@@ -1,0 +1,14 @@
+{
+    "hookup_types":
+    {
+        "ata_bf":
+        {
+            "station": {"up": [[null]], "down": [["ground"]], "position": 0},
+            "antenna": {"up": [["ground"]], "down": [["focus"]], "position": 1},
+            "feed": {"up": [["input"]], "down": [["x"], ["y"]], "position": 2},
+            "pax": {"up": [["x"], ["y"]], "down", [["x"], ["y"]], "position": 3},
+            "rf-converter": {"up": [["x"], ["y"]], "down": [["x1", "x2", "x3", "x4"], ["y1", "y2", "y3", "y4"]], "position": 4},
+            "digitalxxx": {"up": [[], []], "down": [[], []], "position": 5}
+        }
+    }
+}

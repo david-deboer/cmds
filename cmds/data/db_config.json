@@ -1,0 +1,21 @@
+{
+    "default_db_name": "ata_sqlite",
+    "databases": {
+        "hera_mc": {
+            "url": "postgresql://ddeboer@localhost/hera_mc",
+            "mode": "production"
+            },
+        "testing": {
+            "url": "postgresql://ddeboer@localhost/hera_mc_test",
+            "mode": "testing"
+            },
+        "hera_mc_sqlite": {
+            "url": "sqlite:////Users/ddeboer/Documents/ubase/Projects/HERA/ops/hera_cm_db_updates/hera_mc.db",
+            "mode": "production"
+          },
+        "ata_sqlite": {
+            "url": "sqlite:////Users/ddeboer/Documents/ubase/Projects/Oliver/cm_ata/ata.db",
+            "mode": "production"
+         }
+        }
+}
