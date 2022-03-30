@@ -26,7 +26,7 @@ config.set_main_option("sqlalchemy.url", db_url)
 fileConfig(config.config_file_name)
 
 # for 'autogenerate' support
-from hera_mc import mc  # noqa
+from cmds import mc  # noqa
 
 target_metadata = mc.MCDeclarativeBase.metadata
 

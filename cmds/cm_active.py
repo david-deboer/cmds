@@ -206,55 +206,6 @@ class ActiveData:
             self.info.setdefault(key, [])
             self.info[key].append(info)
 
-    def load_rosetta(self, at_date=None, at_time=None, float_format=None):
-        """
-        Retrieve the current 'part rosetta' mappings.
-
-        Note that the dictionary keys don't include revision numbers, which differs from others
-        (if this is needed later, it can be added later).  If current parts are loaded, it adds the
-        'syspn' to the part object (which does use the full hpn:rev key).
-
-        Writes class dictionary:
-            self.rosetta - keyed on part
-
-        Parameters
-        ----------
-        at_date : anything interpretable by cm_utils.get_astropytime
-            Date at which to initialize.
-        at_time : anything interpretable by cm_utils.get_astropytime
-            Time at which to initialize, ignored if at_date is a float or contains time information
-        float_format : str
-            Format if at_date is a number denoting gps, unix seconds or jd
-
-        Raises
-        ------
-        ValueError
-            If a duplicate logical part name is found.
-
-        """
-        gps_time = self.set_active_time(at_date, at_time, float_format)
-        self.rosetta = {}
-        fnd_syspn = []
-        for rose in self.session.query(partconn.PartRosetta).filter(
-            (partconn.PartRosetta.start_gpstime <= gps_time)
-            & (
-                (partconn.PartRosetta.stop_gpstime > gps_time)
-                | (partconn.PartRosetta.stop_gpstime == None)  # noqa
-            )
-        ):
-            if rose.syspn in fnd_syspn:
-                raise ValueError(
-                    "System part number {} already found.".format(rose.syspn)
-                )
-            fnd_syspn.append(rose.syspn)
-            self.rosetta[rose.hpn] = rose
-        if self.parts is not None:
-            for key, part in self.parts.items():
-                try:
-                    self.parts[key].syspn = self.rosetta[part.hpn].syspn
-                except KeyError:
-                    continue
-
     def load_apriori(self, at_date=None, at_time=None, float_format=None, rev="A"):
         """
         Retrieve all active apriori status for a given at_date.
