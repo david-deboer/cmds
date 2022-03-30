@@ -121,7 +121,7 @@ class Checks:
             for dev in ['arduino', 'wr', 'snap0', 'snap1', 'snap2', 'snap3']:
                 for id in ['serial', 'mac', 'ip']:
                     for _i in range(len(data['source']) - 1):
-                        for _j in range(_i+1, len(data['source'])):
+                        for _j in range(_i + 1, len(data['source'])):
                             if _notsame(data[dev][id][_i], data[dev][id][_j], **kwargs):
                                 print(f"{key}-{dev}-{id}", end=sep)
                                 print("{}|{}{}{}{}!={}{}".format(data['source'][_i],
@@ -141,7 +141,7 @@ class Checks:
         self.redis_sn = {}
         tdat = []
         headers = ['source', 'arduino', 'wr', 'snap0', 'snap1', 'snap2', 'snap3']
-        divider = ['-'*7, '-'*17, '-'*17, '-'*17, '-'*17, '-'*17, '-'*17]
+        divider = ['-' * 7, '-' * 17, '-' * 17, '-' * 17, '-' * 17, '-' * 17, '-' * 17]
         self.chk_same = {}
         # Read hera_mc
         for nd in range(0, 30):
@@ -286,8 +286,8 @@ class Checks:
             self.active.load_parts(next)
             self.active.load_connections(next)
             full_part_set = list(self.active.parts.keys())
-            full_conn_set = set(list(self.active.connections['up'].keys()) +
-                                list(self.active.connections['down'].keys()))
+            full_conn_set = set(list(self.active.connections['up'].keys())
+                                + list(self.active.connections['down'].keys()))
             for key in full_conn_set:
                 if key not in full_part_set:
                     if key not in missing_parts:

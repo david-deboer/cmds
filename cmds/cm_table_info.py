@@ -12,8 +12,7 @@ cm_tables = {
     "apriori_antenna": [cm_partconnect.AprioriAntenna, 1],
     "connections": [cm_partconnect.Connections, 2],
     "parts": [cm_partconnect.Parts, 3],
-    "geo_location": [geo_location.GeoLocation, 4],
-    "station_type": [geo_location.StationType, 5],
+    "geo_location": [geo_location.GeoLocation, 4]
 }
 data_prefix = "initialization_cmds_"
 
