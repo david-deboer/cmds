@@ -35,7 +35,6 @@ setup_args = {
         "cartopy",
         "numpy",
         "psycopg2",
-        "pyuvdata",
         "pyyaml",
         "redis",
         "setuptools_scm",
