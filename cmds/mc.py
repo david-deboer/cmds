@@ -21,8 +21,8 @@ from .data import DATA_PATH
 
 test_data_path = op.join(DATA_PATH, "test_data")
 default_config_file = op.join(DATA_PATH, "db_config.json")
-mc_log_file = op.expanduser("~/.hera_mc/mc_log.txt")
-cm_log_file = op.expanduser("~/.hera_mc/cm_log.txt")
+mc_log_file = op.expanduser("~.mc_log.txt")
+cm_log_file = op.expanduser("~.cm_log.txt")
 
 
 class DB(object, metaclass=ABCMeta):

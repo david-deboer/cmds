@@ -497,10 +497,10 @@ class Connections(MCDeclarativeBase):
 
     __table_args__ = (
         ForeignKeyConstraint(
-            ["upstream_part"]
+            ["upstream_part"], [Parts.pn]
         ),
         ForeignKeyConstraint(
-            ["downstream_part"]
+            ["downstream_part"], [Parts.pn]
         ),
     )
 
