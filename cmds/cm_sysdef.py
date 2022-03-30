@@ -11,7 +11,6 @@ from .data import DATA_PATH
 
 with open(os.path.join(DATA_PATH, "sysdef.json"), "r") as fp:
     system_info = json.load(fp)
-hera_zone_prefixes = system_info["hera_zone_prefixes"]
 
 
 class Sysdef:

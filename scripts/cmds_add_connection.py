@@ -7,7 +7,7 @@
 Script to add a general connection to the database.
 """
 
-from hera_mc import mc, cm_utils, cm_partconnect, cm_handling
+from cmds import mc, cm_utils, cm_partconnect, cm_handling
 
 
 def query_args(args):
@@ -16,14 +16,10 @@ def query_args(args):
     """
     if args.uppart is None:
         args.uppart = input("Upstream part number:  ")
-    if args.uprev is None:
-        args.uprev = input("Upstream part revision:  ")
     if args.upport is None:
         args.upport = input("Upstream output port:  ")
     if args.dnpart is None:
         args.dnpart = input("Downstream part number:  ")
-    if args.dnrev is None:
-        args.dnrev = input("Downstream part revision:  ")
     if args.dnport is None:
         args.dnport = input("Downstream input port:  ")
     if args.date == "now":  # note that 'now' is the current default.
@@ -34,10 +30,8 @@ def query_args(args):
 if __name__ == "__main__":
     parser = mc.get_mc_argument_parser()
     parser.add_argument("-u", "--uppart", help="Upstream part number", default=None)
-    parser.add_argument("--uprev", help="Upstream part revision", default=None)
     parser.add_argument("--upport", help="Upstream output port", default=None)
     parser.add_argument("-d", "--dnpart", help="Downstream part number", default=None)
-    parser.add_argument("--dnrev", help="Downstream part revision", default=None)
     parser.add_argument("--dnport", help="Downstream input port", default=None)
     cm_utils.add_date_time_args(parser)
     cm_utils.add_verbosity_args(parser)
@@ -57,10 +51,8 @@ if __name__ == "__main__":
     c = cm_partconnect.Connections()
     c.connection(
         upstream_part=args.uppart,
-        up_part_rev=args.uprev,
         upstream_output_port=args.upport,
         downstream_part=args.dnpart,
-        down_part_rev=args.dnrev,
         downstream_input_port=args.dnport,
     )
     chk = handling.get_specific_connection(c, at_date)
@@ -74,17 +66,15 @@ if __name__ == "__main__":
     if go_ahead:
         if args.verbosity > 1:
             print(
-                "Adding connection {}:{}:{} <-> {}:{}:{}".format(
+                "Adding connection {}:{} <-> {}:{}".format(
                     args.uppart,
-                    args.uprev,
                     args.upport,
                     args.dnpart,
-                    args.dnrev,
                     args.dnport,
                 )
             )
         # Connect parts
         npc = [
-            [args.uppart, args.uprev, args.upport, args.dnpart, args.dnrev, args.dnport]
+            [args.uppart, args.upport, args.dnpart, args.dnport]
         ]
-        cm_partconnect.add_new_connections(session, connect, npc, at_date)
+        cm_partconnect.add_new_connections(session, connect, npc, [at_date])

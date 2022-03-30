@@ -7,16 +7,15 @@
 Script to handle adding a comment to the part_info table.
 """
 
-from hera_mc import mc, cm_utils, cm_partconnect, cm_revisions
+from cmds import mc, cm_utils, cm_partconnect
 
 
 def query_args(args):
     """
     Gets information from user
     """
-    if args.hpn is None:
-        args.hpn = input("HERA part number:  ")
-    args.rev = cm_utils.query_default("rev", args)
+    if args.pn is None:
+        args.pn = input("System part number:  ")
     if args.comment is None:
         args.comment = input("Comment:  ")
     if args.reference is None:
@@ -27,8 +26,7 @@ def query_args(args):
 
 if __name__ == "__main__":
     parser = mc.get_mc_argument_parser()
-    parser.add_argument("-p", "--hpn", help="HERA part number", default=None)
-    parser.add_argument("-r", "--rev", help="Revision of part", default="last")
+    parser.add_argument("-p", "--pn", help="System part number", default=None)
     parser.add_argument("-c", "--comment", help="Comment on part", default=None)
     parser.add_argument("-l", "--reference", help="Library filename", default=None)
     parser.add_argument(
@@ -48,18 +46,13 @@ if __name__ == "__main__":
 
     db = mc.connect_to_mc_db(args)
     session = db.sessionmaker()
-    if args.rev.lower() == "last":
-        args.rev = cm_revisions.get_last_revision(args.hpn, session)[0].rev
-        if args.verbose:
-            print("Using last revision: {}".format(args.rev))
 
     # Check for part
     if args.verbose:
-        print("Adding info for part {}:{}".format(args.hpn, args.rev))
+        print("Adding info for part {}".format(args.pn))
     cm_partconnect.add_part_info(
         session,
-        args.hpn,
-        args.rev,
+        args.pn,
         args.comment,
         at_date=at_date,
         reference=args.reference,

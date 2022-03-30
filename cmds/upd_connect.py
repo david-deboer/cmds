@@ -35,7 +35,6 @@ class UpdateConnect(upd_base.Update):
         self.add_missing_connections()
         self.add_partial_connections()
         self.add_different_connections()
-        self.add_rosetta()
         self.finish()
         self.show_summary_of_compare()
 
@@ -193,24 +192,6 @@ class UpdateConnect(upd_base.Update):
             return 'HH{}'.format(antnum)
         else:
             raise ValueError("NEED TO ADD OUTRIGGERS")
-
-    def add_rosetta(self):
-        for t2u in ['missing', 'different']:
-            t2u_attr = getattr(self, t2u)
-            if not len(t2u_attr):
-                continue
-            self.hera.no_op_comment('Adding {} parts'.format(t2u))
-            for key in t2u_attr:
-                if not key.startswith('SNP'):
-                    continue
-                try:
-                    conn = self.active.connections[key]['up']['RACK']
-                    hname = "heraNode{}Snap{}".format(int(conn.downstream_part[1:]),
-                                                      int(conn.downstream_input_port[-1]))
-                    self.hera.add_part_rosetta(conn.upstream_part, hname, self.cdate, self.ctime)
-                except KeyError:
-                    with open('upd_connect.log', 'a') as fp:
-                        print(f"Need to put {key} in active connections.", file=fp)
 
     def compare_connections(self, direction='gsheet-active'):
         """

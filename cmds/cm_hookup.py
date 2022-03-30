@@ -28,9 +28,6 @@ class Hookup(object):
 
     """
 
-    hookup_list_to_cache = cm_sysdef.hera_zone_prefixes
-    hookup_cache_file = os.path.expanduser("~/.hera_mc/hookup_cache_3.json")
-
     def __init__(self, session=None):
         if session is None:  # pragma: no cover
             db = mc.connect_to_mc_db(None)

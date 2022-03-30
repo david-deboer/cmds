@@ -5,47 +5,10 @@
 """Keep track of geo-located stations."""
 
 from astropy.time import Time
-from sqlalchemy import Column, Float, String, BigInteger, ForeignKey, func
+from sqlalchemy import Column, Float, String, BigInteger, func
 
 from . import MCDeclarativeBase, NotNull
 from . import mc, cm_utils
-
-
-class StationType(MCDeclarativeBase):
-    """
-    Table to track/denote station type data categories in various ways.
-
-    Attributes
-    ----------
-    station_type_name : String Column
-        Name of type class, Primary_key
-    prefix : String Column
-        String prefix to station type, elements of which are typically
-        characterized by <prefix><int>. Comma-delimit list if more than one.
-        Note that prefix is not in the primary_key, so there can be multiple
-        prefixes per type_name.
-    description : String Column
-        hort description of station type.
-    plot_marker : String Column
-        matplotlib marker type to use
-
-    """
-
-    __tablename__ = "station_type"
-
-    station_type_name = Column(String(64), primary_key=True)
-    prefix = NotNull(String(64))
-    description = Column(String(64))
-    plot_marker = Column(String(64))
-
-    def __repr__(self):
-        """Define representation."""
-        return (
-            "<subarray {self.station_type_name}: prefix={self.prefix} "
-            "description={self.description} marker={self.plot_marker}>".format(
-                self=self
-            )
-        )
 
 
 class GeoLocation(MCDeclarativeBase):
@@ -78,9 +41,7 @@ class GeoLocation(MCDeclarativeBase):
     __tablename__ = "geo_location"
 
     station_name = Column(String(64), primary_key=True)
-    station_type_name = Column(
-        String(64), ForeignKey(StationType.station_type_name), nullable=False
-    )
+    station_type_name = Column(String(64), nullable=False)
     datum = Column(String(64))
     tile = Column(String(64))
     northing = Column(Float(precision="53"))

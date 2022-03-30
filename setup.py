@@ -35,7 +35,6 @@ setup_args = {
         "cartopy",
         "numpy",
         "psycopg2",
-        "pyyaml",
         "redis",
         "setuptools_scm",
         "sqlalchemy",
@@ -54,7 +53,6 @@ setup_args = {
             "pre-commit",
         ],
     },
-    "tests_require": ["pyyaml"],
     "classifiers": [
         "Development Status :: 4 - Beta",
         "Environment :: Console",

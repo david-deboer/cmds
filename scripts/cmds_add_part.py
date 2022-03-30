@@ -14,12 +14,10 @@ def query_args(args):
     """
     Gets information from user
     """
-    if args.hpn is None:
-        args.hpn = input("HERA part number:  ")
-    if args.rev is None:
-        args.rev = input("HERA part revision:  ")
-    if args.hptype is None:
-        args.hptype = input("HERA part type:  ")
+    if args.pn is None:
+        args.pn = input("System part number:  ")
+    if args.ptype is None:
+        args.ptype = input("System part type:  ")
     if args.mfg is None:
         args.mfg = input("Manufacturers number for part:  ")
     args.date = cm_utils.query_default("date", args)
@@ -28,9 +26,8 @@ def query_args(args):
 
 if __name__ == "__main__":
     parser = mc.get_mc_argument_parser()
-    parser.add_argument("-p", "--hpn", help="HERA part number", default=None)
-    parser.add_argument("-r", "--rev", help="Revision number of part", default=None)
-    parser.add_argument("-t", "--hptype", help="HERA part type", default=None)
+    parser.add_argument("-p", "--pn", help="HERA part number", default=None)
+    parser.add_argument("-t", "--ptype", help="HERA part type", default=None)
     parser.add_argument(
         "-m", "--mfg", help="Manufacturers number for part", default=None
     )
@@ -44,7 +41,7 @@ if __name__ == "__main__":
     cm_utils.add_verbosity_args(parser)
     args = parser.parse_args()
 
-    if args.hpn is None or args.rev is None or args.hptype is None or args.mfg is None:
+    if args.pn is None or args.ptype is None or args.mfg is None:
         args = query_args(args)
 
     # Pre-process some args
@@ -55,8 +52,8 @@ if __name__ == "__main__":
     session = db.sessionmaker()
 
     if args.verbosity > 1:
-        print("Trying to add new part {}:{}".format(args.hpn, args.rev))
-    new_part = [[args.hpn, args.rev, args.hptype, args.mfg]]
+        print("Trying to add new part {}".format(args.pn))
+    new_part = [[args.pn, args.ptype, args.mfg]]
     cm_partconnect.add_new_parts(
         session, part_list=new_part, at_date=at_date, allow_restart=args.allow_restart
     )

@@ -43,7 +43,6 @@ update.add_missing_parts()
 update.add_missing_connections()
 update.add_partial_connections()
 update.add_different_connections()
-update.add_rosetta()
 update.finish(cron_script=cron_script, archive_to=args.archive_path)
 if cron_script is None:
     update.show_summary_of_compare()

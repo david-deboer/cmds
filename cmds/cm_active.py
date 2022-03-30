@@ -52,7 +52,6 @@ class ActiveData:
     def reset_all(self):
         """Reset all active attributes to None."""
         self.parts = None
-        self.rosetta = None
         self.connections = None
         self.info = None
         self.apriori = None

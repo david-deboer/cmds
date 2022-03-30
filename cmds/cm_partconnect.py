@@ -192,9 +192,7 @@ def add_new_parts(session, parts, start_dates, allow_restart=False):
                 )
             else:
                 print_out = (
-                    "No action. The request {} not an allowed part restart.".format(
-                     pn
-                    )
+                    "No action. The request {} not an allowed part restart.".format(pn)
                 )
                 this_data = None
         if this_data is not None:
@@ -653,7 +651,7 @@ def stop_connections(session, conns, stop_dates):
                     if fnd_conn:
                         print("\t***Warning - this is number {} for this connection! "
                               "Started at {}.  Should clean up."
-                              .format(fnd_conn+1, chk_conn.start_gpstime))
+                              .format(fnd_conn + 1, chk_conn.start_gpstime))
                     fnd_conn += 1
             if not fnd_conn:
                 print("Skipping: no unstopped connections for {}".format(cdes))
@@ -747,13 +745,13 @@ def _update_connection(session=None, conns=None):
     for conn in conns:
         connection = Connections()
         connection.connection(
-                    up=conn[0],
-                    down=conn[1],
-                    upstream_output_port=conn[2],
-                    downstream_input_port=conn[3],
-                    start_gpstime=conn[4],
-                    stop_gpstime=conn[5]
-                )
+            up=conn[0],
+            down=conn[1],
+            upstream_output_port=conn[2],
+            downstream_input_port=conn[3],
+            start_gpstime=conn[4],
+            stop_gpstime=conn[5]
+        )
         session.add(connection)
         session.commit()
     if close_session_when_done:  # pragma: no cover
