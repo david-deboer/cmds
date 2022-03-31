@@ -55,5 +55,5 @@ if __name__ == "__main__":
         print("Trying to add new part {}".format(args.pn))
     new_part = [[args.pn, args.ptype, args.mfg]]
     cm_table_util.add_new_parts(
-        session, parts=new_part, at_date=at_date, allow_restart=args.allow_restart
+        session, parts=new_part, start_dates=[at_date], allow_restart=args.allow_restart
     )

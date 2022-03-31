@@ -212,37 +212,31 @@ def add_new_parts(session, parts, start_dates, allow_restart=False):
             .first()
         )
         if existing is not None and existing.stop_gpstime is None:
-            print(
-                "No action. {} already in database with no stop date".format(
-                    pn
-                )
-            )
+            print("No action. {} already in database with no stop date".format(pn))
             continue
-        this_data = []
-        this_data.append([pn, "pn", pn])
-        this_data.append([pn, "ptype", ptype])
-        this_data.append([pn, "manufacturer_number", pman])
-        this_data.append([pn, "start_gpstime", start_date.gps])
+        this_data = {'pn': pn,
+                     'ptype': ptype,
+                     'manufacturer_number': pman,
+                     'start_gpstime': start_date.gps,
+                     'stop_gpstime': None}
         print_out = "starting part {} at {}".format(pn, str(start_date))
         if existing is not None:
             if allow_restart:
                 print_out = "re" + print_out
-                this_data.append([pn, "stop_gpstime", None])
                 comment = "Restarting part.  Previous data {}".format(existing)
                 add_part_info(
                     session,
                     pn=pn,
                     comment=comment,
                     at_date=start_date.gps,
-                    reference="cm_partconnect",
+                    reference="cm_table_util",
                 )
             else:
                 print_out = (
-                    "No action. The request {} not an allowed part restart.".format(pn)
+                    "No action. The request for {} not an allowed part restart.".format(pn)
                 )
-                this_data = None
-        if this_data is not None:
-            data = data + this_data
+                continue
+        data.append(this_data)
         print(print_out.capitalize())
 
     update_part(session, data)
@@ -260,7 +254,7 @@ def update_part(session=None, data=None):
     ----------
     session : object
         Database session to use.  If None, it will start a new session, then close.
-    data : list of lists
+    data : list of dicts
         List containing the pn, column and value to update
             [[pn0,column0,value0],[...]]
                 pnN:  hera part number as primary key
@@ -282,9 +276,8 @@ def update_part(session=None, data=None):
 
     made_change = False
     for this_entry in data:
-        pn, col, val = this_entry
         part_rec = session.query(cm_tables.Parts).filter(
-            (func.upper(cm_tables.Parts.pn) == pn.upper())
+            (func.upper(cm_tables.Parts.pn) == this_entry['pn'].upper())
         )
         num_part = part_rec.count()
         if num_part == 0:
@@ -292,14 +285,15 @@ def update_part(session=None, data=None):
         elif num_part == 1:
             part = part_rec.first()
         try:
-            try_col = getattr(part, col)  # noqa
-            setattr(part, col, val)
+            for col, val in this_entry.items():
+                try_col = getattr(part, col)  # noqa
+                setattr(part, col, val)
         except AttributeError:
             print(col, "does not exist as a field")
             continue
         made_change = True
         session.add(part)
-        session.commit()
+    session.commit()
     if close_session_when_done:  # pragma: no cover
         session.close()
 
