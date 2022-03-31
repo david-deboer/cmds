@@ -1,4 +1,5 @@
 {
+    "default_hookup": "ata_bf",
     "hookup_types":
     {
         "ata_bf":
@@ -9,6 +10,13 @@
             "pax": {"up": [["x"], ["y"]], "down": [["x"], ["y"]], "position": 3},
             "rf-converter": {"up": [["x"], ["y"]], "down": [["x1", "x2", "x3", "x4"], ["y1", "y2", "y3", "y4"]], "position": 4},
             "digitalxxx": {"up": [[], []], "down": [[], []], "position": 5}
-        }
+        },
+    }
+    "station_types":
+    {
+      "antenna": "Antenna location",
+      "node": "Node location",
+      "core": "Core antenna",
+      "outrigger": "Outrigger antenna"
     }
 }

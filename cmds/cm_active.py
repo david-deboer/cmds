@@ -5,13 +5,12 @@
 
 """Methods to load all active data for a given date."""
 
-from . import cm_utils
-from . import cm_partconnect as partconn
+from . import cm_utils, cm_tables
 
 
 class ActiveData:
     """
-    Object containing the active parts and connections for a given date.
+    Object containing the active data (parts, connections, stations, etc) for a given date.
 
     Parameters
     ----------
@@ -54,7 +53,7 @@ class ActiveData:
         self.connections = None
         self.info = None
         self.apriori = None
-        self.geo = None
+        self.stations = None
 
     def set_active_time(self, at_date, at_time=None, float_format=None):
         """
@@ -107,11 +106,11 @@ class ActiveData:
         """
         gps_time = self.set_active_time(at_date, at_time, float_format)
         self.parts = {}
-        for prt in self.session.query(partconn.Parts).filter(
-            (partconn.Parts.start_gpstime <= gps_time)
+        for prt in self.session.query(cm_tables.Parts).filter(
+            (cm_tables.Parts.start_gpstime <= gps_time)
             & (
-                (partconn.Parts.stop_gpstime > gps_time)
-                | (partconn.Parts.stop_gpstime == None)  # noqa
+                (cm_tables.Parts.stop_gpstime > gps_time)
+                | (cm_tables.Parts.stop_gpstime == None)  # noqa
             )
         ):
             key = cm_utils.make_part_key(prt.hpn, prt.hpn_rev)
@@ -148,11 +147,11 @@ class ActiveData:
         gps_time = self.set_active_time(at_date, at_time, float_format)
         self.connections = {"up": {}, "down": {}}
         check_keys = {"up": [], "down": []}
-        for cnn in self.session.query(partconn.Connections).filter(
-            (partconn.Connections.start_gpstime <= gps_time)
+        for cnn in self.session.query(cm_tables.Connections).filter(
+            (cm_tables.Connections.start_gpstime <= gps_time)
             & (
-                (partconn.Connections.stop_gpstime > gps_time)
-                | (partconn.Connections.stop_gpstime == None)  # noqa
+                (cm_tables.Connections.stop_gpstime > gps_time)
+                | (cm_tables.Connections.stop_gpstime == None)  # noqa
             )
         ):
             chk = cm_utils.make_part_key(
@@ -198,8 +197,8 @@ class ActiveData:
         """
         gps_time = self.set_active_time(at_date, at_time, float_format)
         self.info = {}
-        for info in self.session.query(partconn.PartInfo).filter(
-            (partconn.PartInfo.posting_gpstime <= gps_time)
+        for info in self.session.query(cm_tables.PartInfo).filter(
+            (cm_tables.PartInfo.posting_gpstime <= gps_time)
         ):
             key = cm_utils.make_part_key(info.hpn, info.hpn_rev)
             self.info.setdefault(key, [])
@@ -230,11 +229,11 @@ class ActiveData:
         gps_time = self.set_active_time(at_date, at_time, float_format)
         self.apriori = {}
         apriori_keys = []
-        for astat in self.session.query(partconn.AprioriAntenna).filter(
-            (partconn.AprioriAntenna.start_gpstime <= gps_time)
+        for astat in self.session.query(cm_tables.AprioriAntenna).filter(
+            (cm_tables.AprioriAntenna.start_gpstime <= gps_time)
             & (
-                (partconn.AprioriAntenna.stop_gpstime > gps_time)
-                | (partconn.AprioriAntenna.stop_gpstime == None)  # noqa
+                (cm_tables.AprioriAntenna.stop_gpstime > gps_time)
+                | (cm_tables.AprioriAntenna.stop_gpstime == None)  # noqa
             )
         ):
             key = cm_utils.make_part_key(astat.antenna, rev)
@@ -243,15 +242,15 @@ class ActiveData:
             apriori_keys.append(key)
             self.apriori[key] = astat
 
-    def load_geo(self, at_date=None, at_time=None, float_format=None):
+    def load_stations(self, at_date=None, at_time=None, float_format=None):
         """
-        Retrieve all current geo_location data (ie. before date).
+        Retrieve all current stations (ie. before date).
 
-        Loads the geo data at_date onto the class and sets the class at_date.
+        Loads the station data at_date onto the class and sets the class at_date.
         If at_date is None, the existing at_date on the object will be used.
 
         Writes class dictionary:
-                self.geo - keyed on part
+                self.stations - keyed on part
 
         Parameters
         ----------
@@ -263,19 +262,18 @@ class ActiveData:
             Format if at_date is a number denoting gps, unix seconds or jd
 
         """
-        from . import geo_location
 
         gps_time = self.set_active_time(at_date, at_time, float_format)
-        self.geo = {}
-        for ageo in self.session.query(geo_location.GeoLocation).filter(
-            geo_location.GeoLocation.created_gpstime <= gps_time
+        self.stations = {}
+        for asta in self.session.query(cm_tables.Station).filter(
+            cm_tables.Station.created_gpstime <= gps_time
         ):
-            key = cm_utils.make_part_key(ageo.station_name, None)
-            self.geo[key] = ageo
+            key = cm_utils.make_part_key(asta.station_name, None)
+            self.stations[key] = asta
 
-    def get_hptype(self, hptype):
+    def get_ptype(self, ptype):
         """
-        Return a list of all active parts of type hptype.
+        Return a list of all active parts of type ptype.
 
         Note that this assumes that self.load_parts() has been run and will error
         otherwise.  This is to keep the 'at_date' clearer.
@@ -290,71 +288,8 @@ class ActiveData:
         list
             Contains all part number keys (hpn:rev) of that type.
         """
-        hptype_list = []
+        ptype_list = []
         for key, partclass in self.parts.items():
-            if partclass.hptype == hptype:
-                hptype_list.append(key)
-        return hptype_list
-
-    def revs(self, hpn, exact_match=False):
-        """
-        Return a list of active revisions for the provided hpn list.
-
-        The returned list is the concatentated set of revisions found for the provided list.
-
-        The purpose is to find out what active revisions are present in the database.
-        E.g., to check for all active revisions for all PAMs, call with hpn='PAM'.
-        To check for revisions for a particular one, call with 'PAM123'.
-        To guarantee only one part one should also set exact_match=True.
-
-        Parameters
-        ----------
-        hpn : str or list
-            HERA part number or list.  Checks equality or startswith, depending on below.
-        exact_match : bool
-            Flag to look for exact matches to part numbers or not.
-
-        Returns
-        -------
-        list
-            List of revision Namespaces for supplied hpn.
-            Can show with cm_revisions.show_revisions
-
-        """
-        from argparse import Namespace
-
-        hpn = [x.upper() for x in cm_utils.listify(hpn)]
-        rev_dict = {}
-        for hloop in hpn:
-            rev_dict[hloop] = {}
-            for part in self.parts.values():
-                phup = part.hpn.upper()
-                use_this_one = (
-                    (phup == hloop) if exact_match else phup.startswith(hloop)
-                )
-                if use_this_one:
-                    prup = part.hpn_rev.upper()
-                    rev_dict[hloop].setdefault(
-                        prup,
-                        Namespace(
-                            hpn=hloop,
-                            rev=prup,
-                            number=0,
-                            started=part.start_gpstime,
-                            ended=part.stop_gpstime,
-                        ),
-                    )
-                    rev_dict[hloop][prup].number += 1
-                    if part.start_gpstime < rev_dict[hloop][prup].started:
-                        rev_dict[hloop][prup].started = part.start_gpstime
-                    if rev_dict[hloop][prup].ended is not None:
-                        if (
-                            part.stop_gpstime is None
-                            or part.stop_gpstime > rev_dict[hloop][prup].ended
-                        ):
-                            rev_dict[hloop][prup].ended = part.stop_gpstime
-        hpn_rev = []
-        for hloop in sorted(rev_dict.keys()):
-            for rev in sorted(rev_dict[hloop].keys()):
-                hpn_rev.append(rev_dict[hloop][rev])
-        return hpn_rev
+            if partclass.ptype == ptype:
+                ptype_list.append(key)
+        return ptype_list

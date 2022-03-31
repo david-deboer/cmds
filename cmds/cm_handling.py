@@ -9,8 +9,7 @@ import copy
 from astropy.time import Time
 from sqlalchemy import func
 
-from . import cm, cm_utils, cm_dossier
-from . import cm_partconnect as partconn
+from . import cm, cm_utils, cm_dossier, cm_tables
 
 
 class Handling:
@@ -52,8 +51,8 @@ class Handling:
 
         """
         part_query = (
-            self.session.query(partconn.Parts)
-            .filter((func.upper(partconn.Parts.pn) == pn.upper()))
+            self.session.query(cm_tables.Parts)
+            .filter((func.upper(cm_tables.Parts.pn) == pn.upper()))
             .first()
         )
         return part_query.hptype
@@ -73,9 +72,9 @@ class Handling:
 
         """
         return (
-            self.session.query(partconn.Parts)
+            self.session.query(cm_tables.Parts)
             .filter(
-                (func.upper(partconn.Parts.hpn) == pn.upper())
+                (func.upper(cm_tables.Parts.hpn) == pn.upper())
             )
             .first()
         )
@@ -244,13 +243,13 @@ class Handling:
 
         """
         fnd = []
-        for conn in self.session.query(partconn.Connections).filter(
+        for conn in self.session.query(cm_tables.Connections).filter(
             (
-                func.upper(partconn.Connections.upstream_part)
+                func.upper(cm_tables.Connections.upstream_part)
                 == cobj.upstream_part.upper()
             )
             & (
-                func.upper(partconn.Connections.downstream_part)
+                func.upper(cm_tables.Connections.downstream_part)
                 == cobj.downstream_part.upper()
             )
         ):

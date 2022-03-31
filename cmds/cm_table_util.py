@@ -1,21 +1,92 @@
 # -*- mode: python; coding: utf-8 -*-
-# Copyright 2019 the HERA Collaboration
+# Copyright 2022 David R. DeBoer
 # Licensed under the 2-clause BSD license.
 
-"""M&C logging of the parts and the connections between them."""
+"""CM utils for the parts and the connections between them."""
 
-from astropy.time import Time
-from sqlalchemy import BigInteger, Column, ForeignKeyConstraint, String, Text, func
 from . import cm, cm_utils, cm_tables
+from sqlalchemy import func
 
 
-cm_tables = {
-    "part_info": [PartInfo, 0],
-    "apriori_antenna": [AprioriAntenna, 1],
-    "connections": [Connections, 2],
-    "parts": [Parts, 3],
-    "geo_location": [GeoLocation, 4]
+no_connection_designator = "-X-"
+
+
+cm_tables_order = {
+    "part_info": [cm_tables.PartInfo, 0],
+    "apriori_antenna": [cm_tables.AprioriAntenna, 1],
+    "connections": [cm_tables.Connections, 2],
+    "parts": [cm_tables.Parts, 3],
+    "geo_location": [cm_tables.GeoLocation, 4]
 }
+
+
+def update_station(session=None, data=None, add_new_geo=False):
+    """
+    Update the geo_location table with some data.
+
+    Use with caution -- should usually use in a script which will do datetime
+    primary key etc.
+
+    Parameters
+    ----------
+    session : session
+        session on current database. If session is None, a new session
+        on the default database is created and used.
+    data : str or list
+        [[station_name0,column0,value0],[...]]
+        where
+                station_nameN:  station_name (starts with char)
+                values:  corresponding list of values
+    add_new_geo : bool
+        allow a new entry to be made.
+
+    Returns
+    -------
+    bool
+        Flag if successful
+
+    """
+
+    close_session_when_done = False
+    if session is None:  # pragma: no cover
+        db = cm.connect_cm_db()
+        session = db.sessionmaker()
+        close_session_when_done = True
+
+    for station_name in data_dict.keys():
+        geo_rec = session.query(cm_tables.Station).filter(
+            func.upper(cm_tables.Station.station_name) == station_name.upper()
+        )
+        num_rec = geo_rec.count()
+        make_update = False
+        if num_rec == 0:
+            if add_new_geo:
+                gr = cm_tables.Station()
+                make_update = True
+            else:
+                raise ValueError(
+                    "{} does not exist and add_new_geo not enabled.".format(
+                        station_name
+                    )
+                )
+        elif num_rec == 1:
+            if add_new_geo:
+                raise ValueError(
+                    "{} exists and and_new_geo is enabled.".format(station_name)
+                )
+            else:
+                gr = geo_rec.first()
+                make_update = True
+        if make_update:
+            for d in data_dict[station_name]:
+                setattr(gr, d[1], d[2])
+            session.add(gr)
+            session.commit()
+    cm_utils.log("geo_location update", data_dict=data_dict)
+    if close_session_when_done:  # pragma: no cover
+        session.close()
+
+    return True
 
 
 def order_the_tables(unordered_tables=None):
@@ -37,19 +108,18 @@ def order_the_tables(unordered_tables=None):
 
     """
     if unordered_tables is None:
-        unordered_tables = list(cm_tables.keys())
+        unordered_tables = list(cm_tables_order.keys())
     ordered_tables = []
-    for i in range(len(cm_tables.keys())):
+    for i in range(len(cm_tables_order.keys())):
         ordered_tables.append("NULL")
     for table in unordered_tables:
         try:
-            ordered_tables[cm_tables[table][1]] = table
+            ordered_tables[cm_tables_order[table][1]] = table
         except KeyError:
             print(table, "not found")
     while "NULL" in ordered_tables:
         ordered_tables.remove("NULL")
     return ordered_tables
-
 
 
 def stop_existing_parts(session, parts, stop_dates, allow_override=False):
@@ -101,7 +171,7 @@ def stop_existing_parts(session, parts, stop_dates, allow_override=False):
             print("Stopping part {} at {}".format(pn, str(stop_date)))
         data.append([pn, "stop_gpstime", stop_date.gps])
 
-    _update_part(session, data)
+    update_part(session, data)
     if close_session_when_done:  # pragma: no cover
         session.close()
 
@@ -135,9 +205,9 @@ def add_new_parts(session, parts, start_dates, allow_restart=False):
     for pdes, start_date in zip(parts, start_dates):
         pn, ptype, pman = pdes
         existing = (
-            session.query(Parts)
+            session.query(cm_tables.Parts)
             .filter(
-                (func.upper(Parts.pn) == pn.upper())
+                (func.upper(cm_tables.Parts.pn) == pn.upper())
             )
             .first()
         )
@@ -175,12 +245,12 @@ def add_new_parts(session, parts, start_dates, allow_restart=False):
             data = data + this_data
         print(print_out.capitalize())
 
-    _update_part(session, data)
+    update_part(session, data)
     if close_session_when_done:  # pragma: no cover
         session.close()
 
 
-def _update_part(session=None, data=None):
+def update_part(session=None, data=None):
     """
     Update the database given a part number with columns/values.
 
@@ -213,12 +283,12 @@ def _update_part(session=None, data=None):
     made_change = False
     for this_entry in data:
         pn, col, val = this_entry
-        part_rec = session.query(Parts).filter(
-            (func.upper(Parts.pn) == pn.upper())
+        part_rec = session.query(cm_tables.Parts).filter(
+            (func.upper(cm_tables.Parts.pn) == pn.upper())
         )
         num_part = part_rec.count()
         if num_part == 0:
-            part = Parts()
+            part = cm_tables.Parts()
         elif num_part == 1:
             part = part_rec.first()
         try:
@@ -238,13 +308,11 @@ def _update_part(session=None, data=None):
 
 def get_allowed_apriori_antenna_statuses():
     """Get list of valid apriori statuses."""
-    apa = AprioriAntenna()
+    apa = cm_tables.AprioriAntenna()
     return apa.valid_statuses()
 
 
-def update_apriori_antenna(
-    antenna, status, start_gpstime, stop_gpstime=None, session=None
-):
+def update_apriori_antenna(antenna, status, start_gpstime, stop_gpstime=None, session=None):
     """
     Update the 'apriori_antenna' status table to one of the class enum values.
 
@@ -265,7 +333,7 @@ def update_apriori_antenna(
         Database session to use.  If None, it will start a new session, then close.
 
     """
-    new_apa = AprioriAntenna()
+    new_apa = cm_tables.AprioriAntenna()
 
     if status not in new_apa.valid_statuses():
         raise ValueError(
@@ -281,8 +349,8 @@ def update_apriori_antenna(
     antenna = antenna.upper()
     last_one = 1000
     old_apa = None
-    for trial in session.query(AprioriAntenna).filter(
-        func.upper(AprioriAntenna.antenna) == antenna
+    for trial in session.query(cm_tables.AprioriAntenna).filter(
+        func.upper(cm_tables.AprioriAntenna.antenna) == antenna
     ):
         if trial.start_gpstime > last_one:
             last_one = trial.start_gpstime
@@ -341,7 +409,7 @@ def add_part_info(
         session = db.sessionmaker()
         close_session_when_done = True
 
-    pi = PartInfo()
+    pi = cm_tables.PartInfo()
     pi.pn = pn
     pi.posting_gpstime = int(
         cm_utils.get_astropytime(at_date, at_time, float_format).gps
@@ -371,7 +439,7 @@ def get_connection_from_dict(input_dict):
     Connections object
 
     """
-    return Connections(
+    return cm_tables.Connections(
         upstream_part=input_dict["upstream_part"],
         upstream_output_port=input_dict["upstream_output_port"],
         downstream_part=input_dict["downstream_part"],
@@ -391,7 +459,7 @@ def get_null_connection():
 
     """
     nc = no_connection_designator
-    return Connections(
+    return cm_tables.Connections(
         upstream_part=nc,
         upstream_output_port=nc,
         downstream_part=nc,
@@ -423,11 +491,11 @@ def stop_connections(session, conns, stop_dates):
 
     data = []
     for conn, stop_date in zip(conns, stop_dates):
-        conn_to_stop = session.query(Connections).filter(
-            (Connections.upstream_part == conn[0])
-            & (Connections.upstream_output_port == conn[1])
-            & (Connections.downstream_part == conn[2])
-            & (Connections.downstream_input_port == conn[3])
+        conn_to_stop = session.query(cm_tables.Connections).filter(
+            (cm_tables.Connections.upstream_part == conn[0])
+            & (cm_tables.Connections.upstream_output_port == conn[1])
+            & (cm_tables.Connections.downstream_part == conn[2])
+            & (cm_tables.Connections.downstream_input_port == conn[3])
         )
         cdes = "{}<{} - {}>{}".format(conn[0], conn[1], conn[2], conn[3])
         num_conn = conn_to_stop.count()
@@ -452,7 +520,7 @@ def stop_connections(session, conns, stop_dates):
             if not fnd_conn:
                 print("Skipping: no unstopped connections for {}".format(cdes))
 
-    _update_connection(session, data, False)
+    update_connection(session, data, False)
     if close_session_when_done:
         session.close()
 
@@ -480,11 +548,11 @@ def add_new_connections(session, conns, start_dates, same_conn_sec=60.0):
 
     data = []
     for conn, start_date in zip(conns, start_dates):
-        conn_to_start = session.query(Connections).filter(
-            (Connections.upstream_part == conn[0])
-            & (Connections.upstream_output_port == conn[1])
-            & (Connections.downstream_part == conn[2])
-            & (Connections.downstream_input_port == conn[3])
+        conn_to_start = session.query(cm_tables.Connections).filter(
+            (cm_tables.Connections.upstream_part == conn[0])
+            & (cm_tables.Connections.upstream_output_port == conn[1])
+            & (cm_tables.Connections.downstream_part == conn[2])
+            & (cm_tables.Connections.downstream_input_port == conn[3])
         )
         cdes = "{}<{} - {}>{}".format(conn[0], conn[1], conn[2], conn[3])
         add_this_one = True
@@ -507,12 +575,12 @@ def add_new_connections(session, conns, start_dates, same_conn_sec=60.0):
             this_one.append(None)
             data.append(this_one)
 
-    _update_connection(session, data, True)
+    update_connection(session, data, True)
     if close_session_when_done:
         session.close()
 
 
-def _update_connection(session=None, conns=None):
+def update_connection(session=None, conns=None):
     """
     Update the database given a connection with columns/values.
 
@@ -539,7 +607,7 @@ def _update_connection(session=None, conns=None):
         close_session_when_done = True
 
     for conn in conns:
-        connection = Connections()
+        connection = cm_tables.Connections()
         connection.connection(
             up=conn[0],
             down=conn[1],

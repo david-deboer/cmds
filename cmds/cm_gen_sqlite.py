@@ -3,6 +3,8 @@ from . import cm, cm_table_info
 import os.path
 import json
 
+data_prefix = 'Initialization_cmds'
+
 
 class SqliteHandling:
     """
@@ -86,7 +88,7 @@ class SqliteHandling:
         """Compute the hash_dict for the data csv files."""
         self.hash_dict = {}
         for table in self.cm_table_list:
-            fn = "{}{}.csv".format(cm_table_info.data_prefix, table)
+            fn = "{}{}.csv".format(data_prefix, table)
             csv_file = os.path.join(self.cm_csv_path, fn)
             self.hash_dict[fn] = hash_file(csv_file)
 

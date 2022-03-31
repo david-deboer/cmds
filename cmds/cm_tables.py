@@ -2,15 +2,68 @@
 # Copyright 2022 David R. DeBoer
 # Licensed under the 2-clause BSD license.
 
-"""M&C logging of the parts and the connections between them."""
+"""All of the tables defined here."""
 
 from astropy.time import Time
-from sqlalchemy import BigInteger, Column, ForeignKeyConstraint, String, Text
+from sqlalchemy import BigInteger, Column, ForeignKeyConstraint, String, Text, Float
 from . import MCDeclarativeBase, NotNull
-from . import cm
 
-no_connection_designator = "-X-"
-data_prefix = "initialization_cmds_"
+
+class Station(MCDeclarativeBase):
+    """
+    A table logging stations, which are geographical locations.
+
+    Attributes
+    ----------
+    station_name : String Column
+        Colloquial name of station (which is a unique location on the ground).
+        This one shouldn't change. Primary_key
+    station_type : String Column
+        Type of station.
+    datum : String Column
+        Datum of the geoid.
+    tile : String Column
+        UTM tile
+    northing : Float Column
+        Northing coordinate in m
+    easting : Float Column
+        Easting coordinate in m
+    elevation : Float Column
+        Elevation in m
+    created_gpstime : BigInteger Column
+        The date when the station assigned by project.
+
+    """
+
+    __tablename__ = "station"
+
+    station_name = Column(String(64), primary_key=True)
+    station_type = Column(String(64), nullable=False)
+    datum = Column(String(64))
+    tile = Column(String(64))
+    northing = Column(Float(precision="53"))
+    easting = Column(Float(precision="53"))
+    elevation = Column(Float)
+    created_gpstime = NotNull(BigInteger)
+
+    def gps2Time(self):
+        """Add a created_date attribute -- an astropy Time object based on created_gpstime."""
+        self.created_date = Time(self.created_gpstime, format="gps")
+
+    def geo(self, **kwargs):
+        """Add arbitrary attributes to object based on dict."""
+        for key, value in kwargs.items():
+            if key == "station_name":
+                value = value.upper()
+            setattr(self, key, value)
+
+    def __repr__(self):
+        """Define representation."""
+        return "<station_name={self.station_name} station_type={self.station_type_name} \
+        northing={self.northing} easting={self.easting} \
+        elevation={self.elevation}>".format(
+            self=self
+        )
 
 
 class Parts(MCDeclarativeBase):
@@ -255,205 +308,3 @@ class Connections(MCDeclarativeBase):
             "downstream_part": self.downstream_part,
             "downstream_input_port": self.downstream_input_port,
         }
-
-
-def get_connection_from_dict(input_dict):
-    """
-    Convert a dictionary holding the connection info into a Connections object.
-
-    Parameter
-    ---------
-    input_dict : dictionary
-        The dictionary must have the following keys:
-            upstream_part, upstream_output_port
-            downstream_part, downstream_input_port
-        Other keys will be ignored.
-
-    Returns
-    -------
-    Connections object
-
-    """
-    return Connections(
-        upstream_part=input_dict["upstream_part"],
-        upstream_output_port=input_dict["upstream_output_port"],
-        downstream_part=input_dict["downstream_part"],
-        downstream_input_port=input_dict["downstream_input_port"],
-    )
-
-
-def get_null_connection():
-    """
-    Return a null connection.
-
-    All components hold the no_connection_designator and dates/times are None
-
-    Returns
-    -------
-    Connections object
-
-    """
-    nc = no_connection_designator
-    return Connections(
-        upstream_part=nc,
-        upstream_output_port=nc,
-        downstream_part=nc,
-        downstream_input_port=nc,
-        start_gpstime=None,
-        stop_gpstime=None,
-    )
-
-
-def stop_connections(session, conns, stop_dates):
-    """
-    Add a stop_date to the connections in conn_list.
-
-    Parameters
-    ----------
-    session : object
-        Database session to use.  If None, it will start a new session, then close.
-    conns:  list of lists
-        List with data [[upstream_part,port,downstream_part,port],...]
-    stop_dates : list of astropy.Time
-        date at which to stop connection
-
-    """
-    close_session_when_done = False
-    if session is None:  # pragma: no cover
-        db = cm.connect_to_cm_db(None)
-        session = db.sessionmaker()
-        close_session_when_done = True
-
-    data = []
-    for conn, stop_date in zip(conns, stop_dates):
-        conn_to_stop = session.query(Connections).filter(
-            (Connections.upstream_part == conn[0])
-            & (Connections.upstream_output_port == conn[1])
-            & (Connections.downstream_part == conn[2])
-            & (Connections.downstream_input_port == conn[3])
-        )
-        cdes = "{}<{} - {}>{}".format(conn[0], conn[1], conn[2], conn[3])
-        num_conn = conn_to_stop.count()
-        if num_conn == 0:
-            print("Skipping: no connection listed for {}".format(cdes))
-        else:
-            fnd_conn = 0
-            for chk_conn in conn_to_stop:
-                if chk_conn.stop_gpstime is None:
-                    this_one = []
-                    for cc in conn:
-                        this_one.append(cc)
-                    this_one.append(chk_conn.start_gpstime)
-                    this_one.append(stop_date.gps)
-                    data.append(this_one)
-                    print("Stopping {}:  {}".format(cdes, chk_conn.start_gpstime))
-                    if fnd_conn:
-                        print("\t***Warning - this is number {} for this connection! "
-                              "Started at {}.  Should clean up."
-                              .format(fnd_conn + 1, chk_conn.start_gpstime))
-                    fnd_conn += 1
-            if not fnd_conn:
-                print("Skipping: no unstopped connections for {}".format(cdes))
-
-    _update_connection(session, data, False)
-    if close_session_when_done:
-        session.close()
-
-
-def add_new_connections(session, conns, start_dates, same_conn_sec=60.0):
-    """
-    Add a new connection.
-
-    Parameters
-    ----------
-    session : object
-        Database session to use.  If None, it will start a new session, then close.
-    conns:  list of lists
-        List with data [[upstream_part,port,downstream_part,port],...]
-    start_dates : list of astropy.Time
-        date at which to start connection
-    same_conn_sec
-
-    """
-    close_session_when_done = False
-    if session is None:  # pragma: no cover
-        db = cm.connect_to_cm_db(None)
-        session = db.sessionmaker()
-        close_session_when_done = True
-
-    data = []
-    for conn, start_date in zip(conns, start_dates):
-        conn_to_start = session.query(Connections).filter(
-            (Connections.upstream_part == conn[0])
-            & (Connections.upstream_output_port == conn[1])
-            & (Connections.downstream_part == conn[2])
-            & (Connections.downstream_input_port == conn[3])
-        )
-        cdes = "{}<{} - {}>{}".format(conn[0], conn[1], conn[2], conn[3])
-        add_this_one = True
-        for chk_conn in conn_to_start:
-            if abs(chk_conn.start_gpstime - start_date.gps) < same_conn_sec:
-                print("{} is already a connection starting at {}"
-                      .format(cdes, chk_conn.start_gpstime), end='')
-                if chk_conn.stop_gpstime is None:
-                    print(" --> Skipping.")
-                    add_this_one = False
-                else:
-                    print("\twith a stop time of {}".format(chk_conn.stop_gpstime))
-                break
-        if add_this_one:
-            print("Starting connection {} at {}".format(cdes, str(start_date)))
-            this_one = []
-            for cc in conn:
-                this_one.append(cc)
-            this_one.append(start_date.gps)
-            this_one.append(None)
-            data.append(this_one)
-
-    _update_connection(session, data, True)
-    if close_session_when_done:
-        session.close()
-
-
-def _update_connection(session=None, conns=None):
-    """
-    Update the database given a connection with columns/values.
-
-    This assumes that the calling function has checked.
-
-    Parameters
-    ----------
-    session : object
-        Database session to use.  If None, it will start a new session, then close.
-    data : list of lists
-        Contains list of connections (all entries in each element)
-
-    Returns
-    -------
-    bool
-        True if succesful, otherwise False
-
-    """
-
-    close_session_when_done = False
-    if session is None:  # pragma: no cover
-        db = cm.connect_to_cm_db(None)
-        session = db.sessionmaker()
-        close_session_when_done = True
-
-    for conn in conns:
-        connection = Connections()
-        connection.connection(
-            up=conn[0],
-            down=conn[1],
-            upstream_output_port=conn[2],
-            downstream_input_port=conn[3],
-            start_gpstime=conn[4],
-            stop_gpstime=conn[5]
-        )
-        session.add(connection)
-        session.commit()
-    if close_session_when_done:  # pragma: no cover
-        session.close()
-
-    return True

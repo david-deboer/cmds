@@ -26,9 +26,9 @@ config.set_main_option("sqlalchemy.url", db_url)
 fileConfig(config.config_file_name)
 
 # for 'autogenerate' support
-from cmds import mc  # noqa
+from cmds import cm  # noqa
 
-target_metadata = mc.MCDeclarativeBase.metadata
+target_metadata = cm.MCDeclarativeBase.metadata
 
 
 # other values from the config, defined by the needs of env.py,

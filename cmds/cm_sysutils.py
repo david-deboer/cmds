@@ -5,9 +5,8 @@
 """Methods for handling locating correlator and various system aspects."""
 
 from sqlalchemy import func, and_, or_
-import numpy as np
 
-from . import cm, cm_partconnect, cm_utils, cm_sysdef, cm_hookup
+from . import cm, cm_tables, cm_utils, cm_sysdef, cm_hookup
 from . import geo_handling
 
 
@@ -204,77 +203,6 @@ class Handling:
             station_conn.append(station_info)
         return station_conn
 
-    def get_cminfo_correlator(self, hookup_type=None):
-        """
-        Return a dict with info needed by the correlator.
-
-        Note: This method requires pyuvdata
-
-        Parameters
-        ----------
-        hookup_type : str or None
-            Type of hookup to use (current observing system is 'parts_hera').
-            If 'None' it will determine which system it thinks it is based on
-            the part-type.  The order in which it checks is specified in cm_sysdef.
-            Only change if you know you want a different system (like 'parts_paper').
-            Default is None.
-
-        Returns
-        -------
-        dict
-            cm info formatted for the correlator.
-            Dict keys are:
-                'antenna_numbers': Antenna numbers (list of integers)
-                'antenna_names': Station names (we use antenna_names because that's
-                    what they're called in data files) (list of strings)
-                'correlator_inputs': Correlator input strings for x/y (e/n)
-                    polarizations (list of 2 element tuples of strings)
-                'antenna_positions': Antenna positions in relative ECEF coordinates
-                    (list of 3-element vectors of floats)
-                'cofa_lat': latitude of the center-of-array in degrees
-                'cofa_lon': longitude of the center-of-array in degrees
-                'cofa_alt': altitude of center-of-array in meters
-        """
-        from pyuvdata import utils as uvutils
-        from . import cm_handling
-
-        cm_h = cm_handling.Handling(session=self.session)
-        cofa_loc = self.geo.cofa()[0]
-        cofa_xyz = uvutils.XYZ_from_LatLonAlt(
-            cofa_loc.lat * np.pi / 180.0,
-            cofa_loc.lon * np.pi / 180.0,
-            cofa_loc.elevation,
-        )
-        stations_conn = self.get_connected_stations(
-            at_date="now", hookup_type=hookup_type
-        )
-        stn_arrays = SystemInfo()
-        for stn in stations_conn:
-            stn_arrays.update_arrays(stn)
-        # latitudes, longitudes output by get_connected_stations are in degrees
-        # XYZ_from_LatLonAlt wants radians
-        ecef_positions = uvutils.XYZ_from_LatLonAlt(
-            np.array(stn_arrays.lat) * np.pi / 180.0,
-            np.array(stn_arrays.lon) * np.pi / 180.0,
-            stn_arrays.elevation,
-        )
-
-        rel_ecef_positions = ecef_positions - cofa_xyz
-        return {
-            "antenna_numbers": stn_arrays.antenna_number,
-            # This is actually station names, not antenna names,
-            # but antenna_names is what it's called in pyuvdata
-            "antenna_names": stn_arrays.station_name,
-            # this is a tuple giving the f-engine names for e, n
-            "correlator_inputs": stn_arrays.correlator_input,
-            # this is a tuple giving the corresponding snap serial numbers for e, n
-            "snap_serial_numbers": stn_arrays.snap_serial,
-            "antenna_positions": rel_ecef_positions.tolist(),
-            "cofa_lat": cofa_loc.lat,
-            "cofa_lon": cofa_loc.lon,
-            "cofa_alt": cofa_loc.elevation,
-        }
-
     def get_part_at_station_from_type(
         self,
         stn,
@@ -384,7 +312,7 @@ class Handling:
         Get the "apriori" status of an antenna station (e.g. HH12) at a date.
 
         The status enum list may be found by module
-        cm_partconnect.get_apriori_antenna_status_enum().
+        cm_tables.get_apriori_antenna_status_enum().
 
         Parameters
         ----------
@@ -405,7 +333,7 @@ class Handling:
         """
         ant = antenna.upper()
         at_date = cm_utils.get_astropytime(at_date, at_time, float_format).gps
-        cmapa = cm_partconnect.AprioriAntenna
+        cmapa = cm_tables.AprioriAntenna
         apa = (
             self.session.query(cmapa)
             .filter(
@@ -436,7 +364,7 @@ class Handling:
         Parameters
         ----------
         status : str
-            Apriori antenna status type (see cm_partconnect.get_apriori_antenna_status_enum())
+            Apriori antenna status type (see cm_tables.get_apriori_antenna_status_enum())
         at_date : anything interpretable by cm_utils.get_astropytime
             Date at which to initialize.
         at_time : anything interpretable by cm_utils.get_astropytime
@@ -452,7 +380,7 @@ class Handling:
         """
         at_date = cm_utils.get_astropytime(at_date, at_time, float_format).gps
         ap_ants = []
-        cmapa = cm_partconnect.AprioriAntenna
+        cmapa = cm_tables.AprioriAntenna
         for apa in self.session.query(cmapa).filter(
             or_(
                 and_(
@@ -493,7 +421,7 @@ class Handling:
 
         """
         ap_stat = {}
-        for _status in cm_partconnect.get_apriori_antenna_status_enum():
+        for _status in cm_tables.get_apriori_antenna_status_enum():
             ap_stat[_status] = self.get_apriori_antennas_with_status(
                 _status, at_date=at_date, at_time=at_time, float_format=float_format
             )
@@ -508,7 +436,7 @@ class Handling:
         Parameters
         ----------
         status : str
-            Apriori antenna status type (see cm_partconnect.get_apriori_antenna_status_enum())
+            Apriori antenna status type (see cm_tables.get_apriori_antenna_status_enum())
         at_date : anything interpretable by cm_utils.get_astropytime
             Date at which to initialize.
         at_time : anything interpretable by cm_utils.get_astropytime

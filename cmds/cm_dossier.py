@@ -8,8 +8,7 @@
 from argparse import Namespace
 from itertools import zip_longest
 
-from . import cm_sysdef, cm_utils
-from . import cm_partconnect as partconn
+from . import cm_sysdef, cm_utils, cm_table_util
 
 
 class PartEntry:
@@ -302,7 +301,7 @@ class HookupEntry(object):
             for port, conn_list in input_dict["hookup"].items():
                 new_conn_list = []
                 for conn_dict in conn_list:
-                    new_conn_list.append(partconn.get_connection_from_dict(conn_dict))
+                    new_conn_list.append(cm_table_util.get_connection_from_dict(conn_dict))
                 hookup_connections_dict[port] = new_conn_list
             self.hookup = hookup_connections_dict
             self.fully_connected = input_dict["fully_connected"]

@@ -126,12 +126,5 @@ def NotNull(kind, **kwargs):
     return Column(kind, nullable=False, **kwargs)
 
 
-from . import cm_transfer  # noqa
-from . import cm_dossier  # noqa
-from . import cm_active  # noqa
-from . import cm_sysdef  # noqa
-from . import cm_utils  # noqa
-from . import cm_sysutils  # noqa
-from . import cm_partconnect  # noqa
-from . import geo_location  # noqa
+from . import cm_tables  # noqa
 from . import cm  # noqa keep this last.
