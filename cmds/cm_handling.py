@@ -7,9 +7,9 @@
 
 import copy
 from astropy.time import Time
-from sqlalchemy import func, desc
+from sqlalchemy import func
 
-from . import mc, cm_utils, cm_dossier
+from . import cm, cm_utils, cm_dossier
 from . import cm_partconnect as partconn
 
 
@@ -27,7 +27,7 @@ class Handling:
 
     def __init__(self, session=None):
         if session is None:  # pragma: no cover
-            db = mc.connect_to_mc_db(None)
+            db = cm.connect_to_cm_db(None)
             self.session = db.sessionmaker()
         else:
             self.session = session
@@ -36,63 +36,14 @@ class Handling:
         """Close the session."""
         self.session.close()
 
-    def add_cm_version(self, time, git_hash):
-        """
-        Add a new cm_version row to the M&C database.
-
-        Parameters
-        ----------
-        time : astropy time object
-            Time of this cm_update
-        git_hash : str
-            Git hash of the hera_cm_db_updates repo
-        """
-        from .cm_transfer import CMVersion
-
-        self.session.add(CMVersion.create(time, git_hash))
-
-    def get_cm_version(self, at_date="now", at_time=None, float_format=None):
-        """
-        Get the cm_version git_hash active at a particular time.
-
-        Parameters
-        ----------
-        at_date : anything interpretable by cm_utils.get_astropytime
-            Date for which to check.
-        at_time : anything interpretable by cm_utils.get_astropytime
-            Time for with to check, ignored if at_date is a float or contains time information
-        float_format : str
-            Format if at_date is a number denoting gps or unix seconds or jd day.
-
-        Returns
-        -------
-        str
-            Git hash of the cm_version active at 'at_date'.
-
-        """
-        from .cm_transfer import CMVersion
-
-        # make sure at_date is an astropy time object
-        at_date = cm_utils.get_astropytime(at_date, at_time, float_format)
-
-        # get last row before at_date
-        result = (
-            self.session.query(CMVersion)
-            .filter(CMVersion.update_time <= at_date.gps)
-            .order_by(desc(CMVersion.update_time))
-            .limit(1)
-            .all()
-        )
-        return result[0].git_hash
-
-    def get_part_type_for(self, hpn):
+    def get_part_type_for(self, pn):
         """
         Provide the signal path part type for a supplied part number.
 
         Parameters
         ----------
-        hpn : str
-            HERA part number.
+        pn : str
+            system part number.
 
         Returns
         -------
@@ -102,7 +53,7 @@ class Handling:
         """
         part_query = (
             self.session.query(partconn.Parts)
-            .filter((func.upper(partconn.Parts.hpn) == hpn.upper()))
+            .filter((func.upper(partconn.Parts.pn) == pn.upper()))
             .first()
         )
         return part_query.hptype
@@ -129,41 +80,6 @@ class Handling:
             .first()
         )
 
-    def _get_hpn_list(self, hpn, rev, active, exact_match):
-        """
-        Return hpn,rev zip list to accommodate non-exact matches.
-
-        Parameters
-        ----------
-        hpn : str, list
-            As supplied to get_dossier
-        rev : str, list, None
-            As supplied to get_dossier
-
-        active : class ActiveData
-            Contains the active at appropriate date
-        exact_match : bool
-            Flag to enforce exact match, or first letter
-
-        Returns
-        -------
-        zip class
-            Contains the hpn, rev pairs
-
-        """
-        match_list = cm_utils.match_list(hpn, rev, case_type="upper")
-        if not exact_match:
-            all_hpn = []
-            all_rev = []
-            for h_hpn, h_rev in match_list:
-                for key in active.parts.keys():
-                    if key.upper().startswith(h_hpn):
-                        k_hpn, k_rev = cm_utils.split_part_key(key)
-                        all_hpn.append(k_hpn.upper())
-                        all_rev.append(h_rev)
-            match_list = cm_utils.match_list(all_hpn, all_rev, case_type="upper")
-        return match_list
-
     def _get_allowed_ports(self, ports):
         """
         Get the allowed_ports class variable for requested ports.
@@ -182,8 +98,7 @@ class Handling:
 
     def get_dossier(
         self,
-        hpn,
-        rev=None,
+        pn,
         at_date="now",
         at_time=None,
         float_format=None,
@@ -198,13 +113,8 @@ class Handling:
 
         Parameters
         ----------
-        hpn : str, list
-            Hera part number [string or list-of-strings] (whole or first part thereof)
-        rev : str, list, None
-            Specific revision(s) or None (which yields all). If list, must
-            match length of hpn.
-            Each element of a string may be a csv-list of revisions, which gets
-            parsed later.
+        pn : str, list
+            Part number [string or list-of-strings] (whole or first part thereof)
         at_date : anything interpretable by cm_utils.get_astropytime
             Date for which to check.
         at_time : anything interpretable by cm_utils.get_astropytime
@@ -257,24 +167,17 @@ class Handling:
             active.load_geo(at_date=at_date)
         part_dossier = {}
 
-        hpn_list = self._get_hpn_list(hpn, rev, active, exact_match)
+        pn_list = self._get_pn_list(pn, active, exact_match)
 
-        for loop_hpn, loop_rev in hpn_list:
-            if loop_rev is None:
-                loop_rev = [x.rev for x in active.revs(loop_hpn)]
-            elif isinstance(loop_rev, str):
-                loop_rev = [x.strip().upper() for x in loop_rev.split(",")]
-            for rev in loop_rev:
-                key = cm_utils.make_part_key(loop_hpn, rev)
-                if key in active.parts.keys():
-                    this_part = cm_dossier.PartEntry(
-                        hpn=loop_hpn,
-                        rev=rev,
-                        at_date=at_date,
-                        notes_start_date=notes_start_date,
-                    )
-                    this_part.get_entry(active)
-                    part_dossier[key] = this_part
+        for loop_pn in pn_list:
+            if loop_pn in active.parts.keys():
+                this_part = cm_dossier.PartEntry(
+                    pn=loop_pn,
+                    at_date=at_date,
+                    notes_start_date=notes_start_date,
+                )
+                this_part.get_entry(active)
+                part_dossier[loop_pn] = this_part
 
         return part_dossier
 

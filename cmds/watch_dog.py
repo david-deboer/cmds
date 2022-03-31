@@ -168,9 +168,9 @@ def node_temperature(
     from . import node, cm_utils, cm_active
 
     if session is None:  # pragma: no cover
-        from . import mc
+        from . import cm
 
-        db = mc.connect_to_mc_db(None)
+        db = cm.connect_to_cm_db(None)
         session = db.sessionmaker()
 
     if at_date is None:

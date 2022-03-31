@@ -1,5 +1,5 @@
 """Methods to check and update the database files for sqlite."""
-from . import mc, cm_table_info
+from . import cm, cm_table_info
 import os.path
 import json
 
@@ -11,7 +11,7 @@ class SqliteHandling:
     Attributes
     ----------
     cm_csv_path : str or None
-        Path containing the csv data files.  If None uses default in mc.
+        Path containing the csv data files.  If None uses default in cm.
     cm_table_list : list of str or None
         List of files to be used in hash comparisons.  If None uses default.
     cm_table_hash_file : str
@@ -35,7 +35,7 @@ class SqliteHandling:
         Parameters
         ----------
         cm_csv_path : str or None
-            Path containing the csv data files.  If None uses default in mc.
+            Path containing the csv data files.  If None uses default in cm.
         cm_table_list : list of str or None
             List of files to be used in hash comparisons.  If None uses default.
         cm_table_hash_file : str
@@ -44,7 +44,7 @@ class SqliteHandling:
             Flag to denote testing (sets directory and sql file generation)
         """
         if cm_csv_path is None:
-            cm_csv_path = mc.get_cm_csv_path(testing=testing)
+            cm_csv_path = cm.get_cm_csv_path(testing=testing)
         self.cm_csv_path = cm_csv_path
         if cm_table_list is None:
             cm_table_list = cm_table_info.cm_tables.keys()

@@ -8,7 +8,7 @@ from astropy.time import Time
 from sqlalchemy import Column, Float, String, BigInteger, func
 
 from . import MCDeclarativeBase, NotNull
-from . import mc, cm_utils
+from . import cm, cm_utils
 
 
 class GeoLocation(MCDeclarativeBase):
@@ -102,7 +102,7 @@ def update(session=None, data=None, add_new_geo=False):
 
     close_session_when_done = False
     if session is None:  # pragma: no cover
-        db = mc.connect_mc_db()
+        db = cm.connect_cm_db()
         session = db.sessionmaker()
         close_session_when_done = True
 

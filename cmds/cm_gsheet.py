@@ -2,7 +2,7 @@
 import csv
 import requests
 from . import util
-from hera_mc import cm_utils
+from cmds import cm_utils
 from argparse import Namespace
 
 apriori_enum_header = 'Current apriori enum'
@@ -98,7 +98,7 @@ class SheetData:
                 capture_enums = True
                 for _i, email_addr in enumerate(data[1:]):
                     if len(email_addr):
-                        self.apriori_email[email_addr] = Namespace(eno=_i+1, notify=[])
+                        self.apriori_email[email_addr] = Namespace(eno=_i + 1, notify=[])
             elif capture_enums and not len(data[0]):
                 capture_enums = False
             if capture_enums:

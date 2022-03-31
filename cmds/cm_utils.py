@@ -9,19 +9,19 @@ from astropy.time import Time
 from astropy.time import TimeDelta
 import datetime
 
-from . import mc
+from . import cm
 
 PAST_DATE = "2000-01-01"
 VALID_FLOAT_FORMAT_FOR_TIME = ["unix", "gps", "jd"]
 
 
-def get_cm_repo_git_hash(mc_config_path=None, cm_csv_path=None, testing=False):
+def get_cm_repo_git_hash(cm_config_path=None, cm_csv_path=None, testing=False):
     """
-    Get the current cm_version for recording with antenna locations.
+    Get the current version for recording with antenna locations.
 
     Parameters
     ----------
-    mc_config_path : str or None
+    cm_config_path : str or None
         Path to configuration file.  If None, uses default.
     cm_csv_path : str or None
         Path to the cm csv file updates.  If None, uses default.
@@ -35,9 +35,9 @@ def get_cm_repo_git_hash(mc_config_path=None, cm_csv_path=None, testing=False):
 
     """
     if cm_csv_path is None or testing:
-        cm_csv_path = mc.get_cm_csv_path(mc_config_file=mc_config_path)
+        cm_csv_path = cm.get_cm_csv_path(cm_config_file=cm_config_path)
         if cm_csv_path is None:
-            raise ValueError("No cm_csv_path defined in mc_config file.")
+            raise ValueError("No cm_csv_path defined in cm_config file.")
 
     git_hash = subprocess.check_output(
         ["git", "-C", cm_csv_path, "rev-parse", "HEAD"], stderr=subprocess.STDOUT
@@ -57,7 +57,7 @@ def log(msg, **kwargs):
         keywords and arguments to log.
 
     """
-    fp = open(mc.cm_log_file, "a")
+    fp = open(cm.cm_log_file, "a")
     dt = Time.now()
     fp.write(
         "-------------------"

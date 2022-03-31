@@ -4,7 +4,7 @@
 """
 This class sets up to update the part information database.
 """
-from hera_mc import cm_utils, cm_active
+from cmds import cm_utils, cm_active
 from . import util, upd_base, cm_gsheet
 import os.path
 import json
@@ -67,7 +67,7 @@ class UpdateInfo(upd_base.Update):
         notify_type : str
             one of 'either', 'old', 'new':  notify if status in old, new, either
         """
-        from hera_mc import watch_dog
+        from cmds import watch_dog
         from os import remove
         anotify = {}
         if os.path.isfile(self.apriori_notify_file):

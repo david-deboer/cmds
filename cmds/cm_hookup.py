@@ -11,7 +11,7 @@ import json
 from argparse import Namespace
 from astropy.time import Time
 
-from . import mc, cm_utils, cm_transfer, cm_sysdef, cm_dossier, cm_active
+from . import cm, cm_utils, cm_transfer, cm_sysdef, cm_dossier, cm_active
 
 
 class Hookup(object):
@@ -30,7 +30,7 @@ class Hookup(object):
 
     def __init__(self, session=None):
         if session is None:  # pragma: no cover
-            db = mc.connect_to_mc_db(None)
+            db = cm.connect_to_cm_db(None)
             self.session = db.sessionmaker()
         else:
             self.session = session
@@ -776,7 +776,7 @@ class Hookup(object):
             file_mod_time:  when the cache file was last changed (ie written)
             at_date:  the date of the get hookup request (self.at_date)
             cached_at_date:  the date in the cache file for which it was written.
-        If the cache_file was written before the latest cm_version, it fails because
+        If the cache_file was written before the latest version, it fails because
         anything could have changed within the database.
 
         Returns
@@ -785,7 +785,7 @@ class Hookup(object):
             True if the cache file is current.
 
         """
-        # Get the relevant dates (checking the cache_file/cm_version up front)
+        # Get the relevant dates (checking the cache_file/version up front)
         if cache_dict is None:
             return False
         stats = os.stat(self.hookup_cache_file)

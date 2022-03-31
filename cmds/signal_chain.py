@@ -1,6 +1,5 @@
 """Various signal chain modification methods."""
-from hera_cm import util
-from hera_mc import cm_utils, cm_active, cm_handling
+from cmds import cm_utils, cm_active, cm_handling, util
 import os
 
 part_types = {'FDV': 'feed', 'FEM': 'front-end', 'NBP': 'node-bulkhead',
@@ -8,7 +7,7 @@ part_types = {'FDV': 'feed', 'FEM': 'front-end', 'NBP': 'node-bulkhead',
 
 
 def as_part(add_or_stop, p, cdate, ctime):
-    """Return a string to use hera_mc script to add or stop a part."""
+    """Return a string to use cmds script to add or stop a part."""
     s = '{}_part.py -p {} '.format(add_or_stop, p[0])
     if add_or_stop == 'add':
         s += '-t {} -m {} '.format(p[1], p[2])
@@ -18,7 +17,7 @@ def as_part(add_or_stop, p, cdate, ctime):
 
 
 def as_connect(add_or_stop, up, dn, cdate, ctime):
-    """Return a string to use hera_mc script to add or stop a connection."""
+    """Return a string to use cmds script to add or stop a connection."""
     s = '{}_connection.py -u {} --upport {} -d {} --dnport {}'\
         ' --date {} --time {}\n'.format(add_or_stop, up[0], up[1],
                                         dn[0], dn[1], cdate, ctime)
@@ -366,27 +365,22 @@ class Update:
                 dn = [conn.downstream_part, conn.down_part_rev, conn.downstream_input_port]
                 self.update_connection('add', up, dn, cdate, ctime)
 
-    def get_general_part(self, hpn, rev=None, at_date=None):
+    def get_general_part(self, pn, at_date=None):
         """
         Return a list to add to script if part does not exist.
 
         Will return None if it does (or rev/type can't be found)
         """
-        if rev is None:
-            for key, val in current_revs.items():
-                if hpn.startswith(key):
-                    rev = val
-                    break
         ptype = None
         for key, val in part_types.items():
-            if hpn.startswith(key):
+            if pn.startswith(key):
                 ptype = val
                 break
-        if rev is None or ptype is None:
+        if ptype is None:
             return None
-        if self.exists('part', hpn=hpn, rev=rev, port=None, side='up,down', check_date=at_date):
+        if self.exists('part', pn=pn, port=None, side='up,down', check_date=at_date):
             return None
-        return (hpn, rev, ptype, hpn)
+        return (pn, ptype, pn)
 
     def get_ser_num(self, hpn, part_type):
         """
@@ -408,7 +402,7 @@ class Update:
 
     def update_part(self, add_or_stop, part, cdate, ctime):
         """
-        Write appropriate entry for hera_mc script.
+        Write appropriate entry for cmds script.
 
         Parameters
         ----------
@@ -421,7 +415,7 @@ class Update:
 
     def update_connection(self, add_or_stop, up, down, cdate, ctime):
         """
-        Write appropriate entry for hera_mc script.
+        Write appropriate entry for cmds script.
 
         Parameters
         ----------

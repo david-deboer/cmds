@@ -23,10 +23,8 @@ class PartEntry:
 
     Parameters
     ----------
-    hpn : str
-        HERA part number - for a single part, not list.  Note: only looks for exact matches.
-    rev : str
-        HERA revision - this is for a specific revision, not a class of revisions.
+    pn : str
+        System part number - for a single part, not list.  Note: only looks for exact matches.
     at_date : astropy.Time
         Date after which the part is active.  If inactive, the part will still be included,
         but things like notes, geo etc may exclude on that basis.
@@ -36,9 +34,8 @@ class PartEntry:
     """
 
     col_hdr = {
-        "hpn": "HERA P/N",
-        "hpn_rev": "Rev",
-        "hptype": "Part Type",
+        "pn": "System P/N",
+        "ptype": "Part Type",
         "manufacturer_number": "Mfg #",
         "start_gpstime": "Start",
         "stop_gpstime": "Stop",
@@ -62,10 +59,9 @@ class PartEntry:
         "down.stop_gpstime": "dStop",
     }
 
-    def __init__(self, hpn, rev, at_date="now", notes_start_date="<"):
-        self.hpn = hpn
-        self.rev = rev
-        self.entry_key = cm_utils.make_part_key(self.hpn, self.rev)
+    def __init__(self, pn, at_date="now", notes_start_date="<"):
+        self.pn = pn
+        self.entry_key = pn
         self.at_date = at_date
         self.notes_start_date = notes_start_date
         # Below are the database components of the dossier
@@ -78,7 +74,7 @@ class PartEntry:
 
     def __repr__(self):
         """Define representation."""
-        return "{}:{} -- {}".format(self.hpn, self.rev, self.part)
+        return "{} -- {}".format(self.pn, self.part)
 
     def get_entry(self, active):
         """
@@ -101,11 +97,11 @@ class PartEntry:
         """Pull out the input_ports and output_ports to a class variable."""
         if self.connections.down is not None:
             self.input_ports = cm_utils.put_keys_in_order(
-                [x.lower() for x in self.connections.down.keys()], "PNR"
+                [x.lower() for x in self.connections.down.keys()], "PN"
             )
         if self.connections.up is not None:
             self.output_ports = cm_utils.put_keys_in_order(
-                [x.lower() for x in self.connections.up.keys()], "PNR"
+                [x.lower() for x in self.connections.up.keys()], "PN"
             )
 
     def get_connections(self, active):
@@ -150,9 +146,8 @@ class PartEntry:
             Contains the active database entries.
 
         """
-        key = cm_utils.make_part_key(self.hpn, None)
-        if key in active.geo.keys():
-            self.geo = active.geo[key]
+        if self.pn in active.geo.keys():
+            self.geo = active.geo[self.pn]
 
     def get_headers(self, columns):
         """

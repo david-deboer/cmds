@@ -6,8 +6,8 @@
 This class sets up to update the connections database.
 """
 import datetime
-from hera_mc import cm_active, cm_utils, cm_sysdef
-from hera_mc import cm_partconnect as CMPC
+from cmds import cm_active, cm_utils, cm_sysdef
+from cmds import cm_partconnect as CMPC
 from . import util, cm_gsheet, upd_base
 from argparse import Namespace
 
@@ -43,7 +43,7 @@ class UpdateConnect(upd_base.Update):
 
     def load_active(self):
         """
-        Gets the hookup data from the hera_mc database.
+        Gets the hookup data from the cm database.
         """
         self.active = cm_active.ActiveData()
         self.active.load_connections()

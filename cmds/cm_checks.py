@@ -3,9 +3,8 @@
 # Licensed under the 2-clause BSD license.
 
 """Series of database checks."""
-from hera_mc import cm_utils, cm_active, cm_sysutils
+from . import cm_utils, cm_active
 import redis
-from node_control import he_check
 
 
 def _getkeys(this_dict, these_keys, defv):
@@ -60,7 +59,7 @@ class Checks:
         """
         Get all info comments within look_back time (days).
         """
-        from hera_mc import cm_hookup
+        from cmds import cm_hookup
         print(f"Writing log of last {look_back} days to {outfile}")
         import csv
         look_gps = cm_utils.get_astropytime('now').gps - look_back * 3600 * 24
@@ -128,106 +127,6 @@ class Checks:
                                                                  data['source'][_j], sep,
                                                                  data[dev][id][_i], sep, sep,
                                                                  data[dev][id][_j]))
-
-    def hosts_ethers(self, table_fmt='orgtbl'):
-        print("Run 'hera_upload_meta_to_redis.py' on hera-node-head and hera-snap-head")
-        self.hera_mc = cm_sysutils.node_info()
-        # Read hosts/ethers from redis
-        he = he_check.Check('redis')
-        he.parse_data()
-        he_node_control = he.write_csv('return_only')
-        self.redis_rd = {}
-        self.redis_wr = {}
-        self.redis_sn = {}
-        tdat = []
-        headers = ['source', 'arduino', 'wr', 'snap0', 'snap1', 'snap2', 'snap3']
-        divider = ['-' * 7, '-' * 17, '-' * 17, '-' * 17, '-' * 17, '-' * 17, '-' * 17]
-        self.chk_same = {}
-        # Read hera_mc
-        for nd in range(0, 30):
-            key = f"N{nd:02d}"
-            tdat.append([key] * len(headers))
-            self.chk_same[key] = {'source': []}
-            for hdr in headers[1:]:
-                self.chk_same[key][hdr] = {}
-                for _d in ['serial', 'mac', 'ip']:
-                    self.chk_same[key][hdr][_d] = []
-            try:
-                hmc = self.hera_mc[key]
-                rd = {'serial': _getkeys(hmc, ['arduino'], '-'), 'ip': ['-'], 'mac': ['-']}
-                wr = {'serial': _getkeys(hmc, ['wr'], '-'), 'ip': ['-'], 'mac': ['-']}
-                sn = {'serial': _getkeys(hmc, ['snaps'], ['-']*4)[0], 'ip': ['-']*4, 'mac': ['-']*4}  # noqa
-                for x in [rd, wr, sn]:
-                    for i in range(len(x['serial'])):
-                        notes = _getkeys(self.hera_mc, [x['serial'][i]], [['-']])[0]
-                        for dv in ['ip', 'mac']:
-                            tts = 0
-                            for note in notes:
-                                if note.lower().startswith(dv):
-                                    ntn = note.split('|')[0]
-                                    nts = int(note.split('|')[1])
-                                    if nts > tts:
-                                        x[dv][i] = ntn.split('-')[1].strip()
-                                        tts = nts
-                col1 = hmc['ncm']
-                self.chk_same[key]['source'].append(col1)
-                for x in ['serial', 'mac', 'ip']:
-                    tdat.append([col1] + rd[x] + wr[x] + sn[x])
-                    ard = rd[x][0]
-                    if ard.startswith('RD'):
-                        ard = f"arduino{int(ard[2:])}"
-                    self.chk_same[key]['arduino'][x].append(ard)
-                    self.chk_same[key]['wr'][x].append(wr[x][0])
-                    for i in range(4):
-                        self.chk_same[key][f'snap{i}'][x].append(sn[x][i])
-            except KeyError:
-                pass
-            # Read redis
-            self.chk_same[key]['source'].append('redis')
-            self.redis_rd[key] = self.r.hgetall(f"status:node:{nd}")
-            self.redis_wr[key] = self.r.hgetall(f"status:wr:heraNode{nd}wr")
-            for i in range(4):
-                self.redis_sn[key + str(i)] = self.r.hgetall(f"status:snap:heraNode{nd}Snap{i}")
-            # ...get serial numbers
-            rser = 'x'
-            wser = _getkeys(self.redis_wr[key], ['serial'], '-')[0]
-            self.chk_same[key]['arduino']['serial'].append(rser)
-            self.chk_same[key]['wr']['serial'].append(wser)
-            sser = []
-            for i in range(4):
-                sser.append(_getkeys(self.redis_sn[key + str(i)], ['serial'], '-')[0])
-                self.chk_same[key][f"snap{i}"]['serial'].append(sser[i])
-            if len(rser + wser + sser[0] + sser[1] + sser[2] + sser[3]) > 6:
-                tdat.append(['redis', rser, wser, sser[0], sser[1], sser[2], sser[3]])
-            # --- get macs
-            rmac = _getkeys(self.redis_rd[key], ['mac'], '-')[0]
-            wmac = _getkeys(self.redis_wr[key], ['mac'], 'x')[0]
-            self.chk_same[key]['arduino']['mac'].append(rmac)
-            self.chk_same[key]['wr']['mac'].append(wmac)
-            for i in range(4):
-                self.chk_same[key][f"snap{i}"]['mac'].append('x')
-            if len(rmac + wmac) > 2:
-                tdat.append(['redis', rmac, wmac, 'x', 'x', 'x', 'x'])
-            # --- get ips
-            rip = _getkeys(self.redis_rd[key], ['ip'], '-')[0]
-            wip = _getkeys(self.redis_wr[key], ['ip'], '-')[0]
-            self.chk_same[key]['arduino']['ip'].append(rip)
-            self.chk_same[key]['wr']['ip'].append(wip)
-            for i in range(4):
-                self.chk_same[key][f"snap{i}"]['ip'].append('x')
-            if len(rip + wip) > 2:
-                tdat.append(['redis', rip, wip, 'x', 'x', 'x', 'x'])
-            # Add hosts/ethers
-            self.chk_same[key]['source'].append('host')
-            for _e in ['serial', 'mac', 'ip']:
-                trow = ['host']
-                for _d in ['arduino', 'wr', 'snap0', 'snap1', 'snap2', 'snap3']:
-                    trow.append(he_node_control[key][_e][_d])
-                    self.chk_same[key][_d][_e].append(he_node_control[key][_e][_d])
-                tdat.append(trow)
-            if table_fmt != 'csv':
-                tdat.append(divider)
-        print(cm_utils.general_table_handler(headers, tdat, table_fmt))
 
     def duplicate_comments(self, verbose=False):
         """Check the database for duplicate comments."""

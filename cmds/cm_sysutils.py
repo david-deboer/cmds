@@ -7,7 +7,7 @@
 from sqlalchemy import func, and_, or_
 import numpy as np
 
-from . import mc, cm_partconnect, cm_utils, cm_sysdef, cm_hookup
+from . import cm, cm_partconnect, cm_utils, cm_sysdef, cm_hookup
 from . import geo_handling
 
 
@@ -87,7 +87,7 @@ class Handling:
 
     def __init__(self, session=None):
         if session is None:  # pragma: no cover
-            db = mc.connect_to_mc_db(None)
+            db = cm.connect_to_cm_db(None)
             self.session = db.sessionmaker()
         else:
             self.session = session
@@ -231,7 +231,6 @@ class Handling:
                     polarizations (list of 2 element tuples of strings)
                 'antenna_positions': Antenna positions in relative ECEF coordinates
                     (list of 3-element vectors of floats)
-                'cm_version': CM git hash (string)
                 'cofa_lat': latitude of the center-of-array in degrees
                 'cofa_lon': longitude of the center-of-array in degrees
                 'cofa_alt': altitude of center-of-array in meters
@@ -240,7 +239,6 @@ class Handling:
         from . import cm_handling
 
         cm_h = cm_handling.Handling(session=self.session)
-        cm_version = cm_h.get_cm_version()
         cofa_loc = self.geo.cofa()[0]
         cofa_xyz = uvutils.XYZ_from_LatLonAlt(
             cofa_loc.lat * np.pi / 180.0,
@@ -272,7 +270,6 @@ class Handling:
             # this is a tuple giving the corresponding snap serial numbers for e, n
             "snap_serial_numbers": stn_arrays.snap_serial,
             "antenna_positions": rel_ecef_positions.tolist(),
-            "cm_version": cm_version,
             "cofa_lat": cofa_loc.lat,
             "cofa_lon": cofa_loc.lon,
             "cofa_alt": cofa_loc.elevation,

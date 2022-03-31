@@ -10,64 +10,10 @@ Used in scripts cm_init.py, cm_pack.py
 """
 
 import os.path
-from math import floor
 import subprocess
-from astropy.time import Time
 import csv
-from sqlalchemy import Column, BigInteger, String
 
-from . import MCDeclarativeBase, mc, cm_table_info, cm_utils
-
-
-class CMVersion(MCDeclarativeBase):
-    """
-    Definition of cm_version table.
-
-    This table simply stores the git hash of the repository to which the
-    cm tables were packaged from the onsite database.
-
-    For offsite & test databases, this table is populated by the cm initialization
-    code using the git hash of the repository used for the initialization.
-
-    Attributes
-    ----------
-    update_time : BigInteger Column
-        gps time of the cm update (long integer) Primary key.
-    git_hash : String Column
-        cm repo git hash (String)
-
-    """
-
-    __tablename__ = "cm_version"
-    update_time = Column(BigInteger, primary_key=True, autoincrement=False)
-    git_hash = Column(String(64), nullable=False)
-
-    @classmethod
-    def create(cls, time, git_hash):
-        """
-        Create a new cm version object.
-
-        Parameters
-        ----------
-        time: astropy time object
-            time of update
-        git_hash: String
-            git hash of cm repository
-
-        Returns
-        -------
-        object
-            cm_version object with time/git_hash
-        """
-        if not isinstance(time, Time):
-            raise ValueError("time must be an astropy Time object")
-        time = int(floor(time.gps))
-
-        # In Python 3, we sometimes get Unicode, sometimes bytes
-        if isinstance(git_hash, bytes):
-            git_hash = git_hash.decode("utf8")
-
-        return cls(update_time=time, git_hash=git_hash)
+from . import cm, cm_table_info, cm_utils
 
 
 def package_db_to_csv(session=None, tables="all"):
@@ -93,7 +39,7 @@ def package_db_to_csv(session=None, tables="all"):
     import pandas
 
     if session is None:  # pragma: no cover
-        db = mc.connect_to_mc_db(None)
+        db = cm.connect_to_cm_db(None)
         session = db.sessionmaker()
 
     data_prefix = cm_table_info.data_prefix
@@ -120,7 +66,7 @@ def package_db_to_csv(session=None, tables="all"):
     return files_written
 
 
-def pack_n_go(session, cm_csv_path):  # pragma: no cover
+def pack_n_go(cm_csv_path):  # pragma: no cover
     """
     Move the csv files to the distribution directory, commit them and update the hash.
 
@@ -141,11 +87,7 @@ def pack_n_go(session, cm_csv_path):  # pragma: no cover
     subprocess.call(cmd, shell=True)
 
     # get hash of this commit
-    cm_git_hash = cm_utils.get_cm_repo_git_hash(cm_csv_path=cm_csv_path)
-
-    # add this cm git hash to cm_version table
-    session.add(CMVersion.create(Time.now(), cm_git_hash))
-    session.commit()
+    cm_git_hash = cm_utils.get_cm_repo_git_hash(cm_csv_path=cm_csv_path)  # noqa
 
 
 def initialize_db_from_csv(
@@ -232,7 +174,7 @@ def check_if_main(
     session_db_url = session.bind.engine.url.render_as_string(hide_password=False)
 
     if config_path is None:
-        config_path = mc.default_config_file
+        config_path = cm.default_config_file
 
     with open(config_path) as f:
         config_data = json.load(f)
@@ -314,18 +256,14 @@ def _initialization(
 
     """
     if session is None:  # pragma: no cover
-        db = mc.connect_to_mc_db(None)
+        db = cm.connect_to_cm_db(None)
         session = db.sessionmaker()
     if cm_csv_path is None:
-        cm_csv_path = mc.get_cm_csv_path(mc_config_file=None, testing=testing)
+        cm_csv_path = cm.get_cm_csv_path(cm_config_file=None, testing=testing)
 
     if not db_validation(maindb, session):
         print("cm_init not allowed.")
         return False
-
-    cm_git_hash = cm_utils.get_cm_repo_git_hash(
-        cm_csv_path=cm_csv_path, testing=testing
-    )
 
     if tables != "all":  # pragma: no cover
         print("You may encounter foreign_key issues by not using 'all' tables.")
@@ -344,9 +282,6 @@ def _initialization(
     for table in tables_to_read:
         csv_table_name = data_prefix + table + ".csv"
         use_table.append([table, os.path.join(cm_csv_path, csv_table_name)])
-
-    # add this cm git hash to cm_version table
-    session.add(CMVersion.create(Time.now(), cm_git_hash))
 
     # Delete tables in this order
     for table, data_filename in use_table:

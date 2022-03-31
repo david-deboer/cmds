@@ -25,8 +25,8 @@ class Update():
             Verbose or not.
         """
         if script_path == 'default':
-            from hera_mc import mc
-            self.script_path = mc.get_cm_csv_path()
+            from cmds import cm
+            self.script_path = cm.get_cm_csv_path()
         else:
             self.script_path = script_path
         self.verbose = verbose

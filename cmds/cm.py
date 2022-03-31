@@ -16,12 +16,10 @@ from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.orm import sessionmaker
 
 from . import MCDeclarativeBase
-from .mc_session import MCSession
+from .cm_session import MCSession
 from .data import DATA_PATH
 
-test_data_path = op.join(DATA_PATH, "test_data")
 default_config_file = op.join(DATA_PATH, "db_config.json")
-mc_log_file = op.expanduser("~.mc_log.txt")
 cm_log_file = op.expanduser("~.cm_log.txt")
 
 
@@ -94,7 +92,7 @@ class AutomappedDB(DB):
                 )
 
 
-def get_mc_argument_parser():
+def get_cm_argument_parser():
     """
     Get an CM specific `argparse.ArgumentParser` object.
 
@@ -103,7 +101,7 @@ def get_mc_argument_parser():
     the name of the CM database connection to use.
 
     Once you have parsed arguments, you can pass the resulting object to a
-    function like `connect_to_mc_db()` to automatically use the settings it
+    function like `connect_to_cm_db()` to automatically use the settings it
     encodes.
 
     """
@@ -112,14 +110,14 @@ def get_mc_argument_parser():
     p = argparse.ArgumentParser()
     p.add_argument(
         "--config",
-        dest="mc_config_path",
+        dest="cm_config_path",
         type=str,
         default=default_config_file,
-        help="Path to the mc_config.json configuration file.",
+        help="Path to the cm_config.json configuration file.",
     )
     p.add_argument(
         "--db",
-        dest="mc_db_name",
+        dest="cm_db_name",
         type=str,
         help="Name of the database to connect to. The default is "
         "used if unspecified.",
@@ -127,39 +125,7 @@ def get_mc_argument_parser():
     return p
 
 
-def get_cm_csv_path(mc_config_file=None, testing=False):
-    """
-    Return the full path to csv files read from the mc config file.
-
-    Parameters
-    ----------
-    mc_config_file : str
-        Pass a different config file if desired.  None goes to default.
-
-    """
-    if mc_config_file is None:
-        mc_config_file = default_config_file
-
-    import json
-
-    with open(mc_config_file) as f:
-        config_data = json.load(f)
-
-    if testing:
-        return test_data_path
-
-    try:
-        cm_csv_path = "/{}".format(
-            config_data.get("databases")["hera_mc_sqlite"]["url"]
-            .lstrip("sqlite:////")
-            .rstrip("/hera_mc.db")
-        )
-    except KeyError:
-        cm_csv_path = config_data.get("cm_csv_path")
-    return cm_csv_path
-
-
-def connect_to_mc_db(args, forced_db_name=None, check_connect=True):
+def connect_to_cm_db(args, forced_db_name=None, check_connect=True):
     """
     Get a DB object that is connected to the CM database.
 
@@ -167,7 +133,7 @@ def connect_to_mc_db(args, forced_db_name=None, check_connect=True):
     ----------
     args : arguments
         The result of calling `parse_args` on an `argparse.ArgumentParser`
-        instance created by calling `get_mc_argument_parser()`. Alternatively,
+        instance created by calling `get_cm_argument_parser()`. Alternatively,
         it can be None to use the full defaults.
     forced_db_name : str, optional
         Database name to use (forced). If not set, uses the default one from
@@ -185,8 +151,8 @@ def connect_to_mc_db(args, forced_db_name=None, check_connect=True):
         config_path = default_config_file
         db_name = None
     else:
-        config_path = args.mc_config_path
-        db_name = args.mc_db_name
+        config_path = args.cm_config_path
+        db_name = args.cm_db_name
 
     if forced_db_name is not None:
         db_name = forced_db_name
@@ -257,7 +223,7 @@ def connect_to_mc_db(args, forced_db_name=None, check_connect=True):
     return db
 
 
-def connect_to_mc_testing_db(forced_db_name="testing"):
+def connect_to_cm_testing_db(forced_db_name="testing"):
     """
     Get a DB object that is connected to the testing CM database.
 
@@ -273,4 +239,4 @@ def connect_to_mc_testing_db(forced_db_name="testing"):
         database.
 
     """
-    return connect_to_mc_db(None, forced_db_name=forced_db_name)
+    return connect_to_cm_db(None, forced_db_name=forced_db_name)

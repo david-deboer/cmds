@@ -15,7 +15,7 @@ from sqlalchemy import func
 from pyuvdata import utils as uvutils
 from numpy import radians
 
-from . import mc, cm_partconnect, cm_utils, geo_location, cm_sysdef
+from . import cm, cm_partconnect, cm_utils, geo_location, cm_sysdef
 from .data import DATA_PATH
 
 
@@ -104,7 +104,7 @@ class Handling:
 
     def __init__(self, session=None, testing=False):
         if session is None:  # pragma: no cover
-            db = mc.connect_to_mc_db(None)
+            db = cm.connect_to_cm_db(None)
             self.session = db.sessionmaker()
         else:
             self.session = session

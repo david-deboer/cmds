@@ -40,9 +40,8 @@ class ActiveData:
             Format if at_date is a number denoting gps or unix seconds or jd day.
         """
         if session is None:  # pragma: no cover
-            from . import mc
-
-            db = mc.connect_to_mc_db(None)
+            from . import cm
+            db = cm.connect_to_cm_db(None)
             session = db.sessionmaker()
         self.session = session
         self.at_date = cm_utils.get_astropytime(at_date, at_time, float_format)
