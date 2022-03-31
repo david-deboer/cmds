@@ -16,7 +16,7 @@ cm_tables_order = {
     "apriori_antenna": [cm_tables.AprioriAntenna, 1],
     "connections": [cm_tables.Connections, 2],
     "parts": [cm_tables.Parts, 3],
-    "geo_location": [cm_tables.GeoLocation, 4]
+    "geo_location": [cm_tables.Stations, 4]
 }
 
 
@@ -54,14 +54,14 @@ def update_station(session=None, data=None, add_new_geo=False):
         close_session_when_done = True
 
     for station_name in data_dict.keys():
-        geo_rec = session.query(cm_tables.Station).filter(
-            func.upper(cm_tables.Station.station_name) == station_name.upper()
+        geo_rec = session.query(cm_tables.Stations).filter(
+            func.upper(cm_tables.Stations.station_name) == station_name.upper()
         )
         num_rec = geo_rec.count()
         make_update = False
         if num_rec == 0:
             if add_new_geo:
-                gr = cm_tables.Station()
+                gr = cm_tables.Stations()
                 make_update = True
             else:
                 raise ValueError(

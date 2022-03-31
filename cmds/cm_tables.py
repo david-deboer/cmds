@@ -9,7 +9,7 @@ from sqlalchemy import BigInteger, Column, ForeignKeyConstraint, String, Text, F
 from . import MCDeclarativeBase, NotNull
 
 
-class Station(MCDeclarativeBase):
+class Stations(MCDeclarativeBase):
     """
     A table logging stations, which are geographical locations.
 

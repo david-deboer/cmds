@@ -265,8 +265,8 @@ class ActiveData:
 
         gps_time = self.set_active_time(at_date, at_time, float_format)
         self.stations = {}
-        for asta in self.session.query(cm_tables.Station).filter(
-            cm_tables.Station.created_gpstime <= gps_time
+        for asta in self.session.query(cm_tables.Stations).filter(
+            cm_tables.Stations.created_gpstime <= gps_time
         ):
             key = cm_utils.make_part_key(asta.station_name, None)
             self.stations[key] = asta

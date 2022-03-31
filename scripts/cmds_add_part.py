@@ -7,7 +7,7 @@
 Script to handle adding a part.
 """
 
-from hera_mc import mc, cm_utils, cm_partconnect
+from cmds import cm, cm_utils, cm_table_util
 
 
 def query_args(args):
@@ -25,9 +25,9 @@ def query_args(args):
 
 
 if __name__ == "__main__":
-    parser = mc.get_mc_argument_parser()
-    parser.add_argument("-p", "--pn", help="HERA part number", default=None)
-    parser.add_argument("-t", "--ptype", help="HERA part type", default=None)
+    parser = cm.get_cm_argument_parser()
+    parser.add_argument("-p", "--pn", help="part number", default=None)
+    parser.add_argument("-t", "--ptype", help="part type", default=None)
     parser.add_argument(
         "-m", "--mfg", help="Manufacturers number for part", default=None
     )
@@ -48,12 +48,12 @@ if __name__ == "__main__":
     at_date = cm_utils.get_astropytime(args.date, args.time, args.format)
     args.verbosity = cm_utils.parse_verbosity(args.verbosity)
 
-    db = mc.connect_to_mc_db(args)
+    db = cm.connect_to_cm_db(args)
     session = db.sessionmaker()
 
     if args.verbosity > 1:
         print("Trying to add new part {}".format(args.pn))
     new_part = [[args.pn, args.ptype, args.mfg]]
-    cm_partconnect.add_new_parts(
-        session, part_list=new_part, at_date=at_date, allow_restart=args.allow_restart
+    cm_table_util.add_new_parts(
+        session, parts=new_part, at_date=at_date, allow_restart=args.allow_restart
     )
