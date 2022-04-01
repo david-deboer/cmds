@@ -15,8 +15,7 @@ from sqlalchemy import func
 from pyuvdata import utils as uvutils
 from numpy import radians
 
-from . import cm, cm_partconnect, cm_utils, geo_location, cm_sysdef
-from .data import DATA_PATH
+from . import cm, cm_tables, cm_utils
 
 
 def cofa(session=None):
@@ -109,59 +108,10 @@ class Handling:
         else:
             self.session = session
 
-        self.get_station_types()
-        self.testing = testing
         self.axes_set = False
         self.fp_out = None
         self.graph = False
         self.station_types_plotted = False
-
-    def close(self):
-        """Close the session."""
-        self.session.close()
-
-    def cofa(self):
-        """
-        Get the current center of array.
-
-        Returns
-        -------
-        GeoLocation object
-            GeoLocation object for the center of the array.
-        """
-        current_cofa = self.station_types["cofa"]["Stations"]
-        located = self.get_location(current_cofa, "now")
-        if len(located) > 1:  # pragma: no cover
-            s = "{} has multiple cofa values.".format(str(current_cofa))
-            warnings.warn(s)
-
-        return located
-
-    def get_station_types(self):
-        """
-        Add a dictionary of sub-arrays (station_types) to the object.
-
-        [station_type_name]{'Prefix', 'Description':'...', 'plot_marker':'...', 'stations':[]}
-        """
-        self.station_types = {}
-        for sta in self.session.query(geo_location.StationType):
-            self.station_types[sta.station_type_name.lower()] = {
-                "Prefix": sta.prefix.upper(),
-                "Description": sta.description,
-                "Marker": sta.plot_marker,
-                "Stations": set(),
-            }
-        for loc in self.session.query(geo_location.GeoLocation):
-            self.station_types[loc.station_type_name]["Stations"].add(loc.station_name)
-            expected_prefix = self.station_types[loc.station_type_name][
-                "Prefix"
-            ].upper()
-            actual_prefix = loc.station_name[: len(expected_prefix)].upper()
-            if expected_prefix != actual_prefix:  # pragma: no cover
-                s = "Prefixes don't match: expected {} but got {} for {}".format(
-                    expected_prefix, actual_prefix, loc.station_name
-                )
-                warnings.warn(s)
 
     def set_graph(self, graph_it):
         """
@@ -199,7 +149,7 @@ class Handling:
             if write_header:
                 self.fp_out.write("{}\n".format(self._loc_line("header")))
 
-    def is_in_database(self, station_name, db_name="geo_location"):
+    def is_in_database(self, station_name, db_name="stations"):
         """
         Check to see if a station_name is in the specified database table.
 
@@ -216,16 +166,12 @@ class Handling:
             True if station_name is present in specified table, False otherwise.
 
         """
-        if db_name == "geo_location":
-            station = self.session.query(geo_location.GeoLocation).filter(
-                func.upper(geo_location.GeoLocation.station_name)
-                == station_name.upper()
-            )
+        if db_name == "stations":
+            station = self.session.query(cm_tables.Stations).filter(
+                func.upper(cm_tables.Stations.station_name) == station_name.upper())
         elif db_name == "connections":
-            station = self.session.query(cm_partconnect.Connections).filter(
-                func.upper(cm_partconnect.Connections.upstream_part)
-                == station_name.upper()
-            )
+            station = self.session.query(cm_tables.Connections).filter(
+                func.upper(cm_tables.Connections.upstream_part) == station_name.upper())
         else:
             raise ValueError("db not found.")
         if station.count() > 0:
@@ -234,9 +180,7 @@ class Handling:
             station_present = False
         return station_present
 
-    def find_antenna_at_station(
-        self, station, query_date, query_time=None, float_format=None
-    ):
+    def find_antenna_at_station(self, station, query_date, query_time=None, float_format=None):
         """
         Get antenna details for a station.
 
@@ -261,9 +205,9 @@ class Handling:
 
         """
         query_date = cm_utils.get_astropytime(query_date, query_time, float_format)
-        connected_antenna = self.session.query(cm_partconnect.Connections).filter(
-            (func.upper(cm_partconnect.Connections.upstream_part) == station.upper())
-            & (cm_partconnect.Connections.start_gpstime <= query_date.gps)
+        connected_antenna = self.session.query(cm_tables.Connections).filter(
+            (func.upper(cm_tables.Connections.upstream_part) == station.upper())
+            & (cm_tables.Connections.start_gpstime <= query_date.gps)
         )
         antenna_connected = []
         for conn in connected_antenna:
@@ -307,9 +251,9 @@ class Handling:
             antenna = "A" + str(int(antenna))
         elif antenna[0].upper() != "A":
             antenna = "A" + antenna
-        connected_antenna = self.session.query(cm_partconnect.Connections).filter(
-            (func.upper(cm_partconnect.Connections.downstream_part) == antenna.upper())
-            & (cm_partconnect.Connections.start_gpstime <= query_date.gps)
+        connected_antenna = self.session.query(cm_tables.Connections).filter(
+            (func.upper(cm_tables.Connections.downstream_part) == antenna.upper())
+            & (cm_tables.Connections.start_gpstime <= query_date.gps)
         )
         ctr = 0
         for conn in connected_antenna:
@@ -355,12 +299,12 @@ class Handling:
         locations = []
         self.query_date = cm_utils.get_astropytime(query_date, query_time, float_format)
         for station_name in to_find_list:
-            for a in self.session.query(geo_location.GeoLocation).filter(
+            for a in self.session.query(cm_tables.Stations).filter(
                 (
-                    func.upper(geo_location.GeoLocation.station_name)
+                    func.upper(cm_tables.Stations.station_name)
                     == station_name.upper()
                 )
-                & (geo_location.GeoLocation.created_gpstime < self.query_date.gps)
+                & (cm_tables.Stations.created_gpstime < self.query_date.gps)
             ):
                 a.gps2Time()
                 a.desc = self.station_types[a.station_type_name]["Description"]
@@ -457,39 +401,6 @@ class Handling:
             print("\tstation description ({}):  {}".format(a.station_type_name, a.desc))
             print("\tcreated:  ", cm_utils.get_time_for_display(a.created_date))
 
-    def parse_station_types_to_check(self, sttc):
-        """
-        Parse station strings to list of stations.
-
-        Parameters
-        ----------
-        sttc : str or list of str
-            Stations to check, can be a list of stations or "all" or "default".
-
-        Returns
-        -------
-        list of str
-            List of startions.
-
-        """
-        self.get_station_types()
-        if isinstance(sttc, str):
-            if sttc.lower() == "all":
-                return list(self.station_types.keys())
-            elif sttc.lower() == "default":
-                sttc = cm_sysdef.hera_zone_prefixes
-            else:
-                sttc = [sttc]
-        sttypes = set()
-        for s in sttc:
-            if s.lower() in self.station_types.keys():
-                sttypes.add(s.lower())
-            else:
-                for k, st in self.station_types.items():
-                    if s.upper() == st["Prefix"][: len(s)].upper():
-                        sttypes.add(k.lower())
-        return list(sttypes)
-
     def get_ants_installed_since(self, query_date, station_types_to_check="all"):
         """
         Get list of antennas installed since query_date.
@@ -512,8 +423,8 @@ class Handling:
         utm_p = ccrs.UTM(self.hera_zone[0])
         lat_corr = self.lat_corr[self.hera_zone[1]]
         found_stations = []
-        for a in self.session.query(geo_location.GeoLocation).filter(
-            geo_location.GeoLocation.created_gpstime >= dt
+        for a in self.session.query(cm_tables.Stations).filter(
+            cm_tables.Stations.created_gpstime >= dt
         ):
             if a.station_type_name.lower() in station_types_to_check:
                 a.gps2Time()
@@ -564,10 +475,7 @@ class Handling:
         if label_to_show == "num":
             return ant.strip("A")
         if label_to_show == "ser":
-            p = self.session.query(cm_partconnect.Parts).filter(
-                (cm_partconnect.Parts.hpn == ant)
-                & (cm_partconnect.Parts.hpn_rev == rev)
-            )
+            p = self.session.query(cm_tables.Parts).filter((cm_tables.Parts.pn == ant))
             if p.count() == 1:
                 return p.first().manufacturer_id.replace("S/N", "")
             else:
@@ -627,19 +535,6 @@ class Handling:
             plt.title(fig_label)
         return
 
-    def plot_all_stations(self):
-        """Plot all stations."""
-        if not self.graph:
-            return
-        import os.path
-        import numpy
-        import matplotlib.pyplot as plt
-
-        p = numpy.loadtxt(os.path.join(DATA_PATH, "HERA_350.txt"), usecols=(1, 2, 3))
-        if not self.testing:  # pragma: no cover
-            plt.plot(p[:, 0], p[:, 1], marker="o", color="0.8", linestyle="none")
-        return len(p[:, 0])
-
     def get_active_stations(
         self,
         station_types_to_use,
@@ -670,7 +565,7 @@ class Handling:
             List of GeoLocation objects for all active stations.
 
         """
-        from . import cm_hookup, cm_revisions
+        from . import cm_hookup
 
         query_date = cm_utils.get_astropytime(query_date, query_time, float_format)
         hookup = cm_hookup.Hookup(self.session)
@@ -681,10 +576,6 @@ class Handling:
             station_types_to_use
         )
         active_stations = []
-        for st in self.station_types_to_use:
-            for loc in self.station_types[st]["Stations"]:
-                if cm_revisions.get_full_revision(loc, hookup_dict):
-                    active_stations.append(loc)
         if len(active_stations):
             print("{}.....".format(12 * "."))
             print("{:12s}  {:3d}".format("active", len(active_stations)))

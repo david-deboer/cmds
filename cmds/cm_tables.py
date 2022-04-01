@@ -284,10 +284,9 @@ class Connections(MCDeclarativeBase):
         if (
             isinstance(other, self.__class__)
             and self.upstream_part.upper() == other.upstream_part.upper()
-            and self.upstream_output_port.upper() == other.upstream_output_port.upper()
+            and self.upstream_output_port.lower() == other.upstream_output_port.lower()
             and self.downstream_part.upper() == other.downstream_part.upper()
-            and self.downstream_input_port.upper()
-            == other.downstream_input_port.upper()
+            and self.downstream_input_port.lower() == other.downstream_input_port.lower()
         ):
             return True
         return False
@@ -305,13 +304,20 @@ class Connections(MCDeclarativeBase):
             self.stop_date = Time(self.stop_gpstime, format="gps")
 
     def connection(self, **kwargs):
-        """
-        Add arbitrary attributes passed in a dict to this object.
-
-        Allows arbitrary connection to be specified.
-        """
+        """Allow specification of arbitrary connection."""
+        made_change = False
         for key, value in kwargs.items():
-            setattr(self, key, value)
+            if hasattr(self, key):
+                if key in ['upstream_part', 'downstream_part']:
+                    value = value.upper()
+                elif key in ['upstream_output_port', 'downstream_input_port']:
+                    value = value.lower()
+                setattr(self, key, value)
+                made_change = True
+            else:
+                print("{} is not a valid connection entry.".format(key))
+                continue
+        return made_change
 
     def _to_dict(self):
         return {

@@ -9,8 +9,6 @@ from sqlalchemy import func
 
 
 no_connection_designator = "-X-"
-
-
 cm_tables_order = {
     "part_info": [cm_tables.PartInfo, 0],
     "apriori_antenna": [cm_tables.AprioriAntenna, 1],
@@ -18,6 +16,39 @@ cm_tables_order = {
     "parts": [cm_tables.Parts, 3],
     "stations": [cm_tables.Stations, 4]
 }
+
+
+def order_the_tables(unordered_tables=None):
+    """
+    Ensure that the tables are loaded into the database in the proper order.
+
+    Tables must be loaded into the database in the proper order to satisfy
+    ForeignKey constraints.
+
+    Parameters
+    ----------
+    unordered_tables : list or None
+        list of unordered_tables or None.  Default is None, which gets all cm tables.
+
+    Returns
+    -------
+    list
+        list of ordered tables
+
+    """
+    if unordered_tables is None:
+        unordered_tables = list(cm_tables_order.keys())
+    ordered_tables = []
+    for i in range(len(cm_tables_order.keys())):
+        ordered_tables.append("NULL")
+    for table in unordered_tables:
+        try:
+            ordered_tables[cm_tables_order[table][1]] = table
+        except KeyError:
+            print(table, "not found")
+    while "NULL" in ordered_tables:
+        ordered_tables.remove("NULL")
+    return ordered_tables
 
 
 def update_station(session=None, data=None, add_new_station=False):
@@ -81,39 +112,6 @@ def update_station(session=None, data=None, add_new_station=False):
     return made_change
 
 
-def order_the_tables(unordered_tables=None):
-    """
-    Ensure that the tables are loaded into the database in the proper order.
-
-    Tables must be loaded into the database in the proper order to satisfy
-    ForeignKey constraints.
-
-    Parameters
-    ----------
-    unordered_tables : list or None
-        list of unordered_tables or None.  Default is None, which gets all cm tables.
-
-    Returns
-    -------
-    list
-        list of ordered tables
-
-    """
-    if unordered_tables is None:
-        unordered_tables = list(cm_tables_order.keys())
-    ordered_tables = []
-    for i in range(len(cm_tables_order.keys())):
-        ordered_tables.append("NULL")
-    for table in unordered_tables:
-        try:
-            ordered_tables[cm_tables_order[table][1]] = table
-        except KeyError:
-            print(table, "not found")
-    while "NULL" in ordered_tables:
-        ordered_tables.remove("NULL")
-    return ordered_tables
-
-
 def stop_existing_parts(session, parts, stop_dates, allow_override=False):
     """
     Add stop times to the previous parts.
@@ -161,11 +159,12 @@ def stop_existing_parts(session, parts, stop_dates, allow_override=False):
                 continue
         else:
             print("Stopping part {} at {}".format(pn, str(stop_date)))
-        data.append([pn, "stop_gpstime", stop_date.gps])
+        data.append({'pn': pn, "stop_gpstime": stop_date.gps})
 
-    update_part(session, data)
+    num_changes = update_part(session, data)
     if close_session_when_done:  # pragma: no cover
         session.close()
+    return num_changes
 
 
 def add_new_parts(session, parts, start_dates, allow_restart=False):
@@ -231,9 +230,10 @@ def add_new_parts(session, parts, start_dates, allow_restart=False):
         data.append(this_data)
         print(print_out.capitalize())
 
-    update_part(session, data)
+    num_changes = update_part(session, data)
     if close_session_when_done:  # pragma: no cover
         session.close()
+    return num_changes
 
 
 def update_part(session=None, data=None):
@@ -279,6 +279,179 @@ def update_part(session=None, data=None):
         if part.part(**this_entry):
             made_change += 1
             session.add(part)
+    if made_change:
+        session.commit()
+    if close_session_when_done:  # pragma: no cover
+        session.close()
+
+    return made_change
+
+
+def get_null_connection():
+    """
+    Return a null connection.
+
+    All components hold the no_connection_designator and dates/times are None
+
+    Returns
+    -------
+    Connections object
+
+    """
+    nc = no_connection_designator
+    return cm_tables.Connections(
+        upstream_part=nc,
+        upstream_output_port=nc,
+        downstream_part=nc,
+        downstream_input_port=nc,
+        start_gpstime=None,
+        stop_gpstime=None,
+    )
+
+
+def stop_connections(session, conns, stop_dates):
+    """
+    Add a stop_date to the connections in conn_list.
+
+    Parameters
+    ----------
+    session : object
+        Database session to use.  If None, it will start a new session, then close.
+    conns:  list of lists
+        List with data [[upstream_part,port,downstream_part,port],...]
+    stop_dates : list of astropy.Time
+        date at which to stop connection
+
+    """
+    close_session_when_done = False
+    if session is None:  # pragma: no cover
+        db = cm.connect_to_cm_db(None)
+        session = db.sessionmaker()
+        close_session_when_done = True
+
+    data = []
+    for conn, stop_date in zip(conns, stop_dates):
+        upart, uport, dpart, dport = conn
+        conn_to_stop = session.query(cm_tables.Connections).filter(
+            (cm_tables.Connections.upstream_part == upart)
+            & (cm_tables.Connections.upstream_output_port == uport)
+            & (cm_tables.Connections.downstream_part == dpart)
+            & (cm_tables.Connections.downstream_input_port == dport)
+        )
+        cdes = "{}<{} - {}>{}".format(upart, uport, dpart, dport)
+        num_conn = conn_to_stop.count()
+        if num_conn == 0:
+            print("Skipping: no connection listed for {}".format(cdes))
+        else:
+            fnd_conn = 0
+            for chk_conn in conn_to_stop:
+                if chk_conn.stop_gpstime is None:
+                    this_one = {'upstream_part': upart, 'upstream_output_port': uport,
+                                'downstream_part': dpart, 'downstream_input_port': dport,
+                                'start_gpstime': chk_conn.start_gpstime, 'stop_gpstime': stop_date.gps}
+                    this_one.append(chk_conn.start_gpstime)
+                    this_one.append(stop_date.gps)
+                    data.append(this_one)
+                    print("Stopping {}:  {}".format(cdes, chk_conn.start_gpstime))
+                    if fnd_conn:
+                        print("\t***Warning - this is number {} for this connection! "
+                              "Started at {}.  Should clean up."
+                              .format(fnd_conn + 1, chk_conn.start_gpstime))
+                    fnd_conn += 1
+            if not fnd_conn:
+                print("Skipping: no unstopped connections for {}".format(cdes))
+
+    update_connection(session, data, False)
+    if close_session_when_done:
+        session.close()
+
+
+def add_new_connections(session, conns, start_dates, same_conn_sec=60.0):
+    """
+    Add a new connection.
+
+    Parameters
+    ----------
+    session : object
+        Database session to use.  If None, it will start a new session, then close.
+    conns:  list of lists
+        List with data [[upstream_part,port,downstream_part,port],...]
+    start_dates : list of astropy.Time
+        date at which to start connection
+    same_conn_sec
+
+    """
+    close_session_when_done = False
+    if session is None:  # pragma: no cover
+        db = cm.connect_to_cm_db(None)
+        session = db.sessionmaker()
+        close_session_when_done = True
+
+    data = []
+    for conn, start_date in zip(conns, start_dates):
+        upart, uport, dpart, dport = conn
+        conn_to_chk = session.query(cm_tables.Connections).filter(
+            (cm_tables.Connections.upstream_part == upart)
+            & (cm_tables.Connections.upstream_output_port == uport)
+            & (cm_tables.Connections.downstream_part == dpart)
+            & (cm_tables.Connections.downstream_input_port == dport)
+        )
+        cdes = "{}<{} - {}>{}".format(upart, uport, dpart, dport)
+        add_this_one = True
+        for chk_conn in conn_to_chk:
+            if abs(chk_conn.start_gpstime - start_date.gps) < same_conn_sec:
+                print("{} is already a connection starting at {}"
+                      .format(cdes, chk_conn.start_gpstime), end='')
+                if chk_conn.stop_gpstime is None:
+                    print(" --> Skipping.")
+                    add_this_one = False
+                else:
+                    print("\twith a stop time of {}".format(chk_conn.stop_gpstime))
+        if add_this_one:
+            print("Starting connection {} at {}".format(cdes, str(start_date)))
+            this_one = {'upstream_part': upart, 'upstream_output_port': uport,
+                        'downstream_part': dpart, 'downstream_input_port': dport,
+                        'start_gpstime': start_date.gps, 'stop_gpstime': None}
+            data.append(this_one)
+
+    numconn = update_connection(session, data)
+    if close_session_when_done:
+        session.close()
+    return numconn
+
+
+def update_connection(session=None, conns=None):
+    """
+    Update the database given a connection with columns/values.
+
+    This assumes that the calling function has checked.
+
+    Parameters
+    ----------
+    session : object
+        Database session to use.  If None, it will start a new session, then close.
+    data : list of dicts
+        Contains list of connections (all entries in each element)
+
+    Returns
+    -------
+    int
+        Number of updates
+
+    """
+
+    close_session_when_done = False
+    if session is None:  # pragma: no cover
+        db = cm.connect_to_cm_db(None)
+        session = db.sessionmaker()
+        close_session_when_done = True
+
+    made_change = 0
+    for conn in conns:
+        connection = cm_tables.Connections()
+        if connection.connection(**conn):
+            made_change += 1
+            session.add(connection)
     if made_change:
         session.commit()
     if close_session_when_done:  # pragma: no cover
@@ -401,205 +574,3 @@ def add_part_info(
     session.commit()
     if close_session_when_done:  # pragma: no cover
         session.close()
-
-
-def get_connection_from_dict(input_dict):
-    """
-    Convert a dictionary holding the connection info into a Connections object.
-
-    Parameter
-    ---------
-    input_dict : dictionary
-        The dictionary must have the following keys:
-            upstream_part, upstream_output_port
-            downstream_part, downstream_input_port
-        Other keys will be ignored.
-
-    Returns
-    -------
-    Connections object
-
-    """
-    return cm_tables.Connections(
-        upstream_part=input_dict["upstream_part"],
-        upstream_output_port=input_dict["upstream_output_port"],
-        downstream_part=input_dict["downstream_part"],
-        downstream_input_port=input_dict["downstream_input_port"],
-    )
-
-
-def get_null_connection():
-    """
-    Return a null connection.
-
-    All components hold the no_connection_designator and dates/times are None
-
-    Returns
-    -------
-    Connections object
-
-    """
-    nc = no_connection_designator
-    return cm_tables.Connections(
-        upstream_part=nc,
-        upstream_output_port=nc,
-        downstream_part=nc,
-        downstream_input_port=nc,
-        start_gpstime=None,
-        stop_gpstime=None,
-    )
-
-
-def stop_connections(session, conns, stop_dates):
-    """
-    Add a stop_date to the connections in conn_list.
-
-    Parameters
-    ----------
-    session : object
-        Database session to use.  If None, it will start a new session, then close.
-    conns:  list of lists
-        List with data [[upstream_part,port,downstream_part,port],...]
-    stop_dates : list of astropy.Time
-        date at which to stop connection
-
-    """
-    close_session_when_done = False
-    if session is None:  # pragma: no cover
-        db = cm.connect_to_cm_db(None)
-        session = db.sessionmaker()
-        close_session_when_done = True
-
-    data = []
-    for conn, stop_date in zip(conns, stop_dates):
-        conn_to_stop = session.query(cm_tables.Connections).filter(
-            (cm_tables.Connections.upstream_part == conn[0])
-            & (cm_tables.Connections.upstream_output_port == conn[1])
-            & (cm_tables.Connections.downstream_part == conn[2])
-            & (cm_tables.Connections.downstream_input_port == conn[3])
-        )
-        cdes = "{}<{} - {}>{}".format(conn[0], conn[1], conn[2], conn[3])
-        num_conn = conn_to_stop.count()
-        if num_conn == 0:
-            print("Skipping: no connection listed for {}".format(cdes))
-        else:
-            fnd_conn = 0
-            for chk_conn in conn_to_stop:
-                if chk_conn.stop_gpstime is None:
-                    this_one = []
-                    for cc in conn:
-                        this_one.append(cc)
-                    this_one.append(chk_conn.start_gpstime)
-                    this_one.append(stop_date.gps)
-                    data.append(this_one)
-                    print("Stopping {}:  {}".format(cdes, chk_conn.start_gpstime))
-                    if fnd_conn:
-                        print("\t***Warning - this is number {} for this connection! "
-                              "Started at {}.  Should clean up."
-                              .format(fnd_conn + 1, chk_conn.start_gpstime))
-                    fnd_conn += 1
-            if not fnd_conn:
-                print("Skipping: no unstopped connections for {}".format(cdes))
-
-    update_connection(session, data, False)
-    if close_session_when_done:
-        session.close()
-
-
-def add_new_connections(session, conns, start_dates, same_conn_sec=60.0):
-    """
-    Add a new connection.
-
-    Parameters
-    ----------
-    session : object
-        Database session to use.  If None, it will start a new session, then close.
-    conns:  list of lists
-        List with data [[upstream_part,port,downstream_part,port],...]
-    start_dates : list of astropy.Time
-        date at which to start connection
-    same_conn_sec
-
-    """
-    close_session_when_done = False
-    if session is None:  # pragma: no cover
-        db = cm.connect_to_cm_db(None)
-        session = db.sessionmaker()
-        close_session_when_done = True
-
-    data = []
-    for conn, start_date in zip(conns, start_dates):
-        conn_to_start = session.query(cm_tables.Connections).filter(
-            (cm_tables.Connections.upstream_part == conn[0])
-            & (cm_tables.Connections.upstream_output_port == conn[1])
-            & (cm_tables.Connections.downstream_part == conn[2])
-            & (cm_tables.Connections.downstream_input_port == conn[3])
-        )
-        cdes = "{}<{} - {}>{}".format(conn[0], conn[1], conn[2], conn[3])
-        add_this_one = True
-        for chk_conn in conn_to_start:
-            if abs(chk_conn.start_gpstime - start_date.gps) < same_conn_sec:
-                print("{} is already a connection starting at {}"
-                      .format(cdes, chk_conn.start_gpstime), end='')
-                if chk_conn.stop_gpstime is None:
-                    print(" --> Skipping.")
-                    add_this_one = False
-                else:
-                    print("\twith a stop time of {}".format(chk_conn.stop_gpstime))
-                break
-        if add_this_one:
-            print("Starting connection {} at {}".format(cdes, str(start_date)))
-            this_one = []
-            for cc in conn:
-                this_one.append(cc)
-            this_one.append(start_date.gps)
-            this_one.append(None)
-            data.append(this_one)
-
-    update_connection(session, data, True)
-    if close_session_when_done:
-        session.close()
-
-
-def update_connection(session=None, conns=None):
-    """
-    Update the database given a connection with columns/values.
-
-    This assumes that the calling function has checked.
-
-    Parameters
-    ----------
-    session : object
-        Database session to use.  If None, it will start a new session, then close.
-    data : list of lists
-        Contains list of connections (all entries in each element)
-
-    Returns
-    -------
-    bool
-        True if succesful, otherwise False
-
-    """
-
-    close_session_when_done = False
-    if session is None:  # pragma: no cover
-        db = cm.connect_to_cm_db(None)
-        session = db.sessionmaker()
-        close_session_when_done = True
-
-    for conn in conns:
-        connection = cm_tables.Connections()
-        connection.connection(
-            up=conn[0],
-            down=conn[1],
-            upstream_output_port=conn[2],
-            downstream_input_port=conn[3],
-            start_gpstime=conn[4],
-            stop_gpstime=conn[5]
-        )
-        session.add(connection)
-        session.commit()
-    if close_session_when_done:  # pragma: no cover
-        session.close()
-
-    return True
