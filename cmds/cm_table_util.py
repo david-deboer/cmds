@@ -2,7 +2,7 @@
 # Copyright 2022 David R. DeBoer
 # Licensed under the 2-clause BSD license.
 
-"""CM utils for the parts and the connections between them."""
+"""CM utils for the stations/parts and the connections between them."""
 
 from . import cm, cm_utils, cm_tables
 from sqlalchemy import func
@@ -16,13 +16,13 @@ cm_tables_order = {
     "apriori_antenna": [cm_tables.AprioriAntenna, 1],
     "connections": [cm_tables.Connections, 2],
     "parts": [cm_tables.Parts, 3],
-    "geo_location": [cm_tables.Stations, 4]
+    "stations": [cm_tables.Stations, 4]
 }
 
 
-def update_station(session=None, data=None, add_new_geo=False):
+def update_station(session=None, data=None, add_new_station=False):
     """
-    Update the geo_location table with some data.
+    Update the stations table with some data.
 
     Use with caution -- should usually use in a script which will do datetime
     primary key etc.
@@ -32,18 +32,15 @@ def update_station(session=None, data=None, add_new_geo=False):
     session : session
         session on current database. If session is None, a new session
         on the default database is created and used.
-    data : str or list
-        [[station_name0,column0,value0],[...]]
-        where
-                station_nameN:  station_name (starts with char)
-                values:  corresponding list of values
-    add_new_geo : bool
+    data : list of dicts
+        dicts contain all Stations entries
+    add_new_station : bool
         allow a new entry to be made.
 
     Returns
     -------
-    bool
-        Flag if successful
+    int
+        Number of entries changed
 
     """
 
@@ -53,40 +50,35 @@ def update_station(session=None, data=None, add_new_geo=False):
         session = db.sessionmaker()
         close_session_when_done = True
 
-    for station_name in data_dict.keys():
+    made_change = 0
+    for station in data:
         geo_rec = session.query(cm_tables.Stations).filter(
-            func.upper(cm_tables.Stations.station_name) == station_name.upper()
+            func.upper(cm_tables.Stations.station_name) == station['station_name'].upper()
         )
         num_rec = geo_rec.count()
-        make_update = False
         if num_rec == 0:
-            if add_new_geo:
+            if add_new_station:
                 gr = cm_tables.Stations()
-                make_update = True
             else:
-                raise ValueError(
-                    "{} does not exist and add_new_geo not enabled.".format(
-                        station_name
-                    )
-                )
-        elif num_rec == 1:
-            if add_new_geo:
-                raise ValueError(
-                    "{} exists and and_new_geo is enabled.".format(station_name)
-                )
+                print("{} does not exist and add_new_station not enabled."
+                      .format(station['station_name']))
+                continue
+        else:
+            if add_new_station:
+                print("{} exists and and_new_station is enabled.".format(station['station_name']))
+                continue
             else:
                 gr = geo_rec.first()
-                make_update = True
-        if make_update:
-            for d in data_dict[station_name]:
-                setattr(gr, d[1], d[2])
+        if gr.station(**station):
+            made_change += 1
             session.add(gr)
-            session.commit()
-    cm_utils.log("geo_location update", data_dict=data_dict)
+            cm_utils.log("station update", data_dict=station)
+    if made_change:
+        session.commit()
     if close_session_when_done:  # pragma: no cover
         session.close()
 
-    return True
+    return made_change
 
 
 def order_the_tables(unordered_tables=None):
@@ -274,7 +266,7 @@ def update_part(session=None, data=None):
         session = db.sessionmaker()
         close_session_when_done = True
 
-    made_change = False
+    made_change = 0
     for this_entry in data:
         part_rec = session.query(cm_tables.Parts).filter(
             (func.upper(cm_tables.Parts.pn) == this_entry['pn'].upper())
@@ -284,16 +276,11 @@ def update_part(session=None, data=None):
             part = cm_tables.Parts()
         elif num_part == 1:
             part = part_rec.first()
-        try:
-            for col, val in this_entry.items():
-                try_col = getattr(part, col)  # noqa
-                setattr(part, col, val)
-        except AttributeError:
-            print(col, "does not exist as a field")
-            continue
-        made_change = True
-        session.add(part)
-    session.commit()
+        if part.part(**this_entry):
+            made_change += 1
+            session.add(part)
+    if made_change:
+        session.commit()
     if close_session_when_done:  # pragma: no cover
         session.close()
 

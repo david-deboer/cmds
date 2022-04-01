@@ -35,7 +35,7 @@ class Stations(MCDeclarativeBase):
 
     """
 
-    __tablename__ = "station"
+    __tablename__ = "stations"
 
     station_name = Column(String(64), primary_key=True)
     station_type = Column(String(64), nullable=False)
@@ -50,16 +50,23 @@ class Stations(MCDeclarativeBase):
         """Add a created_date attribute -- an astropy Time object based on created_gpstime."""
         self.created_date = Time(self.created_gpstime, format="gps")
 
-    def geo(self, **kwargs):
-        """Add arbitrary attributes to object based on dict."""
+    def station(self, **kwargs):
+        """Allow specification of an arbitrary station value."""
+        made_change = False
         for key, value in kwargs.items():
-            if key == "station_name":
-                value = value.upper()
-            setattr(self, key, value)
+            if hasattr(self, key):
+                if key == 'station_name':
+                    value = value.upper()
+                setattr(self, key, value)
+                made_change = True
+            else:
+                print("{} is not a valid station entry.".format(key))
+                continue
+        return made_change
 
     def __repr__(self):
         """Define representation."""
-        return "<station_name={self.station_name} station_type={self.station_type_name} \
+        return "<station_name={self.station_name} station_type={self.station_type} \
         northing={self.northing} easting={self.easting} \
         elevation={self.elevation}>".format(
             self=self
@@ -70,17 +77,13 @@ class Parts(MCDeclarativeBase):
     """
     A table logging parts within the system.
 
-    Stations will be considered parts of type='station'
-    Note that ideally install_date would also be a primary key, but that
-    screws up ForeignKey in connections
-
     Attributes
     ----------
     pn : String Column
         System part number for each part; part of the primary key.
     ptype : String Column
         A part-dependent string, i.e. feed, frontend, ...
-    manufacturer_number : String Column
+    manufacturer_id : String Column
         A part number/serial number as specified by manufacturer
     start_gpstime : BigInteger Column
         The date when the part was installed (or otherwise assigned by project).
@@ -93,7 +96,7 @@ class Parts(MCDeclarativeBase):
 
     pn = Column(String(64), primary_key=True)
     ptype = NotNull(String(64))
-    manufacturer_number = Column(String(64))
+    manufacturer_id = Column(String(64))
     start_gpstime = Column(BigInteger, nullable=False)
     stop_gpstime = Column(BigInteger)
 
@@ -125,9 +128,18 @@ class Parts(MCDeclarativeBase):
             self.stop_date = Time(self.stop_gpstime, format="gps")
 
     def part(self, **kwargs):
-        """Allow specification of an arbitrary part."""
+        """Allow specification of an arbitrary part value."""
+        made_change = False
         for key, value in kwargs.items():
-            setattr(self, key, value)
+            if hasattr(self, key):
+                if key == 'pn':
+                    value = value.upper()
+                setattr(self, key, value)
+                made_change = True
+            else:
+                print("{} is not a valid part entry.".format(key))
+                continue
+        return made_change
 
 
 class AprioriAntenna(MCDeclarativeBase):
@@ -195,7 +207,7 @@ class PartInfo(MCDeclarativeBase):
     def __repr__(self):
         """Define representation."""
         return (
-            "<heraPartNumber id = {self.hpn} "
+            "<heraPartNumber id = {self.pn} "
             "comment = {self.comment}>".format(self=self)
         )
 

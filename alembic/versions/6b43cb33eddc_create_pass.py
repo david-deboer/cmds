@@ -35,12 +35,12 @@ def upgrade():
     op.create_table('parts',
     sa.Column('pn', sa.String(length=64), nullable=False),
     sa.Column('ptype', sa.String(length=64), nullable=False),
-    sa.Column('manufacturer_number', sa.String(length=64), nullable=True),
+    sa.Column('manufacturer_id', sa.String(length=64), nullable=True),
     sa.Column('start_gpstime', sa.BigInteger(), nullable=False),
     sa.Column('stop_gpstime', sa.BigInteger(), nullable=True),
     sa.PrimaryKeyConstraint('pn')
     )
-    op.create_table('station',
+    op.create_table('stations',
     sa.Column('station_name', sa.String(length=64), nullable=False),
     sa.Column('station_type', sa.String(length=64), nullable=False),
     sa.Column('datum', sa.String(length=64), nullable=True),
