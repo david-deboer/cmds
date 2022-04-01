@@ -35,7 +35,7 @@ class PartEntry:
     col_hdr = {
         "pn": "System P/N",
         "ptype": "Part Type",
-        "manufacturer_number": "Mfg #",
+        "manufacturer_id": "Mfg #",
         "start_gpstime": "Start",
         "stop_gpstime": "Stop",
         "input_ports": "Input",

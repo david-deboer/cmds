@@ -180,7 +180,7 @@ def add_new_parts(session, parts, start_dates, allow_restart=False):
     session : object
         Database session to use.  If None, it will start a new session, then close.
     parts : list of lists
-        List containing [[part number, part type, manufacturer number], ...].
+        List containing [[part number, part type, manufacturer id], ...].
     start_dates : list of astropy.Time objects
         List of dates to use for logging the addition.
     allow_restart : bool
@@ -208,7 +208,7 @@ def add_new_parts(session, parts, start_dates, allow_restart=False):
             continue
         this_data = {'pn': pn,
                      'ptype': ptype,
-                     'manufacturer_number': pman,
+                     'manufacturer_id': pman,
                      'start_gpstime': start_date.gps,
                      'stop_gpstime': None}
         print_out = "starting part {} at {}".format(pn, str(start_date))

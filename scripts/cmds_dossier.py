@@ -146,13 +146,13 @@ else:  # view == 'parts' or view == 'connections' or view == 'info'
     handling = cm_handling.Handling(session)
     if view == "parts":
         if args.verbosity == 1:
-            columns = ["hpn", "hpn_rev", "hptype", "input_ports", "output_ports"]
+            columns = ["pn", "ptype", "input_ports", "output_ports"]
         elif args.verbosity == 2:
             columns = [
                 "hpn",
                 "hpn_rev",
                 "hptype",
-                "manufacturer_number",
+                "manufacturer_id",
                 "start_gpstime",
                 "stop_gpstime",
                 "input_ports",
@@ -164,7 +164,7 @@ else:  # view == 'parts' or view == 'connections' or view == 'info'
                 "hpn",
                 "hpn_rev",
                 "hptype",
-                "manufacturer_number",
+                "manufacturer_id",
                 "start_gpstime",
                 "stop_gpstime",
                 "input_ports",

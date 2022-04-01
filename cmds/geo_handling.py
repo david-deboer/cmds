@@ -569,7 +569,7 @@ class Handling:
                 & (cm_partconnect.Parts.hpn_rev == rev)
             )
             if p.count() == 1:
-                return p.first().manufacturer_number.replace("S/N", "")
+                return p.first().manufacturer_id.replace("S/N", "")
             else:
                 return "-"
         return None

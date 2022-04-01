@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 # -*- mode: python; coding: utf-8 -*-
-# Copyright 2018 the HERA Collaboration
+# Copyright 2022 David R DeBoer
 # Licensed under the 2-clause BSD license.
 
 """
@@ -51,8 +51,8 @@ def add_entry_to_stations(session, args):
 def add_entry_to_parts(session, args):
     dt = cm_utils.get_astropytime(args.date, args.time, args.format)
     data = {"pn": args.station_name.upper(),
-            "hptype": "station",
-            "manufacturer_number": "{}:{}".format(int(args.northing), int(args.easting),
+            "ptype": "station",
+            "manufacturer_id": "{}:{}".format(int(args.northing), int(args.easting)),
             "start_gpstime": dt.gps}
     cm_table_util.update_part(session, [data])
 
@@ -63,23 +63,14 @@ if __name__ == "__main__":
         "station_name", help="Name of station (HH/A/B# for hera, ND# for node)."
     )
     parser.add_argument("-e", "--easting", help="Easting of new station.", default=None)
-    parser.add_argument(
-        "-n", "--northing", help="Northing of new station", default=None
-    )
-    parser.add_argument(
-        "-z", "--elevation", help="Elevation of new station", default=None
-    )
+    parser.add_argument("-n", "--northing", help="Northing of new station", default=None)
+    parser.add_argument("-z", "--elevation", help="Elevation of new station", default=None)
     cm_utils.add_date_time_args(parser)
-    parser.add_argument(
-        "--station_type", help="Station category name", default=None
-    )
+    parser.add_argument("--station_type", help="Station category name", default=None)
     parser.add_argument("--datum", help="Datum of UTM [WGS84]", default="WGS84")
     parser.add_argument("--tile", help="UTM tile [34J]", default="34J")
-    parser.add_argument(
-        "--add_new_geo",
-        help="Flag to allow update to add a new " "record.  [True]",
-        action="store_false",
-    )
+    parser.add_argument("--add_new_station", action="store_false",
+                        help="Flag to allow update to add a new " "record.  [True]")
 
     args = parser.parse_args()
 
