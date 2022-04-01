@@ -72,7 +72,7 @@ def update_station(session=None, data=None, add_new_station=False):
         if gr.station(**station):
             made_change += 1
             session.add(gr)
-            cm_utils.log("station update", data_dict=station)
+            # cm_utils.log("station update", data_dict=station)
     if made_change:
         session.commit()
     if close_session_when_done:  # pragma: no cover

@@ -14,11 +14,11 @@ def query_geo_information(args):
     """
     Gets geo_location information from user
     """
-    if args.easting is None:
+    if args.easting < 1.0:
         args.easting = float(input("Easting:  "))
-    if args.northing is None:
+    if args.northing < 1.0:
         args.northing = float(input("Northing:  "))
-    if args.elevation is None:
+    if args.elevation < 1.0:
         args.elevation = float(input("Elevation:  "))
     args.datum = cm_utils.query_default("datum", args)
     args.tile = cm_utils.query_default("tile", args)
@@ -31,9 +31,9 @@ def query_geo_information(args):
 def add_entry_to_stations(session, args):
     # NotNull
     dt = cm_utils.get_astropytime(args.date, args.time, args.format)
-    data = {"station_name", args.station_name.upper(),
-            "station_type", args.station_type,
-            "created_gpstime", dt.gps}
+    data = {"station_name": args.station_name.upper(),
+            "station_type": args.station_type,
+            "created_gpstime": dt.gps}
     # Other
     if args.datum:
         data["datum"] = args.datum
@@ -62,9 +62,12 @@ if __name__ == "__main__":
     parser.add_argument(
         "station_name", help="Name of station (HH/A/B# for hera, ND# for node)."
     )
-    parser.add_argument("-e", "--easting", help="Easting of new station.", default=None)
-    parser.add_argument("-n", "--northing", help="Northing of new station", default=None)
-    parser.add_argument("-z", "--elevation", help="Elevation of new station", default=None)
+    parser.add_argument("-e", "--easting", help="Easting of new station.",
+                        type=float, default=0.0)
+    parser.add_argument("-n", "--northing", help="Northing of new station",
+                        type=float, default=0.0)
+    parser.add_argument("-z", "--elevation", help="Elevation of new station",
+                        type=float, default=0.0)
     cm_utils.add_date_time_args(parser)
     parser.add_argument("--station_type", help="Station category name", default=None)
     parser.add_argument("--datum", help="Datum of UTM [WGS84]", default="WGS84")
