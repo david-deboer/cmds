@@ -45,7 +45,7 @@ def add_entry_to_stations(session, args):
         data["easting"] = args.easting
     if args.elevation:
         data["elevation"] = args.elevation
-    cm_table_util.update_station(session, [data], True)
+    cm_table_util.update_stations(session, [data], True)
 
 
 def add_entry_to_parts(session, args):

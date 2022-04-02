@@ -24,12 +24,12 @@ if __name__ == "__main__":
     date = cm_utils.get_astropytime(args.date, args.time, args.format)
     update = {"action": args.action, "pn": args.pn.upper()}
     if args.action == 'add':
-        if args.ptype is None or args.mfg is None:
+        if args.type is None or args.mfg is None:
             raise ValueError("ptype and mfg must have values for add.")
         update['ptype'] = args.type
         update['manufacturer_id'] = args.mfg
 
     db = cm.connect_to_cm_db(args)
     session = db.sessionmaker()
-    cm_table_util.update_parts(session, parts=[update], dates=[date], session=session, override=args.override)
+    cm_table_util.update_parts(parts=[update], dates=[date], session=session, override=args.override)
     session.close()

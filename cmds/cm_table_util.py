@@ -51,7 +51,7 @@ def update_parts(parts, dates, session=None, override=False):
             this_entry = {'pn': pn, "stop_gpstime": date.gps}
         elif partd['action'].lower() == 'add':
             if part is None:
-                part = cm_tables.Part()
+                part = cm_tables.Parts()
             else:
                 print("{} already in database".format(pn), end=' ')
                 if part.stop_gpstime is None:
@@ -81,7 +81,7 @@ def update_parts(parts, dates, session=None, override=False):
     return num_change
 
 
-def update_station(session=None, data=None, add_new_station=False):
+def update_stations(session=None, data=None, add_new_station=False):
     """
     Update the stations table with some data.
 
@@ -140,9 +140,6 @@ def update_station(session=None, data=None, add_new_station=False):
         session.close()
 
     return made_change
-
-
-
 
 
 def get_null_connection():
