@@ -137,7 +137,7 @@ class Parts(MCDeclarativeBase):
                 setattr(self, key, value)
                 made_change = True
             else:
-                print("{} is not a valid part entry.".format(key))
+                print("{} is not a valid part attribute.".format(key))
                 continue
         return made_change
 

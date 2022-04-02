@@ -9,46 +9,76 @@ from sqlalchemy import func
 
 
 no_connection_designator = "-X-"
-cm_tables_order = {
-    "part_info": [cm_tables.PartInfo, 0],
-    "apriori_antenna": [cm_tables.AprioriAntenna, 1],
-    "connections": [cm_tables.Connections, 2],
-    "parts": [cm_tables.Parts, 3],
-    "stations": [cm_tables.Stations, 4]
-}
 
 
-def order_the_tables(unordered_tables=None):
+def update_parts(parts, dates, session=None, override=False):
     """
-    Ensure that the tables are loaded into the database in the proper order.
-
-    Tables must be loaded into the database in the proper order to satisfy
-    ForeignKey constraints.
+    Add or stop parts.
 
     Parameters
     ----------
-    unordered_tables : list or None
-        list of unordered_tables or None.  Default is None, which gets all cm tables.
-
-    Returns
-    -------
-    list
-        list of ordered tables
+    parts : list of dicts
+        List of dicts containing part information and action (add/stop)
+    dates : list of astropy.Time objects
+        List of dates to use for logging the add/stop.
+    session : object
+        Database session to use.  If None, it will start a new session, then close.
+    override : bool
+        Flag to allow override for existence or not.
 
     """
-    if unordered_tables is None:
-        unordered_tables = list(cm_tables_order.keys())
-    ordered_tables = []
-    for i in range(len(cm_tables_order.keys())):
-        ordered_tables.append("NULL")
-    for table in unordered_tables:
-        try:
-            ordered_tables[cm_tables_order[table][1]] = table
-        except KeyError:
-            print(table, "not found")
-    while "NULL" in ordered_tables:
-        ordered_tables.remove("NULL")
-    return ordered_tables
+    close_session_when_done = False
+    if session is None:  # pragma: no cover
+        db = cm.connect_to_cm_db(None)
+        session = db.sessionmaker()
+        close_session_when_done = True
+
+    num_change = 0
+    for partd, date in zip(parts, dates):
+        pn = partd['pn'].upper()
+        part = session.query(cm_tables.Parts).filter(func.upper(cm_tables.Parts.pn) == pn).first()
+        if partd['action'].lower() == 'stop':
+            if part is None:
+                print("{} is not in database, so can't stop it.".format(pn))
+                continue
+            if part.stop_gpstime is not None:
+                print("{} already has a stop time ({})".format(pn, part.stop_gpstime), end=' ')
+                if not override:
+                    print("==> Override not enabled.  No action.")
+                    continue
+                print("==> Override enabled.")
+            print(f"Stopping part {pn} at {date}.")
+            this_entry = {'pn': pn, "stop_gpstime": date.gps}
+        elif partd['action'].lower() == 'add':
+            if part is None:
+                part = cm_tables.Part()
+            else:
+                print("{} already in database".format(pn), end=' ')
+                if part.stop_gpstime is None:
+                    print("with no stop date ==> no action.")
+                    continue
+                if not override:
+                    print("and needs an override ==> no action.")
+                    continue
+                msg = "Restarting part.  Previous data {}".format(part)
+                add_part_info(session, pn=pn, comment=msg, at_date=date.gps, reference="cm_table_util")
+            print(f"Adding part {pn} for {date}")
+            this_entry = {'pn': pn,
+                          'ptype': partd['ptype'],
+                          'manufacturer_id': partd['manufacturer_id'],
+                          'start_gpstime': date.gps,
+                          'stop_gpstime': None}
+        else:
+            print(f"Invalid option: {partd['action']}.")
+            continue
+        if part.part(**this_entry):
+            num_change += 1
+            session.add(part)
+    if num_change:
+        session.commit()
+    if close_session_when_done:  # pragma: no cover
+        session.close()
+    return num_change
 
 
 def update_station(session=None, data=None, add_new_station=False):
@@ -112,71 +142,7 @@ def update_station(session=None, data=None, add_new_station=False):
     return made_change
 
 
-def update_parts(parts, dates, session=None, allow_override=False):
-    """
-    Add or stop parts
 
-    Parameters
-    ----------
-    parts : list of dicts
-        List of dicts containing part information and action (add/stop)
-    dates : list of astropy.Time objects
-        List of dates to use for logging the add/stop.
-    session : object
-        Database session to use.  If None, it will start a new session, then close.
-    allow_override : bool
-        Flag to allow override for existence or not.
-
-    """
-    close_session_when_done = False
-    if session is None:  # pragma: no cover
-        db = cm.connect_to_cm_db(None)
-        session = db.sessionmaker()
-        close_session_when_done = True
-
-    num_change = 0
-    for partd, date in zip(parts, dates):
-        pn = partd['pn'].upper()
-        part = session.query(cm_tables.Parts).filter(func.upper(cm_tables.Parts.pn) == pn).first()
-        if partd['action'].lower() == 'stop':
-            if part is None:
-                print("{} is not in database, so can't stop it.".format(pn))
-                continue
-            if part.stop_gpstime is not None:
-                print("{} already has a stop time ({})".format(pn, part.stop_gpstime), end=' ')
-                if not allow_override:
-                    print("==> Override not enabled.  No action.")
-                    continue
-                print("==> Override enabled.")
-            print(f"Stopping part {pn} at {date}.")
-            this_entry = {'pn': pn, "stop_gpstime": date.gps}
-        elif partd['action'].lower() == 'add':
-            if part is None:
-                part = cm_tables.Part()
-            else:
-                print("{} already in database".format(pn), end=' ')
-                if part.stop_gpstime is None:
-                    print("with no stop date ==> no action.")
-                    continue
-                if not allow_override:
-                    print("and needs an override ==> no action.")
-                    continue
-                msg = "Restarting part.  Previous data {}".format(part)
-                add_part_info(session, pn=pn, comment=msg, at_date=date.gps, reference="cm_table_util")
-            print(f"Adding part {pn} for {date}")
-            this_entry = {'pn': pn,
-                          'ptype': partd['ptype'],
-                          'manufacturer_id': partd['manufacturer_id'],
-                          'start_gpstime': date.gps,
-                          'stop_gpstime': None}
-        if part.part(**this_entry):
-            num_change += 1
-            session.add(part)
-    if num_change:
-        session.commit()
-    if close_session_when_done:  # pragma: no cover
-        session.close()
-    return num_change
 
 
 def get_null_connection():
