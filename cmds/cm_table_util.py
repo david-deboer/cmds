@@ -112,179 +112,71 @@ def update_station(session=None, data=None, add_new_station=False):
     return made_change
 
 
-def stop_existing_parts(session, parts, stop_dates, allow_override=False):
+def update_parts(parts, dates, session=None, allow_override=False):
     """
-    Add stop times to the previous parts.
+    Add or stop parts
 
     Parameters
     ----------
+    parts : list of dicts
+        List of dicts containing part information and action (add/stop)
+    dates : list of astropy.Time objects
+        List of dates to use for logging the add/stop.
     session : object
         Database session to use.  If None, it will start a new session, then close.
-    parts : list of str
-        List containing part numbers.
-    stop_dates : list of astropy.Time objects
-        List of dates to use for logging the stop
     allow_override : bool
-        Flag to allow a reset of the stop time even if one exists.
+        Flag to allow override for existence or not.
 
     """
-    data = []
     close_session_when_done = False
     if session is None:  # pragma: no cover
         db = cm.connect_to_cm_db(None)
         session = db.sessionmaker()
         close_session_when_done = True
 
-    for pn, stop_date in zip(parts, stop_dates):
-        existing = (
-            session.query(cm_tables.Parts)
-            .filter(
-                (func.upper(cm_tables.Parts.pn) == pn.upper())
-            )
-            .first()
-        )
-        if existing is None:
-            print("{} is not found, so can't stop it.".format(pn))
-            continue
-        if existing.stop_gpstime is not None:
-            print(
-                "{} already has a stop time ({})".format(
-                    pn, existing.stop_gpstime
-                )
-            )
-            if allow_override:
-                print("\tOverride enabled.   New value {}".format(stop_date))
-            else:
-                print("\tOverride not enabled.  No action.")
+    num_change = 0
+    for partd, date in zip(parts, dates):
+        pn = partd['pn'].upper()
+        part = session.query(cm_tables.Parts).filter(func.upper(cm_tables.Parts.pn) == pn).first()
+        if partd['action'].lower() == 'stop':
+            if part is None:
+                print("{} is not in database, so can't stop it.".format(pn))
                 continue
-        else:
-            print("Stopping part {} at {}".format(pn, str(stop_date)))
-        data.append({'pn': pn, "stop_gpstime": stop_date.gps})
-
-    num_changes = update_part(session, data)
-    if close_session_when_done:  # pragma: no cover
-        session.close()
-    return num_changes
-
-
-def add_new_parts(session, parts, start_dates, allow_restart=False):
-    """
-    Add new parts.
-
-    If a part is there and is stopped, it will log that info
-    and restart the part.  If it is there and is not stopped, it does nothing.
-
-    Parameters
-    ----------
-    session : object
-        Database session to use.  If None, it will start a new session, then close.
-    parts : list of lists
-        List containing [[part number, part type, manufacturer id], ...].
-    start_dates : list of astropy.Time objects
-        List of dates to use for logging the addition.
-    allow_restart : bool
-        Flag to allow the part to restarted if it already existed.
-
-    """
-    data = []
-    close_session_when_done = False
-    if session is None:  # pragma: no cover
-        db = cm.connect_to_cm_db(None)
-        session = db.sessionmaker()
-        close_session_when_done = True
-
-    for pdes, start_date in zip(parts, start_dates):
-        pn, ptype, pman = pdes
-        existing = (
-            session.query(cm_tables.Parts)
-            .filter(
-                (func.upper(cm_tables.Parts.pn) == pn.upper())
-            )
-            .first()
-        )
-        if existing is not None and existing.stop_gpstime is None:
-            print("No action. {} already in database with no stop date".format(pn))
-            continue
-        this_data = {'pn': pn,
-                     'ptype': ptype,
-                     'manufacturer_id': pman,
-                     'start_gpstime': start_date.gps,
-                     'stop_gpstime': None}
-        print_out = "starting part {} at {}".format(pn, str(start_date))
-        if existing is not None:
-            if allow_restart:
-                print_out = "re" + print_out
-                comment = "Restarting part.  Previous data {}".format(existing)
-                add_part_info(
-                    session,
-                    pn=pn,
-                    comment=comment,
-                    at_date=start_date.gps,
-                    reference="cm_table_util",
-                )
+            if part.stop_gpstime is not None:
+                print("{} already has a stop time ({})".format(pn, part.stop_gpstime), end=' ')
+                if not allow_override:
+                    print("==> Override not enabled.  No action.")
+                    continue
+                print("==> Override enabled.")
+            print(f"Stopping part {pn} at {date}.")
+            this_entry = {'pn': pn, "stop_gpstime": date.gps}
+        elif partd['action'].lower() == 'add':
+            if part is None:
+                part = cm_tables.Part()
             else:
-                print_out = (
-                    "No action. The request for {} not an allowed part restart.".format(pn)
-                )
-                continue
-        data.append(this_data)
-        print(print_out.capitalize())
-
-    num_changes = update_part(session, data)
-    if close_session_when_done:  # pragma: no cover
-        session.close()
-    return num_changes
-
-
-def update_part(session=None, data=None):
-    """
-    Update the database given a part number with columns/values.
-
-    This is a low-level module, generally called from somewhere else
-
-    Parameters
-    ----------
-    session : object
-        Database session to use.  If None, it will start a new session, then close.
-    data : list of dicts
-        List containing the pn, column and value to update
-            [[pn0,column0,value0],[...]]
-                pnN:  hera part number as primary key
-                columnN:  column name(s)
-                valueN:  corresponding list of values
-
-    Returns
-    -------
-    bool
-        True if any updates were made, else False
-
-    """
-
-    close_session_when_done = False
-    if session is None:  # pragma: no cover
-        db = cm.connect_to_cm_db(None)
-        session = db.sessionmaker()
-        close_session_when_done = True
-
-    made_change = 0
-    for this_entry in data:
-        part_rec = session.query(cm_tables.Parts).filter(
-            (func.upper(cm_tables.Parts.pn) == this_entry['pn'].upper())
-        )
-        num_part = part_rec.count()
-        if num_part == 0:
-            part = cm_tables.Parts()
-        elif num_part == 1:
-            part = part_rec.first()
+                print("{} already in database".format(pn), end=' ')
+                if part.stop_gpstime is None:
+                    print("with no stop date ==> no action.")
+                    continue
+                if not allow_override:
+                    print("and needs an override ==> no action.")
+                    continue
+                msg = "Restarting part.  Previous data {}".format(part)
+                add_part_info(session, pn=pn, comment=msg, at_date=date.gps, reference="cm_table_util")
+            print(f"Adding part {pn} for {date}")
+            this_entry = {'pn': pn,
+                          'ptype': partd['ptype'],
+                          'manufacturer_id': partd['manufacturer_id'],
+                          'start_gpstime': date.gps,
+                          'stop_gpstime': None}
         if part.part(**this_entry):
-            made_change += 1
+            num_change += 1
             session.add(part)
-    if made_change:
+    if num_change:
         session.commit()
     if close_session_when_done:  # pragma: no cover
         session.close()
-
-    return made_change
+    return num_change
 
 
 def get_null_connection():
