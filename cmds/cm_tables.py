@@ -129,17 +129,17 @@ class Parts(MCDeclarativeBase):
 
     def part(self, **kwargs):
         """Allow specification of an arbitrary part value."""
-        made_change = False
+        updated = 0
         for key, value in kwargs.items():
             if hasattr(self, key):
                 if key == 'pn':
                     value = value.upper()
                 setattr(self, key, value)
-                made_change = True
+                updated += 1
             else:
                 print("{} is not a valid part attribute.".format(key))
                 continue
-        return made_change
+        return updated
 
 
 class AprioriAntenna(MCDeclarativeBase):
@@ -305,7 +305,7 @@ class Connections(MCDeclarativeBase):
 
     def connection(self, **kwargs):
         """Allow specification of arbitrary connection."""
-        made_change = False
+        updated = 0
         for key, value in kwargs.items():
             if hasattr(self, key):
                 if key in ['upstream_part', 'downstream_part']:
@@ -313,16 +313,8 @@ class Connections(MCDeclarativeBase):
                 elif key in ['upstream_output_port', 'downstream_input_port']:
                     value = value.lower()
                 setattr(self, key, value)
-                made_change = True
+                updated += 1
             else:
                 print("{} is not a valid connection entry.".format(key))
                 continue
-        return made_change
-
-    def _to_dict(self):
-        return {
-            "upstream_part": self.upstream_part,
-            "upstream_output_port": self.upstream_output_port,
-            "downstream_part": self.downstream_part,
-            "downstream_input_port": self.downstream_input_port,
-        }
+        return updated

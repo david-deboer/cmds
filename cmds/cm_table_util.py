@@ -33,7 +33,7 @@ def update_parts(parts, dates, session=None, override=False):
         session = db.sessionmaker()
         close_session_when_done = True
 
-    num_change = 0
+    updated = 0
     for partd, date in zip(parts, dates):
         pn = partd['pn'].upper()
         part = session.query(cm_tables.Parts).filter(func.upper(cm_tables.Parts.pn) == pn).first()
@@ -48,7 +48,8 @@ def update_parts(parts, dates, session=None, override=False):
                     continue
                 print("==> Override enabled.")
             print(f"Stopping part {pn} at {date}.")
-            this_entry = {'pn': pn, "stop_gpstime": date.gps}
+            updated += part.part(stop_gpstime=date.gps)
+            session.add(part)
         elif partd['action'].lower() == 'add':
             if part is None:
                 part = cm_tables.Parts()
@@ -60,25 +61,19 @@ def update_parts(parts, dates, session=None, override=False):
                 if not override:
                     print("and needs an override ==> no action.")
                     continue
-                msg = "Restarting part.  Previous data {}".format(part)
+                msg = f"Restarting part.  Previous data {part}"
                 add_part_info(session, pn=pn, comment=msg, at_date=date.gps, reference="cm_table_util")
             print(f"Adding part {pn} for {date}")
-            this_entry = {'pn': pn,
-                          'ptype': partd['ptype'],
-                          'manufacturer_id': partd['manufacturer_id'],
-                          'start_gpstime': date.gps,
-                          'stop_gpstime': None}
+            updated += part.part(pn=pn, ptype=partd['ptype'], manufacturer_id=partd['manufacturer_id'],
+                                 start_gpstime=date.gps, stop_gpstime=None)
+            session.add(part)
         else:
             print(f"Invalid option: {partd['action']}.")
-            continue
-        if part.part(**this_entry):
-            num_change += 1
-            session.add(part)
-    if num_change:
+    if updated:
         session.commit()
     if close_session_when_done:  # pragma: no cover
         session.close()
-    return num_change
+    return updated
 
 
 def update_stations(session=None, data=None, add_new_station=False):
@@ -164,18 +159,22 @@ def get_null_connection():
     )
 
 
-def stop_connections(session, conns, stop_dates):
+def update_connections(conns, dates, same_conn_sec=100, session=None, override=False):
     """
-    Add a stop_date to the connections in conn_list.
+    Add or stop parts.
 
     Parameters
     ----------
+    conns : list of dicts
+        List of dicts containing connection information and action (add/stop)
+    dates : list of astropy.Time objects
+        List of dates to use for logging the add/stop.
+    same_conn_sec : int
+        Number of seconds under which the connection is the same.
     session : object
         Database session to use.  If None, it will start a new session, then close.
-    conns:  list of lists
-        List with data [[upstream_part,port,downstream_part,port],...]
-    stop_dates : list of astropy.Time
-        date at which to stop connection
+    override : bool
+        Flag to allow override for existence or not.
 
     """
     close_session_when_done = False
@@ -184,135 +183,51 @@ def stop_connections(session, conns, stop_dates):
         session = db.sessionmaker()
         close_session_when_done = True
 
-    data = []
-    for conn, stop_date in zip(conns, stop_dates):
-        upart, uport, dpart, dport = conn
-        conn_to_stop = session.query(cm_tables.Connections).filter(
-            (cm_tables.Connections.upstream_part == upart)
-            & (cm_tables.Connections.upstream_output_port == uport)
-            & (cm_tables.Connections.downstream_part == dpart)
-            & (cm_tables.Connections.downstream_input_port == dport)
+    updated = 0
+    for connd, date in zip(conns, dates):
+        connections_to_check = session.query(cm_tables.Connections).filter(
+            (func.upper(cm_tables.Connections.upstream_part) == connd['upstream_part'].upper())
+            & (func.lower(cm_tables.Connections.upstream_output_port)
+               == connd['upstream_output_port'].lower())
+            & (func.upper(cm_tables.Connections.downstream_part) == connd['downstream_part'].upper())
+            & (func.lower(cm_tables.Connections.downstream_input_port)
+               == connd['downstream_input_port'].lower())
         )
-        cdes = "{}<{} - {}>{}".format(upart, uport, dpart, dport)
-        num_conn = conn_to_stop.count()
-        if num_conn == 0:
-            print("Skipping: no connection listed for {}".format(cdes))
-        else:
-            fnd_conn = 0
-            for chk_conn in conn_to_stop:
-                if chk_conn.stop_gpstime is None:
-                    this_one = {'upstream_part': upart, 'upstream_output_port': uport,
-                                'downstream_part': dpart, 'downstream_input_port': dport,
-                                'start_gpstime': chk_conn.start_gpstime, 'stop_gpstime': stop_date.gps}
-                    this_one.append(chk_conn.start_gpstime)
-                    this_one.append(stop_date.gps)
-                    data.append(this_one)
-                    print("Stopping {}:  {}".format(cdes, chk_conn.start_gpstime))
-                    if fnd_conn:
-                        print("\t***Warning - this is number {} for this connection! "
-                              "Started at {}.  Should clean up."
-                              .format(fnd_conn + 1, chk_conn.start_gpstime))
-                    fnd_conn += 1
-            if not fnd_conn:
-                print("Skipping: no unstopped connections for {}".format(cdes))
-
-    update_connection(session, data, False)
-    if close_session_when_done:
-        session.close()
-
-
-def add_new_connections(session, conns, start_dates, same_conn_sec=60.0):
-    """
-    Add a new connection.
-
-    Parameters
-    ----------
-    session : object
-        Database session to use.  If None, it will start a new session, then close.
-    conns:  list of lists
-        List with data [[upstream_part,port,downstream_part,port],...]
-    start_dates : list of astropy.Time
-        date at which to start connection
-    same_conn_sec
-
-    """
-    close_session_when_done = False
-    if session is None:  # pragma: no cover
-        db = cm.connect_to_cm_db(None)
-        session = db.sessionmaker()
-        close_session_when_done = True
-
-    data = []
-    for conn, start_date in zip(conns, start_dates):
-        upart, uport, dpart, dport = conn
-        conn_to_chk = session.query(cm_tables.Connections).filter(
-            (cm_tables.Connections.upstream_part == upart)
-            & (cm_tables.Connections.upstream_output_port == uport)
-            & (cm_tables.Connections.downstream_part == dpart)
-            & (cm_tables.Connections.downstream_input_port == dport)
-        )
-        cdes = "{}<{} - {}>{}".format(upart, uport, dpart, dport)
-        add_this_one = True
-        for chk_conn in conn_to_chk:
-            if abs(chk_conn.start_gpstime - start_date.gps) < same_conn_sec:
-                print("{} is already a connection starting at {}"
-                      .format(cdes, chk_conn.start_gpstime), end='')
-                if chk_conn.stop_gpstime is None:
-                    print(" --> Skipping.")
-                    add_this_one = False
+        if connd['action'].lower() == 'stop':
+            if connections_to_check.count() == 0:
+                print("Skipping: no connection listed for {}".format(connd))
+                continue
+            for connection in connections_to_check:
+                if connection.stop_gpstime is None:
+                    updated += connection.connection(stop_gpstime=date.gps)
+                    print(f"Stopping {connection}")
+                    session.add(connection)
                 else:
-                    print("\twith a stop time of {}".format(chk_conn.stop_gpstime))
-        if add_this_one:
-            print("Starting connection {} at {}".format(cdes, str(start_date)))
-            this_one = {'upstream_part': upart, 'upstream_output_port': uport,
-                        'downstream_part': dpart, 'downstream_input_port': dport,
-                        'start_gpstime': start_date.gps, 'stop_gpstime': None}
-            data.append(this_one)
-
-    numconn = update_connection(session, data)
-    if close_session_when_done:
-        session.close()
-    return numconn
-
-
-def update_connection(session=None, conns=None):
-    """
-    Update the database given a connection with columns/values.
-
-    This assumes that the calling function has checked.
-
-    Parameters
-    ----------
-    session : object
-        Database session to use.  If None, it will start a new session, then close.
-    data : list of dicts
-        Contains list of connections (all entries in each element)
-
-    Returns
-    -------
-    int
-        Number of updates
-
-    """
-
-    close_session_when_done = False
-    if session is None:  # pragma: no cover
-        db = cm.connect_to_cm_db(None)
-        session = db.sessionmaker()
-        close_session_when_done = True
-
-    made_change = 0
-    for conn in conns:
-        connection = cm_tables.Connections()
-        if connection.connection(**conn):
-            made_change += 1
-            session.add(connection)
-    if made_change:
+                    print(f"Skipping: no unstopped connections for {connection}")
+        elif connd['action'].lower() == 'add':
+            if connections_to_check.count() == 0:
+                updated += connection.connection(
+                    upstream_part=connd['upstream_part'],
+                    upstream_output_port=connd['upstream_output_port'],
+                    downstream_part=connd['downstream_part'],
+                    downstream_input_port=connd['downstream_input_port'],
+                    start_gpstime=date.gps, stop_gpstime=None)
+                session.add(connection)
+            for connection in connections_to_check:
+                if abs(connection.start_gpstime - date.gps) < same_conn_sec:
+                    print(f"{connection} is already started.", end=' ')
+                    if connection.stop_gpstime is None:
+                        print(" ==> Skipping.")
+                    elif override:
+                        print("with a stop time of {}".format(connection.stop_gpstime))
+                        updated += connection.connection(
+                            start_gpstime=date.gps, stop_gpstime=None)
+                        session.add(connection)
+    if updated:
         session.commit()
     if close_session_when_done:  # pragma: no cover
         session.close()
-
-    return made_change
+    return updated
 
 
 def get_allowed_apriori_antenna_statuses():
