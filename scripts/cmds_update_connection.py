@@ -7,7 +7,7 @@
 Script to add/update connection to/in the database.
 """
 
-from cmds import cm, cm_utils, cm_table_util
+from cmds import cm, cm_utils, cm_tables
 
 if __name__ == "__main__":
     parser = cm.get_cm_argument_parser()
@@ -30,4 +30,4 @@ if __name__ == "__main__":
     db = cm.connect_to_cm_db(args)
     session = db.sessionmaker()
 
-    cm_table_util.update_connections([update], [date], same_conn_sec=args.same_conn_sec, session=session)
+    cm_tables.update_connections([update], [date], same_conn_sec=args.same_conn_sec, session=session)

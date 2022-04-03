@@ -7,7 +7,7 @@
 Script to handle installing a new station into system.
 """
 
-from cmds import cm, cm_table_util, cm_utils
+from cmds import cm, cm_table_util, cm_utils, cm_tables
 
 
 def query_geo_information(args):
@@ -55,7 +55,7 @@ def add_entry_to_parts(session, args):
             "ptype": "station",
             "manufacturer_id": "{}:{}".format(int(args.northing), int(args.easting)),
             "start_gpstime": dt.gps}
-    cm_table_util.update_parts([data], [dt], session)
+    cm_tables.update_parts([data], [dt], session)
 
 
 if __name__ == "__main__":

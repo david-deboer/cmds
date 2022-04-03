@@ -7,7 +7,7 @@
 Script to handle adding or stopping a part.
 """
 
-from cmds import cm, cm_utils, cm_table_util
+from cmds import cm, cm_utils, cm_tables
 
 
 if __name__ == "__main__":
@@ -30,5 +30,5 @@ if __name__ == "__main__":
 
     db = cm.connect_to_cm_db(args)
     session = db.sessionmaker()
-    cm_table_util.update_parts(parts=[update], dates=[date], session=session)
+    cm_tables.update_parts(parts=[update], dates=[date], session=session)
     session.close()
