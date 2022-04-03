@@ -8,65 +8,50 @@ from . import cm, cm_utils, cm_tables
 from sqlalchemy import func
 
 
-def update_stations(session=None, data=None, add_new_station=False):
+def update_stations(stations, dates, session=None):
     """
-    Update the stations table with some data.
-
-    Use with caution -- should usually use in a script which will do datetime
-    primary key etc.
+    Add stations to Stations table.
 
     Parameters
     ----------
+    stations : list of dicts
+        dicts contain all Stations entries
+    dates : list of astropy.Time objects
+        List of dates to use for logging creation.
     session : session
         session on current database. If session is None, a new session
         on the default database is created and used.
-    data : list of dicts
-        dicts contain all Stations entries
-    add_new_station : bool
-        allow a new entry to be made.
 
     Returns
     -------
     int
-        Number of entries changed
+        Number of attributes changed
 
     """
 
     close_session_when_done = False
-    if session is None:  # pragma: no cover
+    if session is None:
         db = cm.connect_cm_db()
         session = db.sessionmaker()
         close_session_when_done = True
 
-    made_change = 0
-    for station in data:
-        geo_rec = session.query(cm_tables.Stations).filter(
-            func.upper(cm_tables.Stations.station_name) == station['station_name'].upper()
-        )
-        num_rec = geo_rec.count()
-        if num_rec == 0:
-            if add_new_station:
-                gr = cm_tables.Stations()
-            else:
-                print("{} does not exist and add_new_station not enabled."
-                      .format(station['station_name']))
-                continue
+    updated = 0
+    for statd, date in zip(stations, dates):
+        sn = statd['station_name'].upper()
+        statx = session.query(cm_tables.Stations).filter(
+            func.upper(cm_tables.Stations.station_name) == sn).first()
+        if statx is None:
+            station = cm_tables.Stations()
+            updated += station.station(created_gpstime=date.gps, **statd)
+            print(f"Add {station}")
+            session.add()
         else:
-            if add_new_station:
-                print("{} exists and and_new_station is enabled.".format(station['station_name']))
-                continue
-            else:
-                gr = geo_rec.first()
-        if gr.station(**station):
-            made_change += 1
-            session.add(gr)
-            # cm_utils.log("station update", data_dict=station)
-    if made_change:
+            print(f"{sn} already present.  No action.")
+    if updated:
         session.commit()
     if close_session_when_done:  # pragma: no cover
         session.close()
-
-    return made_change
+    return updated
 
 
 def get_allowed_apriori_antenna_statuses():

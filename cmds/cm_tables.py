@@ -162,7 +162,7 @@ def update_parts(parts, dates, session=None):
         Number of attributes changed.
     """
     close_session_when_done = False
-    if session is None:  # pragma: no cover
+    if session is None:
         db = cm.connect_to_cm_db(None)
         session = db.sessionmaker()
         close_session_when_done = True

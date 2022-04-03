@@ -31,3 +31,4 @@ if __name__ == "__main__":
     session = db.sessionmaker()
 
     cm_tables.update_connections([update], [date], same_conn_sec=args.same_conn_sec, session=session)
+    session.close()
