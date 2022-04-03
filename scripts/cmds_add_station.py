@@ -50,11 +50,12 @@ def add_entry_to_stations(session, args):
 
 def add_entry_to_parts(session, args):
     dt = cm_utils.get_astropytime(args.date, args.time, args.format)
-    data = {"pn": args.station_name.upper(),
+    data = {"action": 'add',
+            "pn": args.station_name.upper(),
             "ptype": "station",
             "manufacturer_id": "{}:{}".format(int(args.northing), int(args.easting)),
             "start_gpstime": dt.gps}
-    cm_table_util.update_part(session, [data])
+    cm_table_util.update_parts([data], [dt], session)
 
 
 if __name__ == "__main__":
