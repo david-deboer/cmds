@@ -74,6 +74,52 @@ class Stations(MCDeclarativeBase):
         )
 
 
+def update_stations(stations, dates, session=None):
+    """
+    Add stations to Stations table.
+
+    Parameters
+    ----------
+    stations : list of dicts
+        dicts contain all Stations entries
+    dates : list of astropy.Time objects
+        List of dates to use for logging creation.
+    session : session
+        session on current database. If session is None, a new session
+        on the default database is created and used.
+
+    Returns
+    -------
+    int
+        Number of attributes changed
+
+    """
+
+    close_session_when_done = False
+    if session is None:
+        db = cm.connect_cm_db()
+        session = db.sessionmaker()
+        close_session_when_done = True
+
+    updated = 0
+    for statd, date in zip(stations, dates):
+        sn = statd['station_name'].upper()
+        statx = session.query(Stations).filter(
+            func.upper(Stations.station_name) == sn).first()
+        if statx is None:
+            station = Stations()
+            updated += station.station(created_gpstime=date.gps, **statd)
+            print(f"Add {station}")
+            session.add(station)
+        else:
+            print(f"{sn} already present.  No action.")
+    if updated:
+        session.commit()
+    if close_session_when_done:  # pragma: no cover
+        session.close()
+    return updated
+
+
 class Parts(MCDeclarativeBase):
     """
     A table logging parts within the system.

@@ -7,7 +7,7 @@
 Script to handle installing a new station into system.
 """
 
-from cmds import cm, cm_table_util, cm_utils, cm_tables
+from cmds import cm, cm_utils, cm_tables
 
 
 def station_data(args):
@@ -19,7 +19,7 @@ def station_data(args):
     return data
 
 
-def part_data(session, args):
+def part_data(args):
     data = {"action": 'add',
             "pn": args.station_name.upper(),
             "ptype": "station",
@@ -45,6 +45,6 @@ if __name__ == "__main__":
 
     db = cm.connect_to_cm_db(args)
     session = db.sessionmaker()
-    cm_table_util.update_stations([station_data(args)], [date], session)
+    cm_tables.update_stations([station_data(args)], [date], session)
     cm_tables.update_parts([part_data(args)], [date], session)
     session.close()
