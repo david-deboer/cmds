@@ -206,6 +206,7 @@ def update_connections(conns, dates, same_conn_sec=100, session=None, override=F
                     print(f"Skipping: no unstopped connections for {connection}")
         elif connd['action'].lower() == 'add':
             if connections_to_check.count() == 0:
+                connection = cm_tables.Connection()
                 updated += connection.connection(
                     upstream_part=connd['upstream_part'],
                     upstream_output_port=connd['upstream_output_port'],
