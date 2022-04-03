@@ -18,7 +18,6 @@ if __name__ == "__main__":
     parser.add_argument("--dnport", help="Downstream input port")
     parser.add_argument("--same-conn-sec", dest='same_conn_sec',
                         help="Threshhold for start being same connection (sec)", default=100)
-    parser.add_argument("--override", help="Flag to override update check.", action='store_true')
     cm_utils.add_date_time_args(parser)
     args = parser.parse_args()
 
@@ -31,5 +30,4 @@ if __name__ == "__main__":
     db = cm.connect_to_cm_db(args)
     session = db.sessionmaker()
 
-    cm_table_util.update_connections([update], [date], same_conn_sec=args.same_conn_sec,
-                                     session=session, override=args.override)
+    cm_table_util.update_connections([update], [date], same_conn_sec=args.same_conn_sec, session=session)
