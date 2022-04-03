@@ -25,7 +25,7 @@ if __name__ == "__main__":
     date = cm_utils.get_astropytime(args.date, args.time, args.format)
     update = {"action": args.action,
               "upstream_part": args.uppart.upper(), "upstream_output_port": args.upport.lower(),
-              "downstream_part": args.uppart.upper(), "downstream_iput_port": args.upport.lower()
+              "downstream_part": args.uppart.upper(), "downstream_input_port": args.upport.lower()
               }
 
     db = cm.connect_to_cm_db(args)
