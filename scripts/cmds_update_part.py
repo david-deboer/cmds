@@ -16,7 +16,6 @@ if __name__ == "__main__":
     parser.add_argument("-p", "--pn", help="part number")
     parser.add_argument("-t", "--type", help="part type", default=None)
     parser.add_argument("-m", "--mfg", help="Manufacturers number for part", default=None)
-    parser.add_argument("--override", help="Flag to override update check.", action='store_true')
     cm_utils.add_date_time_args(parser)
     args = parser.parse_args()
 
@@ -31,5 +30,5 @@ if __name__ == "__main__":
 
     db = cm.connect_to_cm_db(args)
     session = db.sessionmaker()
-    cm_table_util.update_parts(parts=[update], dates=[date], session=session, override=args.override)
+    cm_table_util.update_parts(parts=[update], dates=[date], session=session)
     session.close()

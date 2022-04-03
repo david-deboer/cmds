@@ -11,7 +11,7 @@ from sqlalchemy import func
 no_connection_designator = "-X-"
 
 
-def update_parts(parts, dates, session=None, override=False):
+def update_parts(parts, dates, session=None):
     """
     Add or stop parts.
 
@@ -23,8 +23,6 @@ def update_parts(parts, dates, session=None, override=False):
         List of dates to use for logging the add/stop.
     session : object
         Database session to use.  If None, it will start a new session, then close.
-    override : bool
-        Flag to allow override for existence or not.
 
     """
     close_session_when_done = False
@@ -38,37 +36,25 @@ def update_parts(parts, dates, session=None, override=False):
         pn = partd['pn'].upper()
         part = session.query(cm_tables.Parts).filter(func.upper(cm_tables.Parts.pn) == pn).first()
         if partd['action'].lower() == 'stop':
+            this_update = None
             if part is None:
-                print("{} is not in database, so can't stop it.".format(pn))
-                continue
-            if part.stop_gpstime is not None:
-                print("{} already has a stop time ({})".format(pn, part.stop_gpstime), end=' ')
-                if not override:
-                    print("==> Override not enabled.  No action.")
-                    continue
-                print("==> Override enabled.")
-            print(f"Stopping part {pn} at {date}.")
-            updated += part.part(stop_gpstime=date.gps)
-            session.add(part)
+                print(f"{pn} is not in database.  No update.")
+            elif part.stop_gpstime is not None:
+                print(f"{pn} already has a stop time ({part.stop_gpstime}).  No update.")
+            else:
+                this_update = {'stop_gpstime': date.gps}
         elif partd['action'].lower() == 'add':
+            this_update = None
             if part is None:
                 part = cm_tables.Parts()
+                this_update = {'pn': pn, 'ptype': partd['ptype'], 'manufacturer_id': partd['manufacturer_id'],
+                               'start_gpstime': date.gps, 'stop_gpstime': None}
             else:
-                print("{} already in database".format(pn), end=' ')
-                if part.stop_gpstime is None:
-                    print("with no stop date ==> no action.")
-                    continue
-                if not override:
-                    print("and needs an override ==> no action.")
-                    continue
-                msg = f"Restarting part.  Previous data {part}"
-                add_part_info(session, pn=pn, comment=msg, at_date=date.gps, reference="cm_table_util")
-            print(f"Adding part {pn} for {date}")
-            updated += part.part(pn=pn, ptype=partd['ptype'], manufacturer_id=partd['manufacturer_id'],
-                                 start_gpstime=date.gps, stop_gpstime=None)
+                print(f"{pn} already in database.  No update.")
+        if this_update is not None:
+            updated += part.part(**this_update)
+            print(f"{partd['action']} {part}")
             session.add(part)
-        else:
-            print(f"Invalid option: {partd['action']}.")
     if updated:
         session.commit()
     if close_session_when_done:  # pragma: no cover
@@ -196,14 +182,14 @@ def update_connections(conns, dates, same_conn_sec=100, session=None, override=F
         if connd['action'].lower() == 'stop':
             if connections_to_check.count() == 0:
                 print("Skipping: no connection listed for {}".format(connd))
-                continue
-            for connection in connections_to_check:
-                if connection.stop_gpstime is None:
-                    updated += connection.connection(stop_gpstime=date.gps)
-                    print(f"Stopping {connection}")
-                    session.add(connection)
-                else:
-                    print(f"Skipping: no unstopped connections for {connection}")
+            else:
+                for connection in connections_to_check:
+                    if connection.stop_gpstime is None:
+                        updated += connection.connection(stop_gpstime=date.gps)
+                        print(f"Stopping {connection}")
+                        session.add(connection)
+                    else:
+                        print(f"Skipping: no unstopped connections for {connection}")
         elif connd['action'].lower() == 'add':
             if connections_to_check.count() == 0:
                 connection = cm_tables.Connections()
@@ -213,17 +199,19 @@ def update_connections(conns, dates, same_conn_sec=100, session=None, override=F
                     downstream_part=connd['downstream_part'],
                     downstream_input_port=connd['downstream_input_port'],
                     start_gpstime=date.gps, stop_gpstime=None)
+                print(f"Adding {connection}")
                 session.add(connection)
-            for connection in connections_to_check:
-                if abs(connection.start_gpstime - date.gps) < same_conn_sec:
-                    print(f"{connection} is already started.", end=' ')
-                    if connection.stop_gpstime is None:
-                        print(" ==> Skipping.")
-                    elif override:
-                        print("with a stop time of {}".format(connection.stop_gpstime))
-                        updated += connection.connection(
-                            start_gpstime=date.gps, stop_gpstime=None)
-                        session.add(connection)
+            else:
+                for connection in connections_to_check:
+                    if abs(connection.start_gpstime - date.gps) < same_conn_sec:
+                        print(f"{connection} is already started.", end=' ')
+                        if connection.stop_gpstime is None:
+                            print(" ==> Skipping.")
+                        elif override:
+                            print(f"with a stop time of {connection.stop_gpstime}")
+                            updated += connection.connection(start_gpstime=date.gps, stop_gpstime=None)
+                            print(f"Adding {connection}")
+                            session.add(connection)
     if updated:
         session.commit()
     if close_session_when_done:  # pragma: no cover
