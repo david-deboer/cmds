@@ -5,8 +5,9 @@
 """All of the tables defined here."""
 
 from astropy.time import Time
-from sqlalchemy import BigInteger, Column, ForeignKeyConstraint, String, Text, Float
-from . import MCDeclarativeBase, NotNull
+from sqlalchemy import BigInteger, Column, ForeignKeyConstraint, String, Text, Float, func
+from . import MCDeclarativeBase, NotNull, cm
+import copy
 
 
 class Stations(MCDeclarativeBase):
@@ -142,6 +143,61 @@ class Parts(MCDeclarativeBase):
         return updated
 
 
+def update_parts(parts, dates, session=None):
+    """
+    Add or stop parts.
+
+    Parameters
+    ----------
+    parts : list of dicts
+        List of dicts containing part information and action (add/stop)
+    dates : list of astropy.Time objects
+        List of dates to use for logging the add/stop.
+    session : object
+        Database session to use.  If None, it will start a new session, then close.
+
+    Returns
+    -------
+    int
+        Number of attributes changed.
+    """
+    close_session_when_done = False
+    if session is None:  # pragma: no cover
+        db = cm.connect_to_cm_db(None)
+        session = db.sessionmaker()
+        close_session_when_done = True
+
+    updated = 0
+    for partd, date in zip(parts, dates):
+        pn = partd['pn'].upper()
+        part = session.query(Parts).filter(func.upper(Parts.pn) == pn).first()
+        if partd['action'].lower() == 'stop':
+            this_update = None
+            if part is None:
+                print(f"{pn} is not in database.  No update.")
+            elif part.stop_gpstime is not None:
+                print(f"{pn} already has a stop time ({part.stop_gpstime}).  No update.")
+            else:
+                this_update = {'stop_gpstime': date.gps}
+        elif partd['action'].lower() == 'add':
+            this_update = {'pn': pn, 'ptype': partd['ptype'], 'manufacturer_id': partd['manufacturer_id'],
+                           'start_gpstime': date.gps, 'stop_gpstime': None}
+            if part is None:
+                part = Parts()
+            else:
+                print(f"{pn} already in database.  No update.")
+                this_update = None
+        if this_update is not None:
+            updated += part.part(**this_update)
+            print(f"{partd['action']} {part}")
+            session.add(part)
+    if updated:
+        session.commit()
+    if close_session_when_done:
+        session.close()
+    return updated
+
+
 class AprioriAntenna(MCDeclarativeBase):
     """
     Table for a priori antenna status.
@@ -269,6 +325,8 @@ class Connections(MCDeclarativeBase):
     start_gpstime = NotNull(BigInteger, primary_key=True)
     stop_gpstime = Column(BigInteger)
 
+    no_connection_designator = "-X-"
+
     def __repr__(self):
         """Define representation."""
         up = "{self.upstream_part}".format(self=self)
@@ -318,3 +376,99 @@ class Connections(MCDeclarativeBase):
                 print("{} is not a valid connection entry.".format(key))
                 continue
         return updated
+
+
+def get_null_connection():
+    """
+    Return a null connection.
+
+    All components hold the no_connection_designator and dates/times are None
+
+    Returns
+    -------
+    Connections object
+
+    """
+    return Connections(
+        upstream_part=Connections.no_connection_designator,
+        upstream_output_port=Connections.no_connection_designator,
+        downstream_part=Connections.no_connection_designator,
+        downstream_input_port=Connections.no_connection_designator,
+        start_gpstime=None,
+        stop_gpstime=None,
+    )
+
+
+def update_connections(conns, dates, same_conn_sec=10, session=None):
+    """
+    Add or stop connections.
+
+    Parameters
+    ----------
+    conns : list of dicts
+        List of dicts containing connection information and action (add/stop)
+    dates : list of astropy.Time objects
+        List of dates to use for logging the add/stop.
+    same_conn_sec : int
+        Number of seconds under which the connection is the same.
+    session : object
+        Database session to use.  If None, it will start a new session, then close.
+
+    Returns
+    -------
+    int
+        Number of attributes changed.
+    """
+    close_session_when_done = False
+    if session is None:  # pragma: no cover
+        db = cm.connect_to_cm_db(None)
+        session = db.sessionmaker()
+        close_session_when_done = True
+
+    updated = 0
+    for connd, date in zip(conns, dates):
+        connections_to_check = session.query(Connections).filter(
+            (func.upper(Connections.upstream_part) == connd['upstream_part'].upper())
+            & (func.lower(Connections.upstream_output_port)
+               == connd['upstream_output_port'].lower())
+            & (func.upper(Connections.downstream_part) == connd['downstream_part'].upper())
+            & (func.lower(Connections.downstream_input_port)
+               == connd['downstream_input_port'].lower())
+        )
+        if connd['action'].lower() == 'stop':
+            this_update = None
+            if connections_to_check.count() == 0:
+                print(f"No connection in database {connd}.")
+            else:
+                for connx in connections_to_check:
+                    if connx.stop_gpstime is None:
+                        if this_update is None:
+                            this_update = {'stop_gpstime', date.gps}
+                            connection = copy(connx)
+                        else:
+                            print(f"Multiple open connections for {connx}. No action.")
+                            this_update = None
+                            break
+        elif connd['action'].lower() == 'add':
+            this_update = {"upstream_part": connd['upstream_part'],
+                           "upstream_output_port": connd['upstream_output_port'],
+                           "downstream_part": connd['downstream_part'],
+                           "downstream_input_port": connd['downstream_input_port'],
+                           "start_gpstime": date.gps, "stop_gpstime": None}
+            if connections_to_check.count() == 0:
+                connection = Connections()
+            else:
+                for connection in connections_to_check:
+                    if abs(connection.start_gpstime - date.gps) < same_conn_sec:
+                        print(f"{connection} is already present.  No action.")  # noqa
+                        this_update = None
+                connection = Connections()
+        if this_update is not None:
+            updated += connection.connection(**this_update)
+            print(f"{connd['action']} {connection}")
+            session.add(connection)
+    if updated:
+        session.commit()
+    if close_session_when_done:
+        session.close()
+    return updated
