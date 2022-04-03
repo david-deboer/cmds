@@ -11,12 +11,12 @@ from cmds import cm, cm_utils, cm_table_util
 
 if __name__ == "__main__":
     parser = cm.get_cm_argument_parser()
-    parser.add_argument("action", help="add or stop part.", choices=['add', 'stop'])
+    parser.add_argument("action", help="add or stop connection.", choices=['add', 'stop'])
     parser.add_argument("-u", "--uppart", help="Upstream part number")
     parser.add_argument("--upport", help="Upstream output port")
     parser.add_argument("-d", "--dnpart", help="Downstream part number")
     parser.add_argument("--dnport", help="Downstream input port")
-    parser.add_argument("same_conn_sec", help="Threshhold for start being same connection", default=100)
+    parser.add_argument("same_conn_sec", help="Threshhold for start being same connection (sec)", default=100)
     parser.add_argument("--override", help="Flag to override update check.", action='store_true')
     cm_utils.add_date_time_args(parser)
     args = parser.parse_args()
