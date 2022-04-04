@@ -7,12 +7,12 @@
 Script to handle adding a comment to the part_info table.
 """
 
-from cmds import mc, cm_utils, cm_tables
+from cmds import cm, cm_utils, cm_tables
 
 
 if __name__ == "__main__":
-    parser = mc.get_mc_argument_parser()
-    parser.add_argument("-p", "--pn", help="Part number", default=None)
+    parser = cm.get_cm_argument_parser()
+    parser.add_argument("pn", help="Part number")
     parser.add_argument("-c", "--comment", help="Comment on part", default=None)
     parser.add_argument("-l", "--reference", help="Library filename", default=None)
     cm_utils.add_date_time_args(parser)
@@ -21,7 +21,7 @@ if __name__ == "__main__":
     # Pre-process some args
     date = cm_utils.get_astropytime(args.date, args.time, args.format)
 
-    db = mc.connect_to_mc_db(args)
+    db = cm.connect_to_cm_db(args)
     session = db.sessionmaker()
 
     cm_tables.update_info(
@@ -29,3 +29,5 @@ if __name__ == "__main__":
         dates=[date],
         session=session
     )
+
+    session.close()

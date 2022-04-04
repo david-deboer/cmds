@@ -13,7 +13,7 @@ from cmds import cm, cm_utils, cm_tables
 if __name__ == "__main__":
     parser = cm.get_cm_argument_parser()
     parser.add_argument("action", help="add or stop part.", choices=['add', 'stop'])
-    parser.add_argument("-p", "--pn", help="part number")
+    parser.add_argument("pn", help="part number")
     parser.add_argument("-t", "--type", help="part type", default=None)
     parser.add_argument("-m", "--mfg", help="Manufacturers number for part", default=None)
     cm_utils.add_date_time_args(parser)
