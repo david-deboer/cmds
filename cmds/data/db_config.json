@@ -1,5 +1,6 @@
 {
     "default_db_name": "ata_sqlite",
+    "default_sysdef_name": "ata",
     "databases":
     {
         "hera_mc":
@@ -22,5 +23,9 @@
             "url": "sqlite:////Users/ddeboer/Documents/ubase/Projects/Oliver/cm_ata/ata.db",
             "mode": "production"
         }
+    },
+    "sysdef_files":
+    {
+        "ata": "/Users/ddeboer/Documents/ubase/Projects/Oliver/cm_ata/sysdef.json"
     }
 }

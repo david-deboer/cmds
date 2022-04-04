@@ -249,58 +249,6 @@ def update_parts(parts, dates, session=None):
     return updated
 
 
-class AprioriAntenna(MCDeclarativeBase):
-    """
-    Table for a priori antenna status.
-
-    Parameters
-    ----------
-    antenna :  str
-        antenna designation
-    start_gpstime : int
-        start time for antenna status
-    stop_gpstime : int
-        stop time for antenna status
-    status :  str
-        status - TBD
-    """
-
-    __tablename__ = "apriori_antenna"
-
-    antenna = Column(Text, primary_key=True)
-    start_gpstime = Column(BigInteger, primary_key=True)
-    stop_gpstime = Column(BigInteger)
-    status = Column(Text, nullable=False)
-
-    def __repr__(self):
-        """Define representation."""
-        return "<{}: {}  [{} - {}]>".format(
-            self.antenna, self.status, self.start_gpstime, self.stop_gpstime
-        )
-
-    def apriori(self, **kwargs):
-        """Add arbitrary attributes passed in a dict to this object."""
-        updated = 0
-        for key, value in kwargs.items():
-            if hasattr(self, key):
-                if key in ['start_gpstime', 'stop_gpstime']:
-                    value = int(value)
-                setattr(self, key, value)
-                updated += 1
-            else:
-                print(f"{key} is not a valid apriori_antenna attribute.")
-        return updated
-
-    def valid_statuses(self):
-        """Define current valid statuses GET FROM SYSDEF.JSON!."""
-        return [
-            "DEFINE IN SYSDEF.JSON!",
-            "active",
-            "maintenance",
-            "etc"
-        ]
-
-
 class PartInfo(MCDeclarativeBase):
     """
     A table for logging test information etc for parts.
@@ -323,6 +271,12 @@ class PartInfo(MCDeclarativeBase):
     posting_gpstime = NotNull(BigInteger, primary_key=True)
     comment = NotNull(String(2048))
     reference = Column(String(256))
+
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["pn"], [Parts.pn]
+        ),
+    )
 
     def __repr__(self):
         """Define representation."""
@@ -588,6 +542,118 @@ def update_connections(conns, dates, same_conn_sec=10, session=None):
             updated += connection.connection(**this_update)
             print(f"{connd['action']} {connection}")
             session.add(connection)
+    if updated:
+        session.commit()
+    if close_session_when_done:
+        session.close()
+    return updated
+
+
+class AprioriStatus(MCDeclarativeBase):
+    """
+    Table for a priori status (generally antenna-based).
+
+    Parameters
+    ----------
+    pn :  str
+        part number
+    start_gpstime : int
+        start time for antenna status
+    stop_gpstime : int
+        stop time for antenna status
+    status :  str
+        status - TBD
+    comment : str
+        comment
+    """
+
+    __tablename__ = "apriori_status"
+
+    pn = Column(Text, primary_key=True)
+    start_gpstime = Column(BigInteger, primary_key=True)
+    stop_gpstime = Column(BigInteger)
+    status = Column(Text, nullable=False)
+    comment = Column(Text)
+
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["pn"], [Parts.pn]
+        ),
+    )
+
+    def __repr__(self):
+        """Define representation."""
+        return "<{}: {}  [{} - {}]>".format(
+            self.pn, self.status, self.start_gpstime, self.stop_gpstime
+        )
+
+    def apriori(self, **kwargs):
+        """Add arbitrary attributes passed in a dict to this object."""
+        updated = 0
+        for key, value in kwargs.items():
+            if hasattr(self, key):
+                if key in ['start_gpstime', 'stop_gpstime']:
+                    value = int(value)
+                setattr(self, key, value)
+                updated += 1
+            else:
+                print(f"{key} is not a valid apriori_antenna attribute.")
+        return updated
+
+    def valid_statuses(self):
+        """Get defined current valid statuses."""
+        return cm.get_sysdef(None)["apriori_statuses"]
+
+
+def get_allowed_apriori_antenna_statuses():
+    """Get list of valid apriori statuses."""
+    aps = AprioriStatus()
+    return aps.valid_statuses()
+
+
+def update_aprioris(aprioris, dates, session=None):
+    """
+    Add or stop apriori statuses.
+
+    Parameters
+    ----------
+    aprioris : list of dicts
+        List of dicts containing apriori information and action (add/stop)
+    dates : list of astropy.Time objects
+        List of dates to use for logging the add/stop.
+    session : object
+        Database session to use.  If None, it will start a new session, then close.
+
+    Returns
+    -------
+    int
+        Number of attributes changed.
+    """
+    close_session_when_done = False
+    if session is None:
+        db = cm.connect_to_cm_db(None)
+        session = db.sessionmaker()
+        close_session_when_done = True
+
+    updated = 0
+    for apriorid, date in zip(aprioris, dates):
+        pn = apriorid['pn'].upper()
+        aprioric = session.query(AprioriStatus).filter(func.upper(AprioriStatus.pn) == pn)
+        for apx in aprioric:  # Stop all old ones.
+            if apx.stop_gpstime is None:
+                updated += apx.apriori(stop_gpstime=date.gps)
+                print(f"Stopping {apx}")
+                session.add(apx)
+        if apriorid['action'].lower() == 'stop':
+            if aprioric.count() == 0:
+                print(f"{pn} is not in database.  No update.")
+        elif apriorid['action'].lower() == 'add':
+            this_update = {'pn': pn, 'status': apriorid['status'], 'comment': apriorid['comment'],
+                           'start_gpstime': date.gps, 'stop_gpstime': None}
+            apriori = AprioriStatus()
+            updated += apriori.apriori(**this_update)
+            print(f"Adding {apriori}")
+            session.add(apriori)
     if updated:
         session.commit()
     if close_session_when_done:

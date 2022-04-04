@@ -14,6 +14,8 @@ from abc import ABCMeta
 from sqlalchemy import create_engine
 from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.orm import sessionmaker
+import json
+
 
 from . import MCDeclarativeBase
 from .cm_session import MCSession
@@ -92,6 +94,22 @@ class AutomappedDB(DB):
                 )
 
 
+def get_sysdef(args):
+    sysdef_file = None
+    if args is None:
+        config_file = default_config_file
+    elif hasattr(args, "sysdef_file") and args.sysdef_file is not None:
+        sysdef_file = args.sysdef_file
+    else:
+        config_file = args.config_file
+    if sysdef_file is None:
+        with open(config_file) as fp:
+            config_file = json.load(fp)
+        sysdef_file = config_file["sysdef_files"]["default_sysdef_name"]
+    with open(sysdef_file) as fp:
+        return json.load(fp)
+
+
 def get_cm_argument_parser():
     """
     Get an CM specific `argparse.ArgumentParser` object.
@@ -156,8 +174,6 @@ def connect_to_cm_db(args, forced_db_name=None, check_connect=True):
 
     if forced_db_name is not None:
         db_name = forced_db_name
-
-    import json
 
     with open(config_path) as f:
         config_data = json.load(f)
