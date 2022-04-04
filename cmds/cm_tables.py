@@ -184,7 +184,7 @@ class Parts(MCDeclarativeBase):
                 if key == 'pn':
                     value = value.upper()
                 elif key in ['start_gpstime', 'stop_gpstime']:
-                    if key is not None:
+                    if value is not None:
                         value = int(value)
                 setattr(self, key, value)
                 updated += 1
@@ -443,7 +443,7 @@ class Connections(MCDeclarativeBase):
                 elif key in ['upstream_output_port', 'downstream_input_port']:
                     value = value.lower()
                 elif key in ['start_gpstime', 'stop_gpstime']:
-                    if key is not None:
+                    if value is not None:
                         value = int(value)
                 setattr(self, key, value)
                 updated += 1
@@ -558,9 +558,9 @@ class AprioriStatus(MCDeclarativeBase):
     pn :  str
         part number
     start_gpstime : int
-        start time for antenna status
+        start time for status
     stop_gpstime : int
-        stop time for antenna status
+        stop time for status
     status :  str
         status - TBD
     comment : str
@@ -593,11 +593,12 @@ class AprioriStatus(MCDeclarativeBase):
         for key, value in kwargs.items():
             if hasattr(self, key):
                 if key in ['start_gpstime', 'stop_gpstime']:
-                    value = int(value)
+                    if value is not None:
+                        value = int(value)
                 setattr(self, key, value)
                 updated += 1
             else:
-                print(f"{key} is not a valid apriori_antenna attribute.")
+                print(f"{key} is not a valid apriori_status attribute.")
         return updated
 
     def valid_statuses(self):
@@ -605,7 +606,7 @@ class AprioriStatus(MCDeclarativeBase):
         return cm.get_sysdef(None)["apriori_statuses"]
 
 
-def get_allowed_apriori_antenna_statuses():
+def get_allowed_apriori_statuses():
     """Get list of valid apriori statuses."""
     aps = AprioriStatus()
     return aps.valid_statuses()
