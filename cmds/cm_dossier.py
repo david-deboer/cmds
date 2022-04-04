@@ -145,8 +145,8 @@ class PartEntry:
             Contains the active database entries.
 
         """
-        if self.pn in active.station.keys():
-            self.station = active.station[self.pn]
+        if self.pn in active.stations.keys():
+            self.station = active.stations[self.pn]
 
     def get_headers(self, columns):
         """
