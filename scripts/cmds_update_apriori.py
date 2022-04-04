@@ -8,7 +8,7 @@ Script to handle adding or stopping apriori status.
 """
 
 from cmds import cm, cm_utils, cm_tables
-stat_choices = cm_tables.get_allowed_apriori_antenna_statuses() + [None]
+stat_choices = cm_tables.get_allowed_apriori_statuses() + [None]
 
 
 if __name__ == "__main__":
