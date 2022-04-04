@@ -282,7 +282,7 @@ class ActiveData:
         Returns
         -------
         list
-            Contains all part number keys (hpn:rev) of that type.
+            Contains all part number keys of that type.
         """
         ptype_list = []
         for key, partclass in self.parts.items():
