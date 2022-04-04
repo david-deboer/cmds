@@ -4,7 +4,7 @@
 
 """CM utils for the stations/parts and the connections between them."""
 
-from . import cm, cm_utils, cm_tables
+from . import cm, cm_tables
 from sqlalchemy import func
 
 
@@ -71,54 +71,5 @@ def update_apriori_antenna(antenna, status, start_gpstime, stop_gpstime=None, se
 
     session.commit()
 
-    if close_session_when_done:  # pragma: no cover
-        session.close()
-
-
-def add_part_info(
-    session, pn, comment, at_date, at_time=None, float_format=None, reference=None
-):
-    """
-    Add part information into database.
-
-    Parameters
-    ----------
-    session : object
-        Database session to use.  If None, it will start a new session, then close.
-    pn : str
-        System part number
-    at_date : any format that cm_utils.get_astropytime understands
-        Date to use for the log entry
-    at_time : any format that cm_utils.get_astropytime understands
-        Time to use for the log entry, ignored if at_date is a float or contains time information
-    float_format : str
-        Format if at_date is unix or gps or jd day.
-    comment : str
-        String containing the comment to be logged.
-    reference : str, None
-        If appropriate, name or link of library file or other information.
-
-    """
-    comment = comment.strip()
-    if not len(comment):
-        import warnings
-
-        warnings.warn("No action taken. Comment is empty.")
-        return
-    close_session_when_done = False
-    if session is None:  # pragma: no cover
-        db = cm.connect_to_cm_db(None)
-        session = db.sessionmaker()
-        close_session_when_done = True
-
-    pi = cm_tables.PartInfo()
-    pi.pn = pn
-    pi.posting_gpstime = int(
-        cm_utils.get_astropytime(at_date, at_time, float_format).gps
-    )
-    pi.comment = comment
-    pi.reference = reference
-    session.add(pi)
-    session.commit()
     if close_session_when_done:  # pragma: no cover
         session.close()

@@ -53,17 +53,19 @@ class Stations(MCDeclarativeBase):
 
     def station(self, **kwargs):
         """Allow specification of an arbitrary station value."""
-        made_change = False
+        updated = 0
         for key, value in kwargs.items():
             if hasattr(self, key):
                 if key == 'station_name':
                     value = value.upper()
+                elif key == 'created_gpstime' and value is not None:
+                    value = int(value)
                 setattr(self, key, value)
-                made_change = True
+                updated += 1
             else:
-                print("{} is not a valid station entry.".format(key))
+                print("{} is not a valid station attribute.".format(key))
                 continue
-        return made_change
+        return updated
 
     def __repr__(self):
         """Define representation."""
@@ -181,6 +183,9 @@ class Parts(MCDeclarativeBase):
             if hasattr(self, key):
                 if key == 'pn':
                     value = value.upper()
+                elif key in ['start_gpstime', 'stop_gpstime']:
+                    if key is not None:
+                        value = int(value)
                 setattr(self, key, value)
                 updated += 1
             else:
@@ -319,8 +324,61 @@ class PartInfo(MCDeclarativeBase):
 
     def info(self, **kwargs):
         """Add arbitrary attributes passed in a dict to this object."""
+        updated = 0
         for key, value in kwargs.items():
-            setattr(self, key, value)
+            if hasattr(self, key):
+                if key == 'pn':
+                    value = value.upper()
+                elif key == 'posting_gpstime':
+                    value = int(value)
+                setattr(self, key, value)
+                updated += 1
+            else:
+                print(f"{key} is not a valid part_info attribute.")
+        return updated
+
+
+def update_info(infos, dates, session):
+    """
+    Add part information into database.
+
+    Parameters
+    ----------
+    infos : list of dicts
+        Dicts contain the part info.
+    dates : list of astropy.Time objects
+        Date for comments.
+    session : object
+        Database session to use.  If None, it will start a new session, then close.
+
+    Returns
+    =======
+    int
+        Number of attributes changed.
+    """
+    close_session_when_done = False
+    if session is None:  # pragma: no cover
+        db = cm.connect_to_cm_db(None)
+        session = db.sessionmaker()
+        close_session_when_done = True
+
+    updated = 0
+    for infod, date in zip(infos, dates):
+        pn = infod['pn'].upper()
+        infox = session.query(PartInfo).filter((func.upper(PartInfo.pn) == pn)
+                                               & (PartInfo.posting_gpstime
+                                                  == infod['posting_gpstime'])).first()
+        if infox is None:
+            info = PartInfo()
+            updated += info.info(**infod)
+            session.add(info)
+        else:
+            print(f"{pn} already has info at this time.  No action.")
+    if updated:
+        session.commit()
+    if close_session_when_done:  # pragma: no cover
+        session.close()
+    return updated
 
 
 class Connections(MCDeclarativeBase):
@@ -416,6 +474,9 @@ class Connections(MCDeclarativeBase):
                     value = value.upper()
                 elif key in ['upstream_output_port', 'downstream_input_port']:
                     value = value.lower()
+                elif key in ['start_gpstime', 'stop_gpstime']:
+                    if key is not None:
+                        value = int(value)
                 setattr(self, key, value)
                 updated += 1
             else:
