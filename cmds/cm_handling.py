@@ -95,6 +95,34 @@ class Handling:
         if isinstance(ports, list):
             self.allowed_ports = [x.upper() for x in ports]
 
+    def _get_pn_list(self, pn, active, exact_match):
+        """
+        Return hpn,rev zip list to accommodate non-exact matches.
+
+        Parameters
+        ----------
+        pn : str, list
+            As supplied to get_dossier
+
+        active : class ActiveData
+            Contains the active at appropriate date
+        exact_match : bool
+            Flag to enforce exact match, or first letter
+
+        Returns
+        -------
+        zip class
+            Contains the hpn, rev pairs
+
+        """
+        if not exact_match:
+            all_pn = []
+            for key in active.parts.keys():
+                if key.upper().startswith(pn.upper()):
+                    all_pn.append(key.upper())
+            return all_pn
+        return [pn]
+
     def get_dossier(
         self,
         pn,
