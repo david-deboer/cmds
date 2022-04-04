@@ -225,11 +225,11 @@ class ActiveData:
         gps_time = self.set_active_time(at_date, at_time, float_format)
         self.apriori = {}
         apriori_keys = []
-        for astat in self.session.query(cm_tables.AprioriAntenna).filter(
-            (cm_tables.AprioriAntenna.start_gpstime <= gps_time)
+        for astat in self.session.query(cm_tables.AprioriStatus).filter(
+            (cm_tables.AprioriStatus.start_gpstime <= gps_time)
             & (
-                (cm_tables.AprioriAntenna.stop_gpstime > gps_time)
-                | (cm_tables.AprioriAntenna.stop_gpstime == None)  # noqa
+                (cm_tables.AprioriStatus.stop_gpstime > gps_time)
+                | (cm_tables.AprioriStatus.stop_gpstime == None)  # noqa
             )
         ):
             key = astat.antenna
@@ -264,7 +264,7 @@ class ActiveData:
         for asta in self.session.query(cm_tables.Stations).filter(
             cm_tables.Stations.created_gpstime <= gps_time
         ):
-            key = cm_utils.make_part_key(asta.station_name, None)
+            key = asta.station_name
             self.stations[key] = asta
 
     def get_ptype(self, ptype):
