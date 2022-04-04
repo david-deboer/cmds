@@ -453,25 +453,34 @@ class Connections(MCDeclarativeBase):
         return updated
 
 
-def get_null_connection():
+def get_connection(conn):
     """
-    Return a null connection.
+    Return a connection.
 
     All components hold the no_connection_designator and dates/times are None
+
+    Parameters
+    ----------
+    conn : dict or None
+        If None, return "no_connection"
 
     Returns
     -------
     Connections object
 
     """
-    return Connections(
-        upstream_part=Connections.no_connection_designator,
-        upstream_output_port=Connections.no_connection_designator,
-        downstream_part=Connections.no_connection_designator,
-        downstream_input_port=Connections.no_connection_designator,
-        start_gpstime=None,
-        stop_gpstime=None,
-    )
+    if conn is None:
+        return Connections(
+            upstream_part=Connections.no_connection_designator,
+            upstream_output_port=Connections.no_connection_designator,
+            downstream_part=Connections.no_connection_designator,
+            downstream_input_port=Connections.no_connection_designator,
+            start_gpstime=None,
+            stop_gpstime=None,
+        )
+    this_conn = Connections()
+    this_conn.connection(**conn)
+    return this_conn
 
 
 def update_connections(conns, dates, same_conn_sec=10, session=None):

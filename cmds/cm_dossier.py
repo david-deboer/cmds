@@ -8,14 +8,14 @@
 from argparse import Namespace
 from itertools import zip_longest
 
-from . import cm_sysdef, cm_utils, cm_table_util
+from . import cm_sysdef, cm_utils, cm_tables
 
 
 class PartEntry:
     """
     Holds all of the information on a given part:rev.
 
-    It includes connections, part_info, and, if applicable, geo_location.
+    It includes connections, part_info, and, if applicable, station location.
 
     It contains the modules to format the dossier for use in the parts display matrix.
     Full available list is in col_hdr dict below.
@@ -26,7 +26,7 @@ class PartEntry:
         System part number - for a single part, not list.  Note: only looks for exact matches.
     at_date : astropy.Time
         Date after which the part is active.  If inactive, the part will still be included,
-        but things like notes, geo etc may exclude on that basis.
+        but things like notes, station etc may exclude on that basis.
     notes_start_date : astropy.Time
         Start date on which to filter notes.  The stop date is at_date above.
 
@@ -40,7 +40,7 @@ class PartEntry:
         "stop_gpstime": "Stop",
         "input_ports": "Input",
         "output_ports": "Output",
-        "geo": "Geo",
+        "station": "Geo",
         "comment": "Note",
         "posting_gpstime": "Date",
         "reference": "File",
@@ -69,7 +69,7 @@ class PartEntry:
         self.part = None
         self.part_info = Namespace(comment=[], posting_gpstime=[], reference=[])
         self.connections = Namespace(up=None, down=None)
-        self.geo = None
+        self.station = None
 
     def __repr__(self):
         """Define representation."""
@@ -89,7 +89,7 @@ class PartEntry:
         self.part.gps2Time()
         self.get_connections(active=active)
         self.get_part_info(active=active)
-        self.get_geo(active=active)
+        self.get_station(active=active)
         self.add_ports()
 
     def add_ports(self):
@@ -135,7 +135,7 @@ class PartEntry:
                     self.part_info.posting_gpstime.append(pi_entry.posting_gpstime)
                     self.part_info.reference.append(pi_entry.reference)
 
-    def get_geo(self, active):
+    def get_station(self, active):
         """
         Retrieve the geographical information for the part in self.hpn.
 
@@ -145,8 +145,8 @@ class PartEntry:
             Contains the active database entries.
 
         """
-        if self.pn in active.geo.keys():
-            self.geo = active.geo[self.pn]
+        if self.pn in active.station.keys():
+            self.station = active.station[self.pn]
 
     def get_headers(self, columns):
         """
@@ -245,7 +245,7 @@ class PartEntry:
                     no_port_data = False
                 if col == "comment" and x is not None and len(x):
                     x = "\n".join([y.strip() for y in x])
-                elif col == "geo" and x is not None:
+                elif col == "station" and x is not None:
                     x = "{:.1f}E, {:.1f}N, {:.1f}m".format(
                         x.easting, x.northing, x.elevation
                     )
@@ -301,7 +301,7 @@ class HookupEntry(object):
             for port, conn_list in input_dict["hookup"].items():
                 new_conn_list = []
                 for conn_dict in conn_list:
-                    new_conn_list.append(cm_table_util.get_connection_from_dict(conn_dict))
+                    new_conn_list.append(cm_tables.get_connection(conn_dict))
                 hookup_connections_dict[port] = new_conn_list
             self.hookup = hookup_connections_dict
             self.fully_connected = input_dict["fully_connected"]
