@@ -4,98 +4,13 @@
 
 """Some low-level configuration management utility functions."""
 
-import subprocess
 from astropy.time import Time
 from astropy.time import TimeDelta
 import datetime
 
-from . import cm
 
 PAST_DATE = "2000-01-01"
 VALID_FLOAT_FORMAT_FOR_TIME = ["unix", "gps", "jd"]
-
-
-def get_cm_repo_git_hash(cm_config_path=None, cm_csv_path=None, testing=False):
-    """
-    Get the current version for recording with antenna locations.
-
-    Parameters
-    ----------
-    cm_config_path : str or None
-        Path to configuration file.  If None, uses default.
-    cm_csv_path : str or None
-        Path to the cm csv file updates.  If None, uses default.
-    testing : bool
-        Flag to allow for testing.
-
-    Returns
-    -------
-    str
-        git hash of cm repository
-
-    """
-    if cm_csv_path is None or testing:
-        cm_csv_path = cm.get_cm_csv_path(cm_config_file=cm_config_path)
-        if cm_csv_path is None:
-            raise ValueError("No cm_csv_path defined in cm_config file.")
-
-    git_hash = subprocess.check_output(
-        ["git", "-C", cm_csv_path, "rev-parse", "HEAD"], stderr=subprocess.STDOUT
-    ).strip()
-    return git_hash
-
-
-def log(msg, **kwargs):
-    """
-    Write to the standard cm log file.
-
-    Parameters
-    ----------
-    msg : str
-        log message to write.
-    **kwargs : dict
-        keywords and arguments to log.
-
-    """
-    fp = open(cm.cm_log_file, "a")
-    dt = Time.now()
-    fp.write(
-        "-------------------"
-        + str(dt.datetime)
-        + "  "
-        + msg
-        + "-------------------\n\n"
-    )
-    for key, value in kwargs.items():
-        if key == "args":
-            fp.write("--args\n\t")
-            vargs = vars(value)
-            for k, v in vargs.items():
-                fp.write(str(k) + ":  " + str(v) + ";  ")
-            fp.write("\n\n")
-        elif key == "data_dict":
-            fp.write("--data\n\t")
-            for k, v in value.items():
-                fp.write("    " + k + "  ")
-                for d in v:
-                    fp.write(str(d) + ";  ")
-                fp.write("\n\n")
-        else:
-            fp.write("--other\n\t")
-            fp.write(str(key) + ":  " + str(value) + "\n\n")
-    fp.close()
-
-
-# #######################################Key stuff
-system_wide_key = "__Sys__"
-
-
-def port_is_polarized(port, pol_list):
-    """Determine if a part is polarized."""
-    for pol in pol_list:
-        if port.upper().startswith(pol.upper()):
-            return True
-    return False
 
 
 def stringify(inp):
@@ -168,51 +83,6 @@ def listify(to_list, None_as_list=False, prefix=None, padding=None):
     if isinstance(to_list, list):
         return to_list
     return [to_list]
-
-
-def match_list(a_obj, b_obj, case_type=None):
-    """
-    Return a zipped list-pair of same length.
-
-    This can handle objects of any type, but its primary use is to make sure
-    part number/revision calls as lists or strings are matched.  If case_type is
-    not None, then all elements will be returned as str or None.
-
-    Parameters
-    ----------
-    a_obj
-        First object to match
-    b_obj
-        Second object to match
-    case_type : str or None
-        To convert to 'uppercase'/'u' or 'lowercase'/'l' strings.  None keeps as supplied.
-
-    Returns
-    -------
-    zip
-
-    Raises
-    ------
-    ValueError
-        If supplied objects can't be matched or invalid case_type.
-
-    """
-    a_obj = listify(a_obj, None_as_list=True)
-    b_obj = listify(b_obj, None_as_list=True)
-    if len(a_obj) > len(b_obj):
-        b_obj = b_obj * len(a_obj)
-    elif len(b_obj) > len(a_obj):
-        a_obj = a_obj * len(b_obj)
-    if len(a_obj) != len(b_obj):
-        raise ValueError("Lists must be same length")
-    if case_type is None:
-        return zip(a_obj, b_obj)
-    case_type = case_type[0].lower()
-    if case_type == "u":
-        return zip(to_upper(a_obj), to_upper(b_obj))
-    elif case_type == "l":
-        return zip(to_lower(a_obj), to_lower(b_obj))
-    raise ValueError("Invalid case_type.")
 
 
 def to_upper(inp):
