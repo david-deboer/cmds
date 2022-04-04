@@ -370,7 +370,7 @@ def update_info(infos, dates, session):
                                                   == infod['posting_gpstime'])).first()
         if infox is None:
             info = PartInfo()
-            updated += info.info(**infod)
+            updated += info.info(posting_gpstime=infod['posting_gpstime'], **infod)
             session.add(info)
         else:
             print(f"{pn} already has info at this time.  No action.")
