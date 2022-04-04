@@ -87,12 +87,12 @@ class PartEntry:
         """
         self.part = active.parts[self.entry_key]
         self.part.gps2Time()
-        self.get_connections(active=active)
-        self.get_part_info(active=active)
-        self.get_station(active=active)
-        self.add_ports()
+        self._get_connections(active=active)
+        self._get_part_info(active=active)
+        self._get_station(active=active)
+        self._add_ports()
 
-    def add_ports(self):
+    def _add_ports(self):
         """Pull out the input_ports and output_ports to a class variable."""
         if self.connections.down is not None:
             self.input_ports = cm_utils.put_keys_in_order(
@@ -103,7 +103,7 @@ class PartEntry:
                 [x.lower() for x in self.connections.up.keys()], "PN"
             )
 
-    def get_connections(self, active):
+    def _get_connections(self, active):
         """
         Retrieve the connection info for the part in self.hpn.
 
@@ -118,7 +118,7 @@ class PartEntry:
         if self.entry_key in active.connections["down"].keys():
             self.connections.down = active.connections["down"][self.entry_key]
 
-    def get_part_info(self, active):
+    def _get_part_info(self, active):
         """
         Retrieve the part_info for the part in self.hpn.
 
@@ -135,7 +135,7 @@ class PartEntry:
                     self.part_info.posting_gpstime.append(pi_entry.posting_gpstime)
                     self.part_info.reference.append(pi_entry.reference)
 
-    def get_station(self, active):
+    def _get_station(self, active):
         """
         Retrieve the geographical information for the part in self.hpn.
 
