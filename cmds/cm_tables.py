@@ -278,6 +278,19 @@ class AprioriAntenna(MCDeclarativeBase):
             self.antenna, self.status, self.start_gpstime, self.stop_gpstime
         )
 
+    def apriori(self, **kwargs):
+        """Add arbitrary attributes passed in a dict to this object."""
+        updated = 0
+        for key, value in kwargs.items():
+            if hasattr(self, key):
+                if key in ['start_gpstime', 'stop_gpstime']:
+                    value = int(value)
+                setattr(self, key, value)
+                updated += 1
+            else:
+                print(f"{key} is not a valid apriori_antenna attribute.")
+        return updated
+
     def valid_statuses(self):
         """Define current valid statuses GET FROM SYSDEF.JSON!."""
         return [
