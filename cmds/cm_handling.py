@@ -162,8 +162,8 @@ class Handling:
             active.load_connections(at_date=at_date)
         if active.info is None:
             active.load_info(at_date=at_date)
-        if active.geo is None:
-            active.load_geo(at_date=at_date)
+        if active.station is None:
+            active.load_station(at_date=at_date)
         part_dossier = {}
 
         pn_list = self._get_pn_list(pn, active, exact_match)
