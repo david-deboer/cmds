@@ -69,25 +69,6 @@ class Sysdef:
                 for k in sorted_keys:
                     self.full_connection_path[hutype].append(ordered_path[k])
 
-    def _to_dict(self):
-        """
-        Convert this object to a dict (so it can be written to json).
-
-        Returns
-        -------
-        dict
-            Dictionary version of object.
-
-        """
-        return {
-            "hookup_type": self.hookup_type,
-            "corr_index": self.corr_index,
-            "all_pols": self.all_pols,
-            "redirect_part_types": self.redirect_part_types,
-            "single_pol_labeled_parts": self.single_pol_labeled_parts,
-            "full_connection_path": self.full_connection_path,
-        }
-
     def get_all_ports(self, hookup_types=None):
         """
         Get all ports for hookup_types.

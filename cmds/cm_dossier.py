@@ -13,7 +13,7 @@ from . import cm_sysdef, cm_utils, cm_tables
 
 class PartEntry:
     """
-    Holds all of the information on a given part:rev.
+    Holds all of the information on a given part -- generally called from cm_handling.
 
     It includes connections, part_info, and, if applicable, station location.
 
