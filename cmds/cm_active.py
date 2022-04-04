@@ -113,7 +113,7 @@ class ActiveData:
                 | (cm_tables.Parts.stop_gpstime == None)  # noqa
             )
         ):
-            key = cm_utils.make_part_key(prt.hpn, prt.hpn_rev)
+            key = prt.pn
             self.parts[key] = prt
             self.parts[key].logical_pn = None
 
@@ -154,26 +154,22 @@ class ActiveData:
                 | (cm_tables.Connections.stop_gpstime == None)  # noqa
             )
         ):
-            chk = cm_utils.make_part_key(
-                cnn.upstream_part, cnn.up_part_rev, cnn.upstream_output_port
-            )
+            chk = f"{cnn.upstream_part}-{cnn.upstream_output_port}"
             if self.pytest_param:
                 check_keys[self.pytest_param].append(chk)
             if chk in check_keys["up"]:
                 raise ValueError("Duplicate active port {}".format(chk))
             check_keys["up"].append(chk)
-            chk = cm_utils.make_part_key(
-                cnn.downstream_part, cnn.down_part_rev, cnn.downstream_input_port
-            )
+            chk = f"{cnn.downstream_part}-{cnn.downstream_input_port}"
             if chk in check_keys["down"]:
                 raise ValueError("Duplicate active port {}".format(chk))
             check_keys["down"].append(chk)
-            key = cm_utils.make_part_key(cnn.upstream_part, cnn.up_part_rev)
+            key = cnn.upstream_part
             self.connections["up"].setdefault(key, {})
-            self.connections["up"][key][cnn.upstream_output_port.upper()] = cnn
-            key = cm_utils.make_part_key(cnn.downstream_part, cnn.down_part_rev)
+            self.connections["up"][key][cnn.upstream_output_port.lower()] = cnn
+            key = cnn.downstream_part
             self.connections["down"].setdefault(key, {})
-            self.connections["down"][key][cnn.downstream_input_port.upper()] = cnn
+            self.connections["down"][key][cnn.downstream_input_port.lower()] = cnn
 
     def load_info(self, at_date=None, at_time=None, float_format=None):
         """
@@ -200,7 +196,7 @@ class ActiveData:
         for info in self.session.query(cm_tables.PartInfo).filter(
             (cm_tables.PartInfo.posting_gpstime <= gps_time)
         ):
-            key = cm_utils.make_part_key(info.hpn, info.hpn_rev)
+            key = info.pn
             self.info.setdefault(key, [])
             self.info[key].append(info)
 
@@ -236,7 +232,7 @@ class ActiveData:
                 | (cm_tables.AprioriAntenna.stop_gpstime == None)  # noqa
             )
         ):
-            key = cm_utils.make_part_key(astat.antenna, rev)
+            key = astat.antenna
             if key in apriori_keys:
                 raise ValueError("{} already has an active apriori state.".format(key))
             apriori_keys.append(key)
