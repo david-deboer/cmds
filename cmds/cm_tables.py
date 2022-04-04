@@ -367,7 +367,7 @@ def update_info(infos, dates, session):
         pn = infod['pn'].upper()
         infox = session.query(PartInfo).filter((func.upper(PartInfo.pn) == pn)
                                                & (PartInfo.posting_gpstime
-                                                  == infod['posting_gpstime'])).first()
+                                                  == date.gps)).first()
         if infox is None:
             info = PartInfo()
             updated += info.info(posting_gpstime=date.gps, **infod)
