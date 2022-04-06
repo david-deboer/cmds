@@ -13,11 +13,9 @@ from . import cm_sysdef, cm_utils, cm_tables
 
 class Dossier:
 
-    def __init__(self, type='part', **kwargs):
+    def __init__(self, **kwargs):
         self.dossier = {}
-        self.type = type
-        if type == 'part':
-            self.get_part_dossier(**kwargs)
+        self.get_part_dossier(**kwargs)
 
     def get_part_dossier(
         self,
@@ -30,6 +28,7 @@ class Dossier:
         notes_start_time=None,
         notes_float_format=None,
         exact_match=True,
+        session=None,
         **kwargs
     ):
         """
