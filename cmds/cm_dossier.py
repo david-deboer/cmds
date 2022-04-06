@@ -70,7 +70,7 @@ class Dossier:
             notes_start_date, notes_start_time, notes_float_format
         )
         if active is None:
-            active = cm_active.ActiveData(self.session, at_date=at_date)
+            active = cm_active.ActiveData(session, at_date=at_date)
         elif at_date is not None:
             date_diff = abs(at_date - active.at_date).sec
             if date_diff > 1.0:

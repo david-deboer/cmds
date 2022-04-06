@@ -438,7 +438,7 @@ def get_astropytime(adate, atime=None, float_format=None):
             return return_date + TimeDelta(add_time, format="sec")
 
 
-def get_pn_list(self, pnreq, pnlist, exact_match):
+def get_pn_list(pnreq, pnlist, exact_match):
     """
     Return hpn,rev zip list to accommodate non-exact matches.
 
