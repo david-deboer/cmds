@@ -11,6 +11,132 @@ from itertools import zip_longest
 from . import cm_sysdef, cm_utils, cm_tables
 
 
+class Dossier:
+
+    def __init__(self, type='part', **kwargs):
+        self.dossier = {}
+        self.type = type
+        if type == 'part':
+            self.get_part_dossier(**kwargs)
+
+    def get_part_dossier(
+        self,
+        pn,
+        at_date="now",
+        at_time=None,
+        float_format=None,
+        active=None,
+        notes_start_date="<",
+        notes_start_time=None,
+        notes_float_format=None,
+        exact_match=True,
+        **kwargs
+    ):
+        """
+        Get information on a part or parts.
+
+        Parameters
+        ----------
+        pn : str, list
+            Part number [string or list-of-strings] (whole or first part thereof)
+        at_date : anything interpretable by cm_utils.get_astropytime
+            Date for which to check.
+        at_time : anything interpretable by cm_utils.get_astropytime
+            Time at which to check, ignored if at_date is a float or contains time information
+        float_format : str
+            Format if at_date is a number denoting gps or unix seconds or jd day
+        active : cm_active.ActiveData class or None
+            Use supplied ActiveData.  If None, read in.
+        notes_start_date : anything interpretable by cm_utils.get_astropytime
+            Start_date for displaying notes
+        notes_start_time : anything interpretable by cm_utils.get_astropytime
+            Start time for displaying notes, ignored if notes_start_date is a float or
+            contains time information
+        notes_float_format : str
+            Format if notes_start_date is a number denoting gps or unix seconds or jd day.
+        exact_match : bool
+            Flag to enforce full part number match, or "startswith"
+
+        Returns
+        -------
+        dict
+            dictionary keyed on the part_number:rev containing PartEntry
+            dossier classes
+
+        """
+        from . import cm_active
+
+        at_date = cm_utils.get_astropytime(at_date, at_time, float_format)
+        notes_start_date = cm_utils.get_astropytime(
+            notes_start_date, notes_start_time, notes_float_format
+        )
+        if active is None:
+            active = cm_active.ActiveData(self.session, at_date=at_date)
+        elif at_date is not None:
+            date_diff = abs(at_date - active.at_date).sec
+            if date_diff > 1.0:
+                raise ValueError(
+                    "Supplied date and active date do not agree "
+                    "({}sec)".format(date_diff)
+                )
+        else:
+            at_date = active.at_date
+        if active.parts is None:
+            active.load_parts(at_date=at_date)
+        if active.connections is None:
+            active.load_connections(at_date=at_date)
+        if active.info is None:
+            active.load_info(at_date=at_date)
+        if active.stations is None:
+            active.load_stations(at_date=at_date)
+
+        pn_list = cm_utils.get_pn_list(pn, list(active.parts.keys()), exact_match)
+
+        for this_pn in pn_list:
+            this_part = PartEntry(
+                pn=this_pn,
+                at_date=at_date,
+                notes_start_date=notes_start_date,
+            )
+            this_part.get_entry(active)
+            self.dossier[this_pn] = this_part
+
+    def show_part_dossier(self, columns=None, ports=None):
+        """
+        Generate part information print string.  Uses tabulate package.
+
+        Parameter
+        ---------
+        columns : list
+            List of column headers to use.  If None, use all
+        ports : list, str, None
+            Ports to show.
+            If None, counterintuitively, all are included
+                (see cm_sysdef.all_port_types)
+            If str, it assumes that types are provided
+                (see cm_sysdef.all_port_types), specified as csv-list.
+            If list, it only allows those.
+
+        Returns
+        -------
+        str
+            String containing the dossier table.
+        """
+        from tabulate import tabulate
+
+        ports = [p.lower() for p in ports]
+        pd_keys = cm_utils.put_keys_in_order(list(self.dossier.keys()))
+        if len(pd_keys) == 0:
+            return "Part not found"
+        table_data = []
+        headers = self.dossier[pd_keys[0]].get_headers(columns=columns)
+        for pn in pd_keys:
+            new_rows = self.dossier[pn].table_row(columns=columns, ports=ports)
+            for nr in new_rows:
+                table_data.append(nr)
+        return "\n" + tabulate(table_data, headers=headers, tablefmt="orgtbl") + "\n"
+
+
 class PartEntry:
     """
     Holds all of the information on a given part -- generally called from cm_handling.

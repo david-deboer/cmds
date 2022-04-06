@@ -438,6 +438,41 @@ def get_astropytime(adate, atime=None, float_format=None):
             return return_date + TimeDelta(add_time, format="sec")
 
 
+def get_pn_list(self, pnreq, pnlist, exact_match):
+    """
+    Return hpn,rev zip list to accommodate non-exact matches.
+
+    Parameters
+    ----------
+    pnreq : str, list
+        Requested part number(s)
+    pnlist : list
+        Contains possible list of pns
+    exact_match : bool
+        Flag to enforce exact match, or starting
+
+    Returns
+    -------
+    list
+        Found pns
+
+    """
+    if isinstance(pnreq, str):
+        pnreq = [pnreq]
+    pnreq = to_upper(pnreq)
+    pnlist = to_upper(pnlist)
+    pnfnd = []
+    for pn in pnreq:
+        if exact_match:
+            if pn in pnlist:
+                pnfnd.append(pn)
+        else:
+            for pntrial in pnlist:
+                if pntrial.startswith(pn):
+                    pnfnd.append(pn)
+    return pnfnd
+
+
 def peel_key(key, sort_order):
     """
     Separate a hookup key into its parts.
