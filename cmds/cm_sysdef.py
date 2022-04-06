@@ -4,13 +4,29 @@
 
 """Defines the system architecture for the telescope array."""
 import json
-import os.path
 
 from . import cm_utils
-from .data import DATA_PATH
+from .cm import default_config_file
 
-with open(os.path.join(DATA_PATH, "sysdef.json"), "r") as fp:
-    system_info = json.load(fp)
+
+def get_sysdef(args):
+    """
+    Return the sysdef json file.
+    """
+    sysdef_file = None
+    if args is None:
+        config_file = default_config_file
+    elif hasattr(args, "sysdef_file") and args.sysdef_file is not None:
+        sysdef_file = args.sysdef_file
+    else:
+        config_file = args.config_file
+    if sysdef_file is None:
+        with open(config_file) as fp:
+            config = json.load(fp)
+            sysdef_name_to_use = config['default_sysdef_name']
+            sysdef_file = config["sysdef_files"][sysdef_name_to_use]
+    with open(sysdef_file) as fp:
+        return json.load(fp)
 
 
 class Sysdef:
@@ -38,6 +54,7 @@ class Sysdef:
     ]
 
     def __init__(self, hookup_type=None, input_dict=None):
+        system_info = {}
         self.port_def = system_info["hookup_types"]
         if input_dict is not None:
             self.hookup_type = input_dict["hookup_type"]

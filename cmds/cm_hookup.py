@@ -90,13 +90,13 @@ class Hookup(object):
         self.active.load_parts(at_date=None)
         self.active.load_connections(at_date=None)
         pn = cm_utils.listify(pn)
-        parts = self._cull_dict(pn, self.active.parts, exact_match)
+        parts = self._get_search_dict(pn, self.active.parts, exact_match)
         hookup_dict = {}
         for k, part in parts.items():
             self.hookup_type = self.sysdef.find_hookup_type(
-                part_type=part.hptype, hookup_type=hookup_type
+                part_type=part.ptype, hookup_type=hookup_type
             )
-            if part.hptype in self.sysdef.redirect_part_types[self.hookup_type]:
+            if part.ptype in self.sysdef.redirect_part_types[self.hookup_type]:
                 redirect_parts = self.sysdef.handle_redirect_part_types(
                     part, self.active
                 )
@@ -115,7 +115,7 @@ class Hookup(object):
             hookup_dict[k] = cm_dossier.HookupEntry(entry_key=k, sysdef=self.sysdef)
             for port_pol in self.sysdef.ppkeys:
                 hookup_dict[k].hookup[port_pol] = self._follow_hookup_stream(
-                    part=part.hpn, port_pol=port_pol
+                    part=part.pn, port_pol=port_pol
                 )
                 part_types_found = self._get_part_types_found(
                     hookup_dict[k].hookup[port_pol]
@@ -303,22 +303,21 @@ class Hookup(object):
         return full_info_string
 
     # ################################ Internal methods ######################################
-    def _cull_dict(self, hpn, search_dict, exact_match):
+    def _get_search_dict(self, pn, search_dict, exact_match):
         """
         Determine the complete appropriate set of parts to use within search_dict.
 
-        Based on the list contained in hpn.
+        Based on the list contained in pn.
 
         The supplied search_dict has all options, which are culled by the supplied
-        hpn and exact_match flag.
+        pn and exact_match flag.
 
         Parameters
         ----------
-        hpn : list
-            List of HERA part numbers being checked as returned from self._proc_hpnlist
+        pn : list
+            List of part numbers being checked
         search_dict : dict
-            Contains information about all parts possible to search, keyed on the "standard"
-            cm_utils.make_part_key
+            Contains information about all parts possible to search
         exact_match : bool
             If False, will only check the first characters in each hpn entry.  E.g. 'HH1'
             would allow 'HH1', 'HH10', 'HH123', etc
@@ -326,19 +325,19 @@ class Hookup(object):
         Returns
         -------
         dict
-            Contains the found entries within search_dict
+            Contains the found entries within search_dict (i.e. the appropriate subset)
         """
-        hpn_upper = [x.upper() for x in hpn]
+        pn_upper = [x.upper() for x in pn]
         found_dict = {}
         for key in search_dict.keys():
-            hpn = key.upper()
+            pn = key.upper()
             use_this_one = False
             if exact_match:
-                if hpn in hpn_upper:
+                if pn in pn_upper:
                     use_this_one = True
             else:
-                for hlu in hpn_upper:
-                    if hpn.startswith(hlu):
+                for hlu in pn_upper:
+                    if pn.startswith(hlu):
                         use_this_one = True
                         break
             if use_this_one:

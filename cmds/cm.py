@@ -94,22 +94,6 @@ class AutomappedDB(DB):
                 )
 
 
-def get_sysdef(args):
-    sysdef_file = None
-    if args is None:
-        config_file = default_config_file
-    elif hasattr(args, "sysdef_file") and args.sysdef_file is not None:
-        sysdef_file = args.sysdef_file
-    else:
-        config_file = args.config_file
-    if sysdef_file is None:
-        with open(config_file) as fp:
-            config_file = json.load(fp)
-        sysdef_file = config_file["sysdef_files"]["default_sysdef_name"]
-    with open(sysdef_file) as fp:
-        return json.load(fp)
-
-
 def get_cm_argument_parser():
     """
     Get an CM specific `argparse.ArgumentParser` object.
