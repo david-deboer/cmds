@@ -101,8 +101,8 @@ class Hookup(object):
                     if port in self.sysdef.components[part.ptype]["up"][pol]:
                         polport = f"{pol}-{port}"
                         print(polport)
-                        # hookup_dict[k].hookup[polport] = self._follow_hookup_stream(
-                        #     part=k, pol=pol, port=port)
+                        hookup_dict[k].hookup[polport] = self._follow_hookup_stream(
+                            part=k, pol=pol, port=port)
                 print("DOWNSTREAM")
                 for port in self.dossier.dossier[k].output_ports:
                     if port in self.sysdef.components[part.ptype]["down"][pol]:
@@ -323,7 +323,7 @@ class Hookup(object):
         self.part_type_cache[c.downstream_part] = part_type
         return list(part_types_found)
 
-    def _follow_hookup_stream(self, part, rev, port_pol):
+    def _follow_hookup_stream(self, part, pol, port):
         """
         Follow a list of connections upstream and downstream.
 
@@ -331,10 +331,10 @@ class Hookup(object):
         ----------
         part : str
             HERA part number
-        rev : str
-            HERA part revision
-        port_pol : str
-            Port polarization to follow.  Should be 'E<port' or 'N<port'.
+        pol : str
+            Polarization designation
+        port : str
+            Port designation
 
         Returns
         -------
@@ -344,8 +344,7 @@ class Hookup(object):
         """
         key = part
         part_type = self.active.parts[key].ptype
-        pol, port = port_pol.split("<")
-        port_list = cm_utils.to_upper(self.sysdef.get_ports(pol, part_type))
+        port_list = cm_utils.to_upper(self.sysdef['components'][pol])
         self.upstream = []
         self.downstream = []
         current = Namespace(
@@ -354,7 +353,7 @@ class Hookup(object):
             key=key,
             pol=pol.upper(),
             ptype=part_type,
-            port=port.upper(),
+            port=port.lower(),
             allowed_ports=port_list,
         )
         self._recursive_connect(current)
@@ -364,7 +363,7 @@ class Hookup(object):
             key=key,
             pol=pol.upper(),
             ptype=part_type,
-            port=port.upper(),
+            port=port.lower(),
             allowed_ports=port_list,
         )
         self._recursive_connect(current)
