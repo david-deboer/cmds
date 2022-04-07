@@ -212,13 +212,9 @@ class PartEntry:
     def _add_ports(self):
         """Pull out the input_ports and output_ports to a class variable."""
         if self.connections.down is not None:
-            self.input_ports = cm_utils.put_keys_in_order(
-                [x.lower() for x in self.connections.down.keys()], "PN"
-            )
+            self.input_ports = [x.lower() for x in self.connections.down.keys()]
         if self.connections.up is not None:
-            self.output_ports = cm_utils.put_keys_in_order(
-                [x.lower() for x in self.connections.up.keys()], "PN"
-            )
+            self.output_ports = [x.lower() for x in self.connections.up.keys()]
 
     def _get_connections(self, active):
         """
