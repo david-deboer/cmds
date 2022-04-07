@@ -1,5 +1,5 @@
 {
-    "default_db_name": "ata_sqlite",
+    "default_db_name": "hcro_sqlite",
     "default_sysdef_name": "ata",
     "databases":
     {
@@ -18,9 +18,9 @@
             "url": "sqlite:////Users/ddeboer/Documents/ubase/Projects/HERA/ops/hera_cm_db_updates/hera_mc.db",
             "mode": "production"
         },
-        "ata_sqlite":
+        "hcro_sqlite":
         {
-            "url": "sqlite:////Users/ddeboer/Documents/ubase/Projects/Oliver/cm_ata/ata.db",
+            "url": "sqlite:////Users/ddeboer/Documents/ubase/Projects/Oliver/cm_ata/hcro.db",
             "mode": "production"
         }
     },

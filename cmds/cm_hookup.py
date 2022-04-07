@@ -36,7 +36,6 @@ class Hookup(object):
     def get_hookup(
         self,
         pn,
-        pol,
         at_date,
         at_time=None,
         float_format=None,
@@ -59,8 +58,6 @@ class Hookup(object):
                 - otherwise converts as csv-list
             If element of list is of format '.xxx:a/b/c' it finds the appropriate
                 method as cm_sysdef.Sysdef.xxx([a, b, c])
-        pol : str
-            A port polarization to follow, or 'all',  (e.g. 'e', 'n', 'all')
         at_date : anything interpretable by cm_utils.get_astropytime
             Date at which to initialize.
         at_time : anything interpretable by cm_utils.get_astropytime

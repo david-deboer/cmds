@@ -212,7 +212,6 @@ class PartEntry:
         """
         self.part = active.parts[self.entry_key]
         self.part.gps2Time()
-        print("CMD215:  ", self.part)
         self._get_connections(active=active)
         self._get_part_info(active=active)
         self._get_station(active=active)
