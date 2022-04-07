@@ -344,14 +344,14 @@ class Hookup(object):
         """
         key = part
         part_type = self.active.parts[key].ptype
-        port_list = cm_utils.to_upper(self.sysdef['components'][pol])
+        port_list = cm_utils.to_upper(self.sysdef.components[part_type]["up"][pol])
         self.upstream = []
         self.downstream = []
         current = Namespace(
             direction="up",
             part=part.upper(),
             key=key,
-            pol=pol.upper(),
+            pol=pol,
             ptype=part_type,
             port=port.lower(),
             allowed_ports=port_list,
@@ -361,7 +361,7 @@ class Hookup(object):
             direction="down",
             part=part.upper(),
             key=key,
-            pol=pol.upper(),
+            pol=pol,
             ptype=part_type,
             port=port.lower(),
             allowed_ports=port_list,
@@ -426,10 +426,9 @@ class Hookup(object):
             current.type = self.active.parts[current.key].ptype
         except KeyError:  # pragma: no cover
             return None
-        current.allowed_ports = cm_utils.to_upper(
-            self.sysdef.get_ports(current.pol, current.type)
-        )
+        current.allowed_ports = self.sysdef.components[current.type][current.direction][current.pol]
         current.port = self._get_port(current, options)
+        print("CMHU431:  ", this_conn)
         return this_conn
 
     def _get_port(self, current, options):
@@ -439,9 +438,6 @@ class Hookup(object):
         for p in options:
             if p in current.allowed_ports:
                 sysdef_options.append(p)
-        if current.hptype in self.sysdef.single_pol_labeled_parts[self.hookup_type]:
-            if current.part[-1].upper() == current.pol[0]:
-                return sysdef_options[0]
         if len(sysdef_options) == 1:
             return sysdef_options[0]
         for p in sysdef_options:
