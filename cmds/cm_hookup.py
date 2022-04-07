@@ -31,7 +31,6 @@ class Hookup(object):
             self.session = db.sessionmaker()
         else:
             self.session = session
-        self.sysdef = cm_sysdef.Sysdef()
         self.active = None
 
     def get_hookup(
@@ -61,7 +60,7 @@ class Hookup(object):
             If element of list is of format '.xxx:a/b/c' it finds the appropriate
                 method as cm_sysdef.Sysdef.xxx([a, b, c])
         pol : str
-            A port polarization to follow, or 'all',  ('e', 'n', 'all')
+            A port polarization to follow, or 'all',  (e.g. 'e', 'n', 'all')
         at_date : anything interpretable by cm_utils.get_astropytime
             Date at which to initialize.
         at_time : anything interpretable by cm_utils.get_astropytime
@@ -89,41 +88,46 @@ class Hookup(object):
         self.active = cm_active.ActiveData(self.session, at_date=at_date)
         self.active.load_parts(at_date=None)
         self.active.load_connections(at_date=None)
+        self.hookup_type = hookup_type
+        self.sysdef = cm_sysdef.Sysdef(hookup_type)
         pn = cm_utils.listify(pn)
-        parts = self._get_search_dict(pn, self.active.parts, exact_match)
+        parts_list = cm_utils.get_pn_list(pn, list(self.active.parts.keys()), exact_match)
+        self.dossier = cm_dossier.Dossier(pn=pn, at_date=at_date, active=self.active)
         hookup_dict = {}
-        for k, part in parts.items():
-            self.hookup_type = self.sysdef.find_hookup_type(
-                part_type=part.ptype, hookup_type=hookup_type
-            )
-            if part.ptype in self.sysdef.redirect_part_types[self.hookup_type]:
-                redirect_parts = self.sysdef.handle_redirect_part_types(
-                    part, self.active
-                )
-                redirect_hookup_dict = self.get_hookup(
-                    hpn=redirect_parts,
-                    pol=pol,
-                    at_date=self.at_date,
-                    exact_match=True,
-                    hookup_type=self.hookup_type,
-                )
-                for rhdk, vhd in redirect_hookup_dict.items():
-                    hookup_dict[rhdk] = vhd
-                redirect_hookup_dict = None
-                continue
-            self.sysdef.setup(part=part, pol=pol, hookup_type=self.hookup_type)
-            hookup_dict[k] = cm_dossier.HookupEntry(entry_key=k, sysdef=self.sysdef)
-            for port_pol in self.sysdef.ppkeys:
-                hookup_dict[k].hookup[port_pol] = self._follow_hookup_stream(
-                    part=part.pn, port_pol=port_pol
-                )
-                part_types_found = self._get_part_types_found(
-                    hookup_dict[k].hookup[port_pol]
-                )
-                hookup_dict[k].get_hookup_type_and_column_headers(
-                    port_pol, part_types_found
-                )
-                hookup_dict[k].add_timing_and_fully_connected(port_pol)
+        for k in parts_list:
+            part = self.active.parts[k]
+            print(k, part.ptype)
+            print(self.sysdef.components[part.ptype])
+            print(self.dossier.dossier[k].input_ports, self.dossier.dossier[k].output_ports)
+            # ptype, pols2chk = self.sysdef.setup(part=part, pol=pol)
+            # if part.ptype in self.sysdef.redirect_part_types[self.hookup_type]:
+            #     redirect_parts = self.sysdef.handle_redirect_part_types(
+            #         part, self.active
+            #     )
+            #     redirect_hookup_dict = self.get_hookup(
+            #         hpn=redirect_parts,
+            #         pol=pol,
+            #         at_date=self.at_date,
+            #         exact_match=True,
+            #         hookup_type=self.hookup_type,
+            #     )
+            #     for rhdk, vhd in redirect_hookup_dict.items():
+            #         hookup_dict[rhdk] = vhd
+            #     redirect_hookup_dict = None
+            #     continue
+            #
+            # hookup_dict[k] = cm_dossier.HookupEntry(entry_key=k, sysdef=self.sysdef)
+            # for port_pol in self.sysdef.ppkeys:
+            #     hookup_dict[k].hookup[port_pol] = self._follow_hookup_stream(
+            #         part=part.pn, port_pol=port_pol
+            #     )
+            #     part_types_found = self._get_part_types_found(
+            #         hookup_dict[k].hookup[port_pol]
+            #     )
+            #     hookup_dict[k].get_hookup_type_and_column_headers(
+            #         port_pol, part_types_found
+            #     )
+            #     hookup_dict[k].add_timing_and_fully_connected(port_pol)
         return hookup_dict
 
     def show_hookup(
@@ -303,47 +307,6 @@ class Hookup(object):
         return full_info_string
 
     # ################################ Internal methods ######################################
-    def _get_search_dict(self, pn, search_dict, exact_match):
-        """
-        Determine the complete appropriate set of parts to use within search_dict.
-
-        Based on the list contained in pn.
-
-        The supplied search_dict has all options, which are culled by the supplied
-        pn and exact_match flag.
-
-        Parameters
-        ----------
-        pn : list
-            List of part numbers being checked
-        search_dict : dict
-            Contains information about all parts possible to search
-        exact_match : bool
-            If False, will only check the first characters in each hpn entry.  E.g. 'HH1'
-            would allow 'HH1', 'HH10', 'HH123', etc
-
-        Returns
-        -------
-        dict
-            Contains the found entries within search_dict (i.e. the appropriate subset)
-        """
-        pn_upper = [x.upper() for x in pn]
-        found_dict = {}
-        for key in search_dict.keys():
-            pn = key.upper()
-            use_this_one = False
-            if exact_match:
-                if pn in pn_upper:
-                    use_this_one = True
-            else:
-                for hlu in pn_upper:
-                    if pn.startswith(hlu):
-                        use_this_one = True
-                        break
-            if use_this_one:
-                found_dict[key] = copy.copy(search_dict[key])
-        return found_dict
-
     def _get_part_types_found(self, hookup_connections):
         """
         Take a list of connections, return the part_types and populate 'self.part_type_cache'.

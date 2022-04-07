@@ -2,9 +2,8 @@
 # Copyright 2022 David R DeBoer
 # Licensed under the 2-clause BSD license.
 
-"""Defines the system architecture for the telescope array."""
+"""Defines the system architecture for the telescope."""
 import json
-
 from .cm import default_config_file
 
 

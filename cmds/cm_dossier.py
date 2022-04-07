@@ -63,13 +63,13 @@ class Dossier:
             dossier classes
 
         """
-        from . import cm_active
 
         at_date = cm_utils.get_astropytime(at_date, at_time, float_format)
         notes_start_date = cm_utils.get_astropytime(
             notes_start_date, notes_start_time, notes_float_format
         )
         if active is None:
+            from . import cm_active
             active = cm_active.ActiveData(session, at_date=at_date)
         elif at_date is not None:
             date_diff = abs(at_date - active.at_date).sec
@@ -138,7 +138,7 @@ class Dossier:
 
 class PartEntry:
     """
-    Holds all of the information on a given part -- generally called from cm_handling.
+    Holds all of the information on a given part.
 
     It includes connections, part_info, and, if applicable, station location.
 
@@ -212,6 +212,7 @@ class PartEntry:
         """
         self.part = active.parts[self.entry_key]
         self.part.gps2Time()
+        print("CMD215:  ", self.part)
         self._get_connections(active=active)
         self._get_part_info(active=active)
         self._get_station(active=active)
