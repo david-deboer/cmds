@@ -100,7 +100,7 @@ class Dossier:
             this_part.get_entry(active)
             self.dossier[this_pn] = this_part
 
-    def show_part_dossier(self, columns=None, ports=None):
+    def show_part_dossier(self, columns=None):
         """
         Generate part information print string.  Uses tabulate package.
 
@@ -108,13 +108,6 @@ class Dossier:
         ---------
         columns : list
             List of column headers to use.  If None, use all
-        ports : list, str, None
-            Ports to show.
-            If None, counterintuitively, all are included
-                (see cm_sysdef.all_port_types)
-            If str, it assumes that types are provided
-                (see cm_sysdef.all_port_types), specified as csv-list.
-            If list, it only allows those.
 
         Returns
         -------
@@ -123,14 +116,13 @@ class Dossier:
         """
         from tabulate import tabulate
 
-        ports = [p.lower() for p in ports]
         pd_keys = cm_utils.put_keys_in_order(list(self.dossier.keys()))
         if len(pd_keys) == 0:
             return "Part not found"
         table_data = []
         headers = self.dossier[pd_keys[0]].get_headers(columns=columns)
         for pn in pd_keys:
-            new_rows = self.dossier[pn].table_row(columns=columns, ports=ports)
+            new_rows = self.dossier[pn].table_row(columns=columns)
             for nr in new_rows:
                 table_data.append(nr)
         return "\n" + tabulate(table_data, headers=headers, tablefmt="orgtbl") + "\n"

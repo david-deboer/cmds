@@ -94,30 +94,20 @@ class Hookup(object):
         for k in parts_list:
             part = self.active.parts[k]
             print(k, part.ptype)
-            print(self.sysdef.components[part.ptype])
-            print(self.dossier.dossier[k].input_ports, self.dossier.dossier[k].output_ports)
-            # ptype, pols2chk = self.sysdef.setup(part=part, pol=pol)
-            # if part.ptype in self.sysdef.redirect_part_types[self.hookup_type]:
-            #     redirect_parts = self.sysdef.handle_redirect_part_types(
-            #         part, self.active
-            #     )
-            #     redirect_hookup_dict = self.get_hookup(
-            #         hpn=redirect_parts,
-            #         pol=pol,
-            #         at_date=self.at_date,
-            #         exact_match=True,
-            #         hookup_type=self.hookup_type,
-            #     )
-            #     for rhdk, vhd in redirect_hookup_dict.items():
-            #         hookup_dict[rhdk] = vhd
-            #     redirect_hookup_dict = None
-            #     continue
-            #
-            # hookup_dict[k] = cm_dossier.HookupEntry(entry_key=k, sysdef=self.sysdef)
-            # for port_pol in self.sysdef.ppkeys:
-            #     hookup_dict[k].hookup[port_pol] = self._follow_hookup_stream(
-            #         part=part.pn, port_pol=port_pol
-            #     )
+            hookup_dict[k] = cm_dossier.HookupEntry(entry_key=k, sysdef=self.sysdef)
+            for pol in self.sysdef.polarizations:
+                print("UPSTREAM")
+                for port in self.dossier.dossier[k].input_ports:
+                    if port in self.sysdef.components[part.ptype]["up"][pol]:
+                        polport = f"{pol}-{port}"
+                        print(polport)
+                        # hookup_dict[k].hookup[polport] = self._follow_hookup_stream(
+                        #     part=k, pol=pol, port=port)
+                print("DOWNSTREAM")
+                for port in self.dossier.dossier[k].output_ports:
+                    if port in self.sysdef.components[part.ptype]["down"][pol]:
+                        polport = f"{pol}-{port}"
+                        print(polport)
             #     part_types_found = self._get_part_types_found(
             #         hookup_dict[k].hookup[port_pol]
             #     )
