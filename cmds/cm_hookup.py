@@ -36,7 +36,7 @@ class Hookup(object):
     def get_hookup(
         self,
         pn,
-        at_date,
+        at_date='now',
         at_time=None,
         float_format=None,
         exact_match=False,
@@ -93,21 +93,18 @@ class Hookup(object):
         hookup_dict = {}
         for k in parts_list:
             part = self.active.parts[k]
-            print(k, part.ptype)
             hookup_dict[k] = cm_dossier.HookupEntry(entry_key=k, sysdef=self.sysdef)
             for pol in self.sysdef.polarizations:
-                print("UPSTREAM")
                 for port in self.dossier.dossier[k].input_ports:
-                    if port in self.sysdef.components[part.ptype]["up"][pol]:
+                    if port in self.sysdef.components[part.ptype]['up'][pol]:
                         polport = f"{pol}-{port}"
-                        print(polport)
                         hookup_dict[k].hookup[polport] = self._follow_hookup_stream(
-                            part=k, pol=pol, port=port)
-                print("DOWNSTREAM")
+                            part=k, pol=pol, port=port, dir="up")
                 for port in self.dossier.dossier[k].output_ports:
-                    if port in self.sysdef.components[part.ptype]["down"][pol]:
+                    if port in self.sysdef.components[part.ptype]['down'][pol]:
                         polport = f"{pol}-{port}"
-                        print(polport)
+                        hookup_dict[k].hookup[polport] = self._follow_hookup_stream(
+                            part=k, pol=pol, port=port, dir="down")
             #     part_types_found = self._get_part_types_found(
             #         hookup_dict[k].hookup[port_pol]
             #     )
@@ -294,36 +291,7 @@ class Hookup(object):
         return full_info_string
 
     # ################################ Internal methods ######################################
-    def _get_part_types_found(self, hookup_connections):
-        """
-        Take a list of connections, return the part_types and populate 'self.part_type_cache'.
-
-        Parameters
-        ----------
-        hookup_connections : list
-            List of Connection objects
-
-        Returns
-        -------
-        list
-            List of part_types
-
-        """
-        if not len(hookup_connections):
-            return []
-        part_types_found = set()
-        for c in hookup_connections:
-            key = cm_utils.make_part_key(c.upstream_part, c.up_part_rev)
-            part_type = self.active.parts[key].hptype
-            part_types_found.add(part_type)
-            self.part_type_cache[c.upstream_part] = part_type
-        key = cm_utils.make_part_key(c.downstream_part, c.down_part_rev)
-        part_type = self.active.parts[key].hptype
-        part_types_found.add(part_type)
-        self.part_type_cache[c.downstream_part] = part_type
-        return list(part_types_found)
-
-    def _follow_hookup_stream(self, part, pol, port):
+    def _follow_hookup_stream(self, part, pol, port, dir):
         """
         Follow a list of connections upstream and downstream.
 
@@ -335,6 +303,8 @@ class Hookup(object):
             Polarization designation
         port : str
             Port designation
+        dir : str
+            Direction to follow (up or down)
 
         Returns
         -------
@@ -342,35 +312,33 @@ class Hookup(object):
             List of connections for that hookup.
 
         """
-        key = part
-        part_type = self.active.parts[key].ptype
-        port_list = cm_utils.to_upper(self.sysdef.components[part_type]["up"][pol])
-        self.upstream = []
-        self.downstream = []
+        stream = {'up': [], 'down': []}
+        starting_part = part.upper()
+        starting_part_type = self.active.parts[part].ptype
         current = Namespace(
-            direction="up",
-            part=part.upper(),
-            key=key,
+            direction=dir,
+            part=starting_part,
             pol=pol,
-            ptype=part_type,
+            type=starting_part_type,
             port=port.lower(),
-            allowed_ports=port_list,
+            stream=stream[dir]
         )
         self._recursive_connect(current)
+        port = self.sysdef.get_thru_port(port, dir, pol, starting_part_type)
+        dir = cm_sysdef.opposite_direction[dir]
         current = Namespace(
-            direction="down",
-            part=part.upper(),
-            key=key,
+            direction=dir,
+            part=starting_part,
             pol=pol,
-            ptype=part_type,
+            type=starting_part_type,
             port=port.lower(),
-            allowed_ports=port_list,
+            stream=stream[dir]
         )
         self._recursive_connect(current)
         hu = []
-        for pn in reversed(self.upstream):
+        for pn in reversed(stream['up']):
             hu.append(pn)
-        for pn in self.downstream:
+        for pn in stream['down']:
             hu.append(pn)
         return hu
 
@@ -384,13 +352,10 @@ class Hookup(object):
             Namespace containing current information.
 
         """
-        conn = self._get_connection(current)
+        conn, current = self._get_connection(current)  # rewrites current
         if conn is None:
             return None
-        if current.direction == "up":
-            self.upstream.append(conn)
-        elif current.direction == "down":
-            self.downstream.append(conn)
+        current.stream.append(conn)
         self._recursive_connect(current)
 
     def _get_connection(self, current):
@@ -400,56 +365,42 @@ class Hookup(object):
         Parameters
         ----------
         current : Namespace object
-            Namespace containing current information.
+            Namespace containing current information, which gets updated.
 
         """
-        odir = self.sysdef.opposite_direction[current.direction]
+        # Get the next port we want.
+        oside = cm_sysdef.opposite_direction[current.direction]
+        if current.port is None:
+            return None, None
         try:
-            options = list(self.active.connections[odir][current.key].keys())
+            this_conn = self.active.connections[oside][current.part][current.port]
         except KeyError:
-            return None
-        this_port = self._get_port(current, options)
-        if this_port is None:
-            return None
-        this_conn = self.active.connections[odir][current.key][this_port]
+            return None, None
+        # Now increment the connection up/down the chain
         if current.direction == "up":
             current.part = this_conn.upstream_part.upper()
-            current.rev = this_conn.up_part_rev.upper()
-            current.port = this_conn.upstream_output_port.upper()
+            port1 = this_conn.upstream_output_port.lower()
         elif current.direction == "down":
             current.part = this_conn.downstream_part.upper()
-            current.rev = this_conn.down_part_rev.upper()
-            current.port = this_conn.downstream_input_port.upper()
-        current.key = current.part
-        options = list(self.active.connections[current.direction][current.key].keys())
+            port1 = this_conn.downstream_input_port.lower()
+        current.type = self.active.parts[current.part].ptype
         try:
-            current.type = self.active.parts[current.key].ptype
-        except KeyError:  # pragma: no cover
-            return None
-        current.allowed_ports = self.sysdef.components[current.type][current.direction][current.pol]
-        current.port = self._get_port(current, options)
-        print("CMHU431:  ", this_conn)
-        return this_conn
+            options = list(self.active.connections[oside][current.part].keys())
+        except KeyError:
+            options = None
+        if options is None:
+            current.port = None
+        else:
+            next_port = self.sysdef.get_thru_port(port1, oside, current.pol, current.type)
+            if next_port in options:
+                current.port = next_port
+            else:
+                current.port = None
+        return this_conn, current
 
-    def _get_port(self, current, options):
-        if current.port is None:
-            return None
-        sysdef_options = []
-        for p in options:
-            if p in current.allowed_ports:
-                sysdef_options.append(p)
-        if len(sysdef_options) == 1:
-            return sysdef_options[0]
-        for p in sysdef_options:
-            if p == current.port:
-                return p
-        for p in sysdef_options:
-            if p[0] == current.pol[0]:
-                return p
-
-    def _sort_hookup_display(self, sortby, hookup_dict, def_sort_order="NRP"):
+    def _sort_hookup_display(self, sortby, hookup_dict, def_sort_order="NP"):
         if sortby is None:
-            return cm_utils.put_keys_in_order(hookup_dict.keys(), sort_order="NPR")
+            return cm_utils.put_keys_in_order(hookup_dict.keys(), sort_order="NP")
         if isinstance(sortby, str):
             sortby = sortby.split(",")
         sort_order_dict = {}
@@ -461,7 +412,7 @@ class Hookup(object):
                 sort_order_dict[ss[0]] = ss[1]
         if "station" not in sort_order_dict.keys():
             sortby.append("station")
-            sort_order_dict["station"] = "NPR"
+            sort_order_dict["station"] = "NP"
         key_bucket = {}
         show = {"revs": True, "ports": False}
         for this_key, this_hu in hookup_dict.items():
