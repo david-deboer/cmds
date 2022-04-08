@@ -1,16 +1,60 @@
 {
-    "THIS IS THE OLD DEPRECATED ONE": "xxx",
-    "default_hookup": "ata_bf",
-    "hookup_types":
+    "default_type": "ata-rfsoc",
+    "polarization_defs":
     {
-        "ata_bf":
-        {
-            "station": {"up": [[null]], "down": [["ground"]], "position": 0},
-            "antenna": {"up": [["ground"]], "down": [["focus"]], "position": 1},
-            "feed": {"up": [["input"]], "down": [["x"], ["y"]], "position": 2},
-            "pax": {"up": [["x"], ["y"]], "down": [["x"], ["y"]], "position": 3},
-            "rf-converter": {"up": [["x"], ["y"]], "down": [["x1", "x2", "x3", "x4"], ["y1", "y2", "y3", "y4"]], "position": 4},
-            "digitalxxx": {"up": [[], []], "down": [[], []], "position": 5}
+        "ata-rfsoc": ["x", "y"],
+        "ata-snap": ["x", "y"],
+        "ata-usrp": ["x", "y"]
+    },
+    "hookup_defs":
+    {
+        "ata-rfsoc": ["station", "antenna", "feed", "pax", "rfcb", "attemplifier", "rfsoc"],
+        "ata-snap": ["station", "antenna", "feed", "pax", "rfcb", "attemplifier", "snap"],
+        "ata-usrp": ["station", "antenna", "feed", "pax", "rfcb", "rf-switch", "usrp"]
+    },
+    "components":
+    {
+        "station": {
+            "up": {"x": [null], "y": [null]},
+            "down": {"x": ["ground"], "y": ["ground"]}
+        },
+        "antenna": {
+            "up": {"x": ["ground"], "y": ["ground"]},
+            "down": {"x": ["focus"], "y": ["focus"]}
+        },
+        "feed": {
+            "up": {"x": ["input"], "y": ["input"]},
+            "down": {"x": ["x"], "y": ["y"]}
+        },
+        "pax": {
+            "up": {"x": ["x"], "y": ["y"]},
+            "down": {"x": ["x"], "y": ["y"]}
+        },
+        "rfcb": {
+            "up": {"x": ["x"], "y": ["y"]},
+            "down": {"x": ["xa", "xb", "xc", "xd"], "y": ["ya", "yb", "yc", "yd"]}
+        },
+        "attemplifier": {
+            "up": {"x": ["in1", "in2", "in3", "in4", "in5", "in6", "in7", "in8"],
+                   "y": ["in9", "in10", "in11", "in12", "in13", "in14", "in15", "in16"]},
+            "down":  {"x": ["out1", "out2", "out3", "out4", "out5", "out6", "out7", "out8"],
+                      "y": ["out9", "out10", "out11", "out12", "out13", "out14", "out15", "out16"]}
+        },
+        "rf-switch": {
+            "up": {"x": ["x"], "y": ["y"]},
+            "down": {"x": ["x"], "y": ["y"]}
+        },
+        "rfsoc": {
+            "up": {"x": ["x"], "y": ["y"]},
+            "down": {"x": [null],"y": [null]}
+        },
+        "snap": {
+            "up": {"x": ["x"], "y": ["y"]},
+            "down": {"x": [null], "y": [null]}
+        },
+        "usrp": {
+            "up": {"x": ["x"], "y": ["y"]},
+            "down": {"x": [null], "y": [null]}
         }
     },
     "station_types":
@@ -18,7 +62,12 @@
       "antenna": "Antenna location",
       "node": "Node location",
       "core": "Core antenna",
-      "outrigger": "Outrigger antenna"
+      "outrigger": "Outrigger antenna",
+      "seismo": "seismo.berkeley.edu",
+      "unavco": "unavc.org",
+      "nrdz": "NRDZ",
+      "chime": "CHIME",
+      "chord": "CHORD"
     },
     "apriori_statuses": ["active", "maintenance", "inactive"]
 }
