@@ -11,6 +11,12 @@ from argparse import Namespace
 from . import cm, cm_utils, cm_sysdef, cm_dossier, cm_active
 
 
+def _polport(pol, port):
+    if port == 'split':
+        return pol.split('-')
+    return f"{pol}-{port}"
+
+
 class Hookup(object):
     """
     Class to find and display the signal path hookup information.
@@ -91,33 +97,30 @@ class Hookup(object):
         parts_list = cm_utils.get_pn_list(pn, list(self.active.parts.keys()), exact_match)
         self.dossier = cm_dossier.Dossier(pn=pn, at_date=at_date, active=self.active)
         hookup_dict = {}
-        for k in parts_list:
-            part = self.active.parts[k]
-            hookup_dict[k] = cm_dossier.HookupEntry(entry_key=k, sysdef=self.sysdef)
+        for this_part in parts_list:
+            part = self.active.parts[this_part]
+            hookup_dict[this_part] = cm_dossier.HookupEntry(entry_key=this_part, sysdef=self.sysdef)
             for pol in self.sysdef.polarizations:
-                for port in self.dossier.dossier[k].input_ports:
+                for port in self.dossier.dossier[this_part].input_ports:
                     if port in self.sysdef.components[part.ptype]['up'][pol]:
-                        polport = f"{pol}-{port}"
-                        hookup_dict[k].hookup[polport] = self._follow_hookup_stream(
-                            part=k, pol=pol, port=port, dir="up")
-                for port in self.dossier.dossier[k].output_ports:
+                        polport = _polport(pol, port)
+                        hookup_dict[this_part].hookup[polport] = self._follow_hookup_stream(
+                            part=this_part, pol=pol, port=port, dir="up")
+                        hookup_dict[this_part].add_extras(polport, self.part_type_cache)
+                for port in self.dossier.dossier[this_part].output_ports:
                     if port in self.sysdef.components[part.ptype]['down'][pol]:
-                        polport = f"{pol}-{port}"
-                        hookup_dict[k].hookup[polport] = self._follow_hookup_stream(
-                            part=k, pol=pol, port=port, dir="down")
-            #     part_types_found = self._get_part_types_found(
-            #         hookup_dict[k].hookup[port_pol]
-            #     )
-            #     hookup_dict[k].get_hookup_type_and_column_headers(
-            #         port_pol, part_types_found
-            #     )
-            #     hookup_dict[k].add_timing_and_fully_connected(port_pol)
+                        polport = _polport(pol, port)
+                        hookup_dict[this_part].hookup[polport] = self._follow_hookup_stream(
+                            part=this_part, pol=pol, port=port, dir="down")
+                        hookup_dict[this_part].add_extras(polport, self.part_type_cache)
         return hookup_dict
 
     def show_hookup(
         self,
         hookup_dict,
         cols_to_show="all",
+        pols_to_show="all",
+        ports_to_show="all",
         state="full",
         ports=False,
         sortby=None,
@@ -160,29 +163,22 @@ class Hookup(object):
         headers = self._make_header_row(hookup_dict, cols_to_show)
         table_data = []
         total_shown = 0
-        sorted_hukeys = self._sort_hookup_display(
-            sortby, hookup_dict, def_sort_order="NP"
-        )
+        sorted_hukeys = self._sort_hookup_display(hookup_dict, sortby, def_sort_order="NP")
         for hukey in sorted_hukeys:
-            for pol in cm_utils.put_keys_in_order(
-                hookup_dict[hukey].hookup.keys(), sort_order="PN"
-            ):
-                if not len(hookup_dict[hukey].hookup[pol]):
+            for ppk in cm_utils.put_keys_in_order(hookup_dict[hukey].hookup.keys(), sort_order="PN"):
+                if not len(hookup_dict[hukey].hookup[ppk]):
                     continue
                 use_this_row = False
                 if state.lower() == "all":
                     use_this_row = True
-                elif (
-                    state.lower() == "full" and hookup_dict[hukey].fully_connected[pol]
-                ):
+                elif state.lower() == "full" and hookup_dict[hukey].fully_connected[ppk]:
                     use_this_row = True
                 if not use_this_row:
                     continue
                 total_shown += 1
-                td = hookup_dict[hukey].table_entry_row(
-                    pol, headers, self.part_type_cache, show
-                )
-                table_data.append(td)
+                td = hookup_dict[hukey].table_entry_row(ppk, headers, show)
+                if td not in table_data:
+                    table_data.append(td)
         if total_shown == 0:
             print(
                 "None found for {} (show-state is {})".format(
@@ -315,6 +311,7 @@ class Hookup(object):
         stream = {'up': [], 'down': []}
         starting_part = part.upper()
         starting_part_type = self.active.parts[part].ptype
+        self.part_type_cache = {starting_part: starting_part_type}
         current = Namespace(
             direction=dir,
             part=starting_part,
@@ -384,6 +381,7 @@ class Hookup(object):
             current.part = this_conn.downstream_part.upper()
             port1 = this_conn.downstream_input_port.lower()
         current.type = self.active.parts[current.part].ptype
+        self.part_type_cache[current.part] = current.type
         try:
             options = list(self.active.connections[oside][current.part].keys())
         except KeyError:
@@ -398,9 +396,11 @@ class Hookup(object):
                 current.port = None
         return this_conn, current
 
-    def _sort_hookup_display(self, sortby, hookup_dict, def_sort_order="NP"):
+    def _sort_hookup_display(self, hookup_dict, sortby=None, def_sort_order="NP"):
         if sortby is None:
             return cm_utils.put_keys_in_order(hookup_dict.keys(), sort_order="NP")
+        print("ONLY SORTBY NONE IS OK")
+        return None
         if isinstance(sortby, str):
             sortby = sortby.split(",")
         sort_order_dict = {}
@@ -414,7 +414,7 @@ class Hookup(object):
             sortby.append("station")
             sort_order_dict["station"] = "NP"
         key_bucket = {}
-        show = {"revs": True, "ports": False}
+        show = {"ports": False}
         for this_key, this_hu in hookup_dict.items():
             pk = list(this_hu.hookup.keys())[0]
             this_entry = this_hu.table_entry_row(pk, sortby, self.part_type_cache, show)
@@ -447,6 +447,10 @@ class Hookup(object):
             List of header titles.
 
         """
+        if cols_to_show == 'all':
+            return self.sysdef.hookup + ['start', 'stop']
+        print("ONLY ALL WORKS RIGHT NOW.")
+        return []
         self.col_list = []
         for h in hookup_dict.values():
             for cols in h.columns.values():
