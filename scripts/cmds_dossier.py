@@ -11,17 +11,16 @@ set of columns, which may be overridden by instead using the args.columns parame
 (--list-all-columns)
 
 """
-from hera_mc import mc, cm_handling, cm_utils
+from cmds import cm, cm_dossier, cm_utils
 
 all_views = {
     "p": "parts",
     "c": "connections",
     "i": "info",
-    "r": "revisions",
     "n": "node",
 }
 
-parser = mc.get_mc_argument_parser()
+parser = cm.get_cm_argument_parser()
 parser.add_argument(
     "view",
     nargs="?",
@@ -34,16 +33,10 @@ parser.add_argument(
 # set values for 'action' to use
 parser.add_argument(
     "-p",
-    "--hpn",
+    "--pn",
     help="Part number or portion thereof, csv list. "
     "If view is 'node', this may be ints or a hyphen-range of ints (e.g. '0-3')"
     "or 'active'/'all'",
-    default=None,
-)
-parser.add_argument(
-    "-r",
-    "--revision",
-    help="Revision for hpn. Typically don't change from default.",
     default=None,
 )
 parser.add_argument(
@@ -95,81 +88,41 @@ notes_start_date = cm_utils.get_astropytime(
 )
 
 # Start session
-db = mc.connect_to_mc_db(args)
+db = cm.connect_to_cm_db(args)
 session = db.sessionmaker()
 
 if args.list_columns:
-    if view == "revisions":
-        from hera_mc import cm_revisions
-
-        print("Use 'present'/'all' or any/all of:")
-        print(",".join(cm_revisions.ordered_columns))
-    else:
-        from hera_mc import cm_dossier
-
-        blank = cm_dossier.PartEntry(None, None)
-        print("\t{:30s}\t{}".format("Use", "For"))
-        print("\t{:30s}\t{}".format("--------------", "----------"))
-        for col in blank.col_hdr.keys():
-            print("\t{:30s}\t{}".format(col, blank.col_hdr[col]))
-elif view == "node":
-    from hera_mc import cm_sysutils
-
-    if args.hpn is None:
-        args.hpn = "active"
-    elif args.hpn not in ["active", "all"]:
-        if args.hpn[0] == "N":
-            prefix = None
-        else:
-            prefix = "N"
-        args.hpn = cm_utils.listify(args.hpn, prefix=prefix, padding=2)
-    node_info = cm_sysutils.node_info(args.hpn, session)
-    cm_sysutils.print_node(node_info)
-elif view == "revisions":
-    from hera_mc import cm_active, cm_revisions
-
-    args.hpn = cm_utils.listify(args.hpn)
-    if args.verbosity == 1:
-        columns = ["HPN", "Revision", "Start", "Stop"]
-    elif args.verbosity == 2:
-        columns = "present"
-    else:
-        columns = "all"
-    if args.columns is not None and args.columns not in ["present", "all"]:
-        columns = cm_utils.listify(args.columns)
-    active = cm_active.ActiveData(session, date_query)
-    active.load_parts()
-    revs = active.revs(args.hpn)
-    print(cm_revisions.show_revisions(revs, columns=columns))
+    blank = cm_dossier.PartEntry(None, None)
+    print("\t{:30s}\t{}".format("Use", "For"))
+    print("\t{:30s}\t{}".format("--------------", "----------"))
+    for col in blank.col_hdr.keys():
+        print("\t{:30s}\t{}".format(col, blank.col_hdr[col]))
 else:  # view == 'parts' or view == 'connections' or view == 'info'
-    args.hpn = cm_utils.listify(args.hpn)
-    handling = cm_handling.Handling(session)
+    args.pn = cm_utils.listify(args.pn)
     if view == "parts":
         if args.verbosity == 1:
             columns = ["pn", "ptype", "input_ports", "output_ports"]
         elif args.verbosity == 2:
             columns = [
-                "hpn",
-                "hpn_rev",
-                "hptype",
+                "pn",
+                "ptype",
                 "manufacturer_id",
                 "start_gpstime",
                 "stop_gpstime",
                 "input_ports",
                 "output_ports",
-                "geo",
+                "stations",
             ]
         else:
             columns = [
-                "hpn",
-                "hpn_rev",
-                "hptype",
+                "pn",
+                "ptype",
                 "manufacturer_id",
                 "start_gpstime",
                 "stop_gpstime",
                 "input_ports",
                 "output_ports",
-                "geo",
+                "stations",
                 "comment",
             ]
     elif view == "connections":
@@ -178,7 +131,7 @@ else:  # view == 'parts' or view == 'connections' or view == 'info'
                 "up.upstream_part",
                 "up.upstream_output_port",
                 "up.downstream_input_port",
-                "hpn",
+                "pn",
                 "down.upstream_output_port",
                 "down.downstream_input_port",
                 "down.downstream_part",
@@ -189,8 +142,7 @@ else:  # view == 'parts' or view == 'connections' or view == 'info'
                 "up.up_part_rev",
                 "up.upstream_output_port",
                 "up.downstream_input_port",
-                "hpn",
-                "hpn_rev",
+                "pn",
                 "down.upstream_output_port",
                 "down.downstream_input_port",
                 "down.downstream_part",
@@ -204,8 +156,7 @@ else:  # view == 'parts' or view == 'connections' or view == 'info'
                 "up.up_part_rev",
                 "up.upstream_output_port",
                 "up.downstream_input_port",
-                "hpn",
-                "hpn_rev",
+                "pn",
                 "down.upstream_output_port",
                 "down.downstream_input_port",
                 "down.downstream_part",
@@ -215,24 +166,22 @@ else:  # view == 'parts' or view == 'connections' or view == 'info'
             ]
     elif view == "info":
         if args.verbosity == 1:
-            columns = ["hpn", "comment"]
+            columns = ["pn", "comment"]
         elif args.verbosity == 2:
-            columns = ["hpn", "posting_gpstime", "comment"]
+            columns = ["pn", "posting_gpstime", "comment"]
         else:
-            columns = ["hpn", "posting_gpstime", "reference", "comment"]
+            columns = ["pn", "posting_gpstime", "reference", "comment"]
 
     if args.columns is not None:
         columns = cm_utils.listify(args.columns)
     if args.ports is not None:
         args.ports = cm_utils.listify(args.ports)  # specify port names as list.
-
-    dossier = handling.get_dossier(
-        hpn=args.hpn,
-        rev=args.revision,
+    dossier = cm_dossier.Dossier(
+        pn=args.pn,
         at_date=date_query,
         active=None,
         notes_start_date=notes_start_date,
         exact_match=args.exact_match,
     )
-    print(handling.show_dossier(dossier, columns, ports=args.ports))
+    print(dossier.show_part_dossier(columns))
 print()

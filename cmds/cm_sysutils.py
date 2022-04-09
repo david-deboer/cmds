@@ -7,7 +7,7 @@
 from sqlalchemy import func, and_, or_
 
 from . import cm, cm_tables, cm_utils, cm_sysdef, cm_hookup
-from . import geo_handling
+from . import cm_stations
 
 
 class SystemInfo:
@@ -16,8 +16,8 @@ class SystemInfo:
 
     Parameters
     ----------
-    stn : None or geo_handling object.  If None, it initializes a class with empty lists.
-        Otherwise, it initializes based on the geo_handling object class.
+    stn : None or cm_stations object.  If None, it initializes a class with empty lists.
+        Otherwise, it initializes based on the cm_stations object class.
         Anything else will generate an error.
 
     """
@@ -59,7 +59,7 @@ class SystemInfo:
 
         Parameters
         ----------
-        stn : geo_handling object or None
+        stn : cm_stations object or None
             Contains the init station information.  If None, it will initial a blank object.
         """
         if stn is None:
@@ -90,7 +90,7 @@ class Handling:
             self.session = db.sessionmaker()
         else:
             self.session = session
-        self.geo = geo_handling.Handling(self.session)
+        self.geo = cm_stations.Handling(self.session)
         self.H = None
         self.sysdef = cm_sysdef.Sysdef()
         self.apriori_status_set = None

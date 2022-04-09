@@ -3,11 +3,11 @@
 # Copyright 2016 the HERA Collaboration
 # Licensed under the 2-clause BSD license.
 
-"""This is meant to hold utility scripts for geo_location (via geo_handling)
+"""This is meant to hold utility scripts for geo_location (via cm_stations)
 
 """
 
-from hera_mc import mc, geo_handling, cm_utils
+from hera_mc import mc, cm_stations, cm_utils
 
 if __name__ == "__main__":
     parser = mc.get_mc_argument_parser()
@@ -92,7 +92,7 @@ if __name__ == "__main__":
     # start session and instances
     db = mc.connect_to_mc_db(args)
     session = db.sessionmaker()
-    G = geo_handling.Handling(session)
+    G = cm_stations.Handling(session)
 
     # If args.graph is set, apply background
     if args.graph:
@@ -180,5 +180,5 @@ if __name__ == "__main__":
         print(s)
 
     if args.graph:
-        geo_handling.show_it_now()
+        cm_stations.show_it_now()
     G.close()
