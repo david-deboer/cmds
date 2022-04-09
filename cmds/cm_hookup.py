@@ -82,7 +82,7 @@ class Hookup(object):
         Returns
         -------
         dict
-            Hookup dossier dictionary as defined in cm_dossier
+            Hookup dossier dictionary as defined in cm_dossier.HookupEntry
 
         """
         # Reset at_date
