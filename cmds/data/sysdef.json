@@ -8,7 +8,7 @@
     },
     "hookup_defs":
     {
-        "ata-rfsoc": ["station", "antenna", "feed", "pax", "rfcb", "attemplifier", "rfsoc"],
+        "ata-rfsoc": ["station", "antenna", "feed", "pax", {"rfcb": {"down": {"x": ["xa"], "y": ["ya"]}}}, "attemplifier", "rfsoc"],
         "ata-snap": ["station", "antenna", "feed", "pax", "rfcb", "attemplifier", "snap"],
         "ata-usrp": ["station", "antenna", "feed", "pax", "rfcb", "rf-switch", "usrp"]
     },
