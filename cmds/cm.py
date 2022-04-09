@@ -22,7 +22,6 @@ from .cm_session import MCSession
 from .data import DATA_PATH
 
 default_config_file = op.join(DATA_PATH, "db_config.json")
-cm_log_file = op.expanduser("~.cm_log.txt")
 
 
 class DB(object, metaclass=ABCMeta):
@@ -127,7 +126,7 @@ def get_cm_argument_parser():
     return p
 
 
-def connect_to_cm_db(args, forced_db_name=None, check_connect=True):
+def connect_to_cm_db(args, check_connect=True):
     """
     Get a DB object that is connected to the CM database.
 
@@ -137,9 +136,6 @@ def connect_to_cm_db(args, forced_db_name=None, check_connect=True):
         The result of calling `parse_args` on an `argparse.ArgumentParser`
         instance created by calling `get_cm_argument_parser()`. Alternatively,
         it can be None to use the full defaults.
-    forced_db_name : str, optional
-        Database name to use (forced). If not set, uses the default one from
-        args.
     check_connect : bool
         Option to test the database connection.
 
@@ -155,9 +151,6 @@ def connect_to_cm_db(args, forced_db_name=None, check_connect=True):
     else:
         config_path = args.cm_config_path
         db_name = args.cm_db_name
-
-    if forced_db_name is not None:
-        db_name = forced_db_name
 
     with open(config_path) as f:
         config_data = json.load(f)
