@@ -22,25 +22,7 @@ default_plot_values = {'xgraph': 'easting',
                        'marker_color': 'k',
                        'marker_shape': 'o',
                        'marker_size': 3
-                       } 
-
-
-def show_it_now(fignm=None):  # pragma: no cover
-    """
-    Show plot.
-
-    Used in scripts to actually make plot (as opposed to within python). Seems to be needed...
-
-    Parameters
-    ----------
-    fignm:  string/int for figure
-
-    """
-    import matplotlib.pyplot as plt
-
-    if fignm is not None:
-        plt.figure(fignm)
-    plt.show()
+                       }
 
 
 class Stations:
@@ -63,26 +45,12 @@ class Stations:
             self.session = db.sessionmaker()
         else:
             self.session = session
-
         self.date = cm_utils.get_astropytime(at_date, at_time, float_format)
         self.axes_set = False
         self.fp_out = None
-        self.graph = True  # why?
         self.station_types_plotted = False
         self.active = cm_active.ActiveData(at_date=self.date)
         self.active.load_stations()
-
-    def set_graph(self, graph_it):
-        """
-        Set the graph attribute.
-
-        Parameters
-        ----------
-        graph_it : bool
-            Flag indicating whether a graph should be made.
-
-        """
-        self.graph = graph_it
 
     def start_file(self, fname):
         """
@@ -108,7 +76,7 @@ class Stations:
             if write_header:
                 self.fp_out.write("{}\n".format(self._stn_line("header")))
 
-    def parse_tile(self, stn):
+    def _parse_tile(self, stn):
         tile = self.active.stations[stn].tile
         return int(tile[:2]), tile[-1]
 
@@ -137,7 +105,7 @@ class Stations:
         stations = []
         for station_name in station_list:
             if using_all or station_name in self.active.stations:
-                tile = self.parse_tile(station_name)
+                tile = self._parse_tile(station_name)
                 utm_p = ccrs.UTM(tile[0])
                 lat_corr = self.lat_corr[tile[1]]
                 stn = copy.copy(self.active.stations[station_name])
@@ -186,28 +154,14 @@ class Stations:
         for a in stn:
             if self.file_type == "csv":
                 s = "{},{},{},{},{},{},{},{},{}".format(
-                    a.station_name,
-                    a.easting,
-                    a.northing,
-                    a.lon,
-                    a.lat,
-                    a.elevation,
-                    a.X,
-                    a.Y,
-                    a.Z,
-                )
+                    a.station_name, a.easting, a.northing,
+                    a.lon, a.lat, a.elevation,
+                    a.X, a.Y, a.Z)
             else:
                 s = "{:6s} {:.2f} {:.2f} {:.6f} {:.6f} {:.1f} {:.6f} {:.6f} {:.6f}".format(
-                    a.station_name,
-                    a.easting,
-                    a.northing,
-                    a.lon,
-                    a.lat,
-                    a.elevation,
-                    a.X,
-                    a.Y,
-                    a.Z,
-                )
+                    a.station_name, a.easting, a.northing,
+                    a.lon, a.lat, a.elevation,
+                    a.X, a.Y, a.Z)
             ret.append(s)
         if not is_list:
             ret = ret[0]
@@ -301,31 +255,17 @@ class Stations:
         import matplotlib.pyplot as plt
         for a in stations_to_plot:
             pt = {
-                "easting": a.easting,
-                "northing": a.northing,
-                "elevation": a.elevation,
-                "lat": a.lat,
-                "lon": a.lon,
-                "X": a.X,
-                "Y": a.Y,
-                "Z": a.Z
-            }
+                "easting": a.easting, "northing": a.northing, "elevation": a.elevation,
+                "lat": a.lat, "lon": a.lon, "X": a.X, "Y": a.Y, "Z": a.Z}
             x_vals = pt[kwargs["xgraph"]]
             y_vals = pt[kwargs["ygraph"]]
-            plt.plot(
-                x_vals,
-                y_vals,
-                color=kwargs["marker_color"],
-                label=a.station_name,
-                marker=kwargs["marker_shape"],
-                markersize=kwargs["marker_size"],
-            )
+            plt.plot(x_vals, y_vals, color=kwargs["marker_color"], label=a.station_name,
+                     marker=kwargs["marker_shape"],
+                     markersize=kwargs["marker_size"])
             if displaying_label:
                 labeling = self.get_station_label(label_to_show, a, show=kwargs['lblrng'])
                 if labeling:
-                    plt.annotate(
-                        labeling, xy=(x_vals, y_vals), xytext=(x_vals, y_vals)
-                    )
+                    plt.annotate(labeling, xy=(x_vals, y_vals), xytext=(x_vals, y_vals))
         if not self.axes_set:
             self.axes_set = True
             plt.xlabel(kwargs["xgraph"])
@@ -333,14 +273,8 @@ class Stations:
             plt.title(fig_label)
         return
 
-    def get_active_stations(
-        self,
-        station_types_to_use,
-        query_date,
-        query_time=None,
-        float_format=None,
-        hookup_type=None,
-    ):
+    def get_active_stations(self, station_types_to_use, query_date, query_time=None, float_format=None,
+                            hookup_type=None):
         """
         Get active stations.
 
@@ -379,14 +313,8 @@ class Stations:
             print("{:12s}  {:3d}".format("active", len(active_stations)))
         return self.get_stations(active_stations)
 
-    def plot_station_types(
-        self,
-        station_types_to_use,
-        query_date,
-        query_time=None,
-        float_format=None,
-        **kwargs
-    ):
+    def plot_station_types(self, station_types_to_use, query_date, query_time=None, float_format=None,
+                           **kwargs):
         """
         Plot the various sub-array types.
 
