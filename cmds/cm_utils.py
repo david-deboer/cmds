@@ -13,6 +13,21 @@ PAST_DATE = "2000-01-01"
 VALID_FLOAT_FORMAT_FOR_TIME = ["unix", "gps", "jd"]
 
 
+def str2slice(s, this_str):
+    if s == ':':
+        return slice(0, len(this_str))
+    a, b = s.split(':')
+    try:
+        a = int(a)
+    except ValueError:
+        a = 0
+    try:
+        b = int(b)
+    except ValueError:
+        b = len(this_str)
+    return slice(a, b)
+
+
 def stringify(inp):
     """
     "Stringify" the input, hopefully sensibly.
