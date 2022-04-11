@@ -311,5 +311,5 @@ class Stations:
             kwargs["size"] = 5
             self.load_stations(station_types=[st])
             mkr = "{}{}".format(kwargs["color"], kwargs["shape"])
-            print(f"Station type {st} -> {k=mkr}")
+            print(f"Station type {st} -> {mkr}")
             self.plot_stations(**kwargs)
