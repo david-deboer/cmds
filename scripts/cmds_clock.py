@@ -7,7 +7,7 @@
 Prints Time info for given date/time with flexible format
 """
 
-from hera_mc import cm_utils
+from cmds import cm_utils
 import argparse
 
 

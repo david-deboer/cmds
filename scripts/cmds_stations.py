@@ -7,10 +7,10 @@
 
 """
 
-from hera_mc import mc, cm_stations, cm_utils
+from cmds import cm, cm_stations, cm_utils
 
 if __name__ == "__main__":
-    parser = mc.get_mc_argument_parser()
+    parser = cm.get_cm_argument_parser()
     parser.add_argument(
         "fg_action",
         nargs="*",
@@ -90,7 +90,7 @@ if __name__ == "__main__":
         at_date = cm_utils.get_astropytime("now")
 
     # start session and instances
-    db = mc.connect_to_mc_db(args)
+    db = cm.connect_to_cm_db(args)
     session = db.sessionmaker()
     G = cm_stations.Handling(session)
 
