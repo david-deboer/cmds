@@ -43,6 +43,8 @@ class Sysdef:
         self.polarizations = sysdef['polarization_defs'][self.type]
         self.components = sysdef['components']
         self._set_hookup(sysdef['hookup_defs'][self.type])  # Set attribute hookup
+        self.station_types = sysdef['station_types']
+        self.apriori_statuses = sysdef['apriori_statuses']
 
     def _set_hookup(self, hdef):
         self.hookup = []

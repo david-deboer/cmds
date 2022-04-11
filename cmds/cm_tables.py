@@ -69,11 +69,10 @@ class Stations(MCDeclarativeBase):
 
     def __repr__(self):
         """Define representation."""
-        return "<station_name={self.station_name} station_type={self.station_type} \
-        northing={self.northing} easting={self.easting} \
-        elevation={self.elevation}>".format(
-            self=self
-        )
+        a = f"<name={self.station_name} type={self.station_type} "
+        b = f"northing={self.northing} easting={self.easting} "
+        c = f"elevation={self.elevation}>"
+        return a + b + c
 
 
 def update_stations(stations, dates, session=None):

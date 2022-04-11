@@ -13,15 +13,15 @@ import copy
 from pyuvdata import utils as uvutils
 from numpy import radians
 
-from . import cm, cm_utils, cm_active
+from . import cm, cm_utils, cm_active, cm_sysdef
 
 default_plot_values = {'xgraph': 'easting',
                        'ygraph': 'northing',
                        'label': 'name',
                        'lblrng': '1:',
-                       'marker_color': 'k',
-                       'marker_shape': 'o',
-                       'marker_size': 3
+                       'color': 'k',
+                       'shape': 'o',
+                       'size': 3
                        }
 
 
@@ -48,9 +48,11 @@ class Stations:
         self.date = cm_utils.get_astropytime(at_date, at_time, float_format)
         self.axes_set = False
         self.fp_out = None
+        self.stations = None
         self.station_types_plotted = False
         self.active = cm_active.ActiveData(at_date=self.date)
         self.active.load_stations()
+        self.sysdef = cm_sysdef.Sysdef()
 
     def start_file(self, fname):
         """
@@ -80,14 +82,17 @@ class Stations:
         tile = self.active.stations[stn].tile
         return int(tile[:2]), tile[-1]
 
-    def get_stations(self, station_list='all'):
+    def load_stations(self, station_list='all', station_types="all"):
         """
-        Get Station objects for a list of station_names, include uvdata.
+        Load Station objects into self.stations to use for plotting/listing/etc
 
         Parameters
         ----------
-        to_find_list :  list of str
-            station names to find
+        station_list :  list of str
+            station names to find or 'all'
+        station_type : list of str
+            station_types to find or 'all':
+
 
         Returns
         -------
@@ -97,32 +102,36 @@ class Stations:
         """
         import cartopy.crs as ccrs
 
-        using_all = False
         if station_list == 'all':
             station_list = list(self.active.stations.keys())
-            using_all = True
+        if station_types == 'all':
+            station_types = list(self.sysdef.station_types.keys())
         latlon_p = ccrs.Geodetic()
-        stations = []
+        self.stations = []
         for station_name in station_list:
-            if using_all or station_name in self.active.stations:
-                tile = self._parse_tile(station_name)
-                utm_p = ccrs.UTM(tile[0])
-                lat_corr = self.lat_corr[tile[1]]
-                stn = copy.copy(self.active.stations[station_name])
-                # a.desc = self.station_types[a.station_type_name]["Description"] from Sysdef now
-                stn.lon, stn.lat = latlon_p.transform_point(
-                    stn.easting, stn.northing - lat_corr, utm_p
-                )
-                stn.X, stn.Y, stn.Z = uvutils.XYZ_from_LatLonAlt(
-                    radians(stn.lat), radians(stn.lon), stn.elevation
-                )
-                stn.desc = "Get info from sysdef"
-                stations.append(stn)
-                if self.fp_out is not None:
-                    self.fp_out.write("{}\n".format(self._stn_line(stn)))
-        return stations
+            try:
+                this_station = self.active.stations[station_name]
+            except KeyError:
+                continue
+            if this_station.station_type not in station_types:
+                continue
+            tile = self._parse_tile(station_name)
+            utm_p = ccrs.UTM(tile[0])
+            lat_corr = self.lat_corr[tile[1]]
+            stn = copy.copy(self.active.stations[station_name])
+            # a.desc = self.station_types[a.station_type_name]["Description"] from Sysdef now
+            stn.lon, stn.lat = latlon_p.transform_point(
+                stn.easting, stn.northing - lat_corr, utm_p
+            )
+            stn.X, stn.Y, stn.Z = uvutils.XYZ_from_LatLonAlt(
+                radians(stn.lat), radians(stn.lon), stn.elevation
+            )
+            stn.desc = self.sysdef.station_types[stn.station_type]['description']
+            self.stations.append(stn)
+            if self.fp_out is not None:
+                self.fp_out.write("{}\n".format(self._stn_line(stn)))
 
-    def _stn_line(self, stn):
+    def _stn_line(self, header=False):
         """
         Return a list or str of the given stations, depending if stn is list or not.
 
@@ -138,7 +147,7 @@ class Stations:
         list-of-str or str : a single line containing the data
             if stn=='header' it returns the header line
         """
-        if stn == "header":
+        if header:
             if self.file_type == "csv":
                 return "name,easting,northing,longitude,latitude,elevation,X,Y,Z"
             else:
@@ -146,12 +155,9 @@ class Stations:
                     "name  easting   northing   longitude latitude  elevation"
                     "    X              Y               Z"
                 )
-        is_list = True
-        if not isinstance(stn, list):
-            stn = [stn]
-            is_list = False
+
         ret = []
-        for a in stn:
+        for a in self.stations:
             if self.file_type == "csv":
                 s = "{},{},{},{},{},{},{},{},{}".format(
                     a.station_name, a.easting, a.northing,
@@ -163,13 +169,11 @@ class Stations:
                     a.lon, a.lat, a.elevation,
                     a.X, a.Y, a.Z)
             ret.append(s)
-        if not is_list:
-            ret = ret[0]
         return ret
 
-    def print_stn_info(self, stn_list):
+    def print_stn_info(self):
         """
-        Print out station information as returned from get_stations
+        Print out station information as returned from load_stations
 
         Parameters
         ----------
@@ -177,10 +181,8 @@ class Stations:
             List of station to print information for.
 
         """
-        if stn_list is None or len(stn_list) == 0:
-            print("No stnations found.")
-            return
-        for a in stn_list:
+
+        for a in self.stations:
             print("station_name: ", a.station_name)
             print("\teasting: ", a.easting)
             print("\tnorthing: ", a.northing)
@@ -228,9 +230,9 @@ class Stations:
                 lbl = self.active.parts[conn].manufacturer_id
         return lbl[cm_utils.str2slice(show, lbl)]
 
-    def plot_stations(self, stations_to_plot, **kwargs):  # pragma: no cover
+    def plot_stations(self, **kwargs):  # pragma: no cover
         """
-        Plot a list of stations.
+        Plot self.stations.
 
         Parameters
         ----------
@@ -240,8 +242,6 @@ class Stations:
             arguments for [xgraph, ygraph, label, lblrng, marker_color, marker_shape, marker_size]
 
         """
-        if not len(stations_to_plot) or not self.graph:
-            return
         for oarg in default_plot_values:
             if oarg not in kwargs.keys():
                 kwargs[oarg] = default_plot_values[oarg]
@@ -253,15 +253,12 @@ class Stations:
         )
 
         import matplotlib.pyplot as plt
-        for a in stations_to_plot:
-            pt = {
-                "easting": a.easting, "northing": a.northing, "elevation": a.elevation,
-                "lat": a.lat, "lon": a.lon, "X": a.X, "Y": a.Y, "Z": a.Z}
-            x_vals = pt[kwargs["xgraph"]]
-            y_vals = pt[kwargs["ygraph"]]
-            plt.plot(x_vals, y_vals, color=kwargs["marker_color"], label=a.station_name,
-                     marker=kwargs["marker_shape"],
-                     markersize=kwargs["marker_size"])
+        for a in self.stations:
+            x_vals = getattr(a, kwargs["xgraph"])
+            y_vals = getattr(a, kwargs["ygraph"])
+            plt.plot(x_vals, y_vals, color=kwargs["color"], label=a.station_name,
+                     marker=kwargs["shape"],
+                     markersize=kwargs["size"])
             if displaying_label:
                 labeling = self.get_station_label(label_to_show, a, show=kwargs['lblrng'])
                 if labeling:
@@ -271,10 +268,9 @@ class Stations:
             plt.xlabel(kwargs["xgraph"])
             plt.ylabel(kwargs["ygraph"])
             plt.title(fig_label)
-        return
+        plt.show()
 
-    def get_active_stations(self, station_types_to_use, query_date, query_time=None, float_format=None,
-                            hookup_type=None):
+    def get_active_stations(self, station_types_to_use, hookup_type='default'):
         """
         Get active stations.
 
@@ -282,12 +278,6 @@ class Stations:
         ----------
         station_types_to_use : str or list of str
             Stations to use, can be a list of stations or "all" or "default".
-        query_date :  Anything that `get_astropytime` can translate.
-            Date for query.
-        query_time : Anything that `get_astropytime` can translate.
-            Time for query, ignored if at_date is a float or contains time information.
-        float_format : str or None
-            Format if query_date is unix or gps or jd day.
         hookup_type : str
             hookup_type to use
 
@@ -299,55 +289,27 @@ class Stations:
         """
         from . import cm_hookup
 
-        query_date = cm_utils.get_astropytime(query_date, query_time, float_format)
-        hookup = cm_hookup.Hookup(self.session)
-        hookup_dict = hookup.get_hookup(
-            hookup.hookup_list_to_cache, at_date=query_date, hookup_type=hookup_type
-        )
-        self.station_types_to_use = self.parse_station_types_to_check(
-            station_types_to_use
-        )
-        active_stations = []
-        if len(active_stations):
-            print("{}.....".format(12 * "."))
-            print("{:12s}  {:3d}".format("active", len(active_stations)))
-        return self.get_stations(active_stations)
+        hookup = cm_hookup.Hookup(self.session)  # noqa
 
-    def plot_station_types(self, station_types_to_use, query_date, query_time=None, float_format=None,
-                           **kwargs):
+    def plot_station_types(self, station_types='all', **kwargs):
         """
         Plot the various sub-array types.
 
         Parameters
         ----------
-        station_types_to_use : str or list of str
-            station_types or prefixes to plot.
-        query_date :  Anything that `get_astropytime` can translate.
-            Date for query.
-        query_time : Anything that `get_astropytime` can translate.
-            Time for query, ignored if at_date is a float or contains time information.
-        float_format : str or None
-            Format if query_date is unix or gps or jd day.
+        station_types : str or list of str
+            station_types to plot.
         kwargs :  dict
             matplotlib arguments for marker_color, marker_shape, marker_size, label, xgraph, ygraph
 
         """
-        if self.station_types_plotted:
-            return
-        self.station_types_plotted = True
-        self.axes_set = False
-        station_types_to_use = self.parse_station_types_to_check(station_types_to_use)
-        total_plotted = 0
-        for st in sorted(station_types_to_use):
-            kwargs["marker_color"] = self.station_types[st]["Marker"][0]
-            kwargs["marker_shape"] = self.station_types[st]["Marker"][1]
-            kwargs["marker_size"] = 5
-            stations_to_plot = self.get_stations(
-                self.station_types[st]["Stations"], query_date, query_time, float_format
-            )
-            self.plot_stations(stations_to_plot, **kwargs)
-            if len(stations_to_plot):
-                print("{:12s}  {:3d}".format(st, len(stations_to_plot)))
-                total_plotted += len(stations_to_plot)
-        print("{:12s}  ---".format(" "))
-        print("{:12s}  {:3d}".format("Total", total_plotted))
+        if isinstance(station_types, str) and station_types == 'all':
+            station_types = list(self.sysdef.station_types.keys())
+        for st in sorted(station_types):
+            kwargs["color"] = self.sysdef.station_types[st]["color"]
+            kwargs["shape"] = self.sysdef.station_types[st]["marker"]
+            kwargs["size"] = 5
+            self.load_stations(station_types=[st])
+            mkr = "{}{}".format(kwargs["color"], kwargs["shape"])
+            print(f"Station type {st} -> {k=mkr}")
+            self.plot_stations(**kwargs)
