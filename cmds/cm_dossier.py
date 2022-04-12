@@ -17,20 +17,9 @@ class Dossier:
         self.dossier = {}
         self.get_part_dossier(**kwargs)
 
-    def get_part_dossier(
-        self,
-        pn,
-        at_date="now",
-        at_time=None,
-        float_format=None,
-        active=None,
-        notes_start_date="<",
-        notes_start_time=None,
-        notes_float_format=None,
-        exact_match=True,
-        session=None,
-        **kwargs
-    ):
+    def get_part_dossier(self, pn, at_date="now", at_time=None, float_format=None,
+                         active=None, notes_start_date="<", notes_start_time=None,
+                         notes_float_format=None, exact_match=True, session=None, **kwargs):
         """
         Get information on a part or parts.
 

@@ -4,7 +4,7 @@
 # Licensed under the 2-clause BSD license.
 
 """
-Allows various views on the antenna hookup, as well as handle the hookup cache file.
+Allows various views on the antenna hookup.
 
 """
 
@@ -15,7 +15,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-p",
         "--pn",
-        help="Part number, csv-list, default/cache or method. (default)",
+        help="Part number, csv-list. (default)",
         default="default",
     )
     parser.add_argument(
@@ -83,10 +83,8 @@ if __name__ == "__main__":
 
     hookup_dict = hookup.get_hookup(
         pn=args.pn,
-        pol=args.pol,
         at_date=at_date,
         exact_match=args.exact_match,
-        use_cache=args.use_cache,
         hookup_type=args.hookup_type,
     )
     show = hookup.show_hookup(
