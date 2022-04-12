@@ -146,4 +146,3 @@ if __name__ == "__main__":
             marker_shape="*",
             marker_size=fg_markersize,
         )
-    S.close()
