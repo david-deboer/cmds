@@ -39,15 +39,8 @@ class Hookup(object):
             self.session = session
         self.active = None
 
-    def get_hookup(
-        self,
-        pn,
-        at_date='now',
-        at_time=None,
-        float_format=None,
-        exact_match=False,
-        hookup_type=None,
-    ):
+    def get_hookup(self, pn, at_date='now', at_time=None, float_format=None,
+                   exact_match=False, hookup_type=None):
         """
         Get the hookup dict from the database for the supplied match parameters.
 
@@ -115,18 +108,8 @@ class Hookup(object):
                         hookup_dict[this_part].add_extras(polport, self.part_type_cache)
         return hookup_dict
 
-    def show_hookup(
-        self,
-        hookup_dict,
-        cols_to_show="all",
-        pols_to_show="all",
-        ports_to_show="all",
-        state="full",
-        ports=False,
-        sortby=None,
-        filename=None,
-        output_format="table",
-    ):
+    def show_hookup(self, hookup_dict, cols_to_show="all", pols_to_show="all",
+                    state="full", ports=False, sortby=None, filename=None, output_format="table"):
         """
         Generate a printable hookup table.
 
@@ -449,8 +432,6 @@ class Hookup(object):
         """
         if cols_to_show == 'all':
             return self.sysdef.hookup + ['start', 'stop']
-        print("ONLY ALL WORKS RIGHT NOW.")
-        return []
         self.col_list = []
         for h in hookup_dict.values():
             for cols in h.columns.values():
