@@ -109,8 +109,9 @@ class Hookup(object):
                         hookup_dict[this_part].add_extras(polport, self.part_type_cache)
         return hookup_dict
 
-    def show_hookup(self, hookup_dict, cols_to_show="all", pols_to_show="all",
-                    state="full", ports=False, sortby=None, filename=None, output_format="table"):
+    def show_hookup(self, hookup_dict, cols_to_show="all", state="full",
+                    pols_to_show="all", ports=False, sortby=None,
+                    filename=None, output_format="table"):
         """
         Generate a printable hookup table.
 
@@ -122,6 +123,8 @@ class Hookup(object):
             list of columns to include in hookup listing
         state : str
             String designating whether to show the full hookups only, or all
+        pols_to_show : list, str
+            List of polarizations or 'all'
         ports : bool
             Flag to include ports or not
         sortby : list, str or None
@@ -383,8 +386,6 @@ class Hookup(object):
     def _sort_hookup_display(self, hookup_dict, sortby=None, def_sort_order="NP"):
         if sortby is None:
             return cm_utils.put_keys_in_order(hookup_dict.keys(), sort_order="NP")
-        print("ONLY SORTBY NONE IS OK")
-        return None
         if isinstance(sortby, str):
             sortby = sortby.split(",")
         sort_order_dict = {}
