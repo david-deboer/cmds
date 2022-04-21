@@ -39,14 +39,14 @@ if __name__ == "__main__":
     parser.add_argument(
         "--hookup-cols",
         help="Specify a subset of parts to show in hookup, "
-        "comma-delimited no-space list. (all])",
+        "comma-delimited no-space list. (all])  NOT IMPLEMENTED",
         dest="hookup_cols",
         default="all",
     )
     parser.add_argument(
         "--hookup-type",
         dest="hookup_type",
-        help="Force use of specified hookup type.",
+        help="Use specified hookup type - the default is in the sysdef json file.",
         default=None,
     )
     parser.add_argument(
@@ -60,7 +60,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--sortby",
-        help="Part-type column order to sort display.  (csv-list)",
+        help="Part-type column order to sort display.  (csv-list) NOT IMPLEMENTED",
         default=None,
     )
     cm_utils.add_date_time_args(parser)
