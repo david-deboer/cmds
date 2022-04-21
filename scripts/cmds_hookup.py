@@ -50,7 +50,7 @@ if __name__ == "__main__":
         default=None,
     )
     parser.add_argument(
-        "--hide-ports", dest="ports", help="Hide ports on hookup.", action="store_false"
+        "--show-ports", dest="ports", help="Hide ports on hookup.", action="store_true"
     )
     parser.add_argument(
         "--file",

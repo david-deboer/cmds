@@ -88,7 +88,8 @@ class Hookup(object):
         self.sysdef = cm_sysdef.Sysdef(hookup_type)
         pn = cm_utils.listify(pn)
         parts_list = cm_utils.get_pn_list(pn, list(self.active.parts.keys()), exact_match)
-        self.dossier = cm_dossier.Dossier(pn=pn, at_date=at_date, active=self.active)
+        self.dossier = cm_dossier.Dossier(pn=parts_list, at_date=at_date, active=self.active,
+                                          skip_pn_list_gather=True)
         hookup_dict = {}
         for this_part in parts_list:
             part = self.active.parts[this_part]
@@ -421,7 +422,7 @@ class Hookup(object):
         ----------
         hookup_dict : dict
             Hookup dictionary generated in self.get_hookup
-        cols_to_show : list, str
+        cols_to_show : list
             list of columns to include in hookup listing
 
         Returns
@@ -430,7 +431,7 @@ class Hookup(object):
             List of header titles.
 
         """
-        if cols_to_show == 'all':
+        if cols_to_show[0] == 'all':
             return self.sysdef.hookup + ['start', 'stop']
         self.col_list = []
         for h in hookup_dict.values():

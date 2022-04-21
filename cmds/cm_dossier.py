@@ -44,6 +44,8 @@ class Dossier:
             Format if notes_start_date is a number denoting gps or unix seconds or jd day.
         exact_match : bool
             Flag to enforce full part number match, or "startswith"
+        kwargs:
+            skip_pn_list_gather:  skip redoing the pn_list step (use pn as is)
 
         Returns
         -------
@@ -78,7 +80,10 @@ class Dossier:
         if active.stations is None:
             active.load_stations(at_date=at_date)
 
-        pn_list = cm_utils.get_pn_list(pn, list(active.parts.keys()), exact_match)
+        if 'skip_pn_list_gather' in kwargs:
+            pn_list = pn
+        else:
+            pn_list = cm_utils.get_pn_list(pn, list(active.parts.keys()), exact_match)
 
         for this_pn in pn_list:
             this_part = PartEntry(
