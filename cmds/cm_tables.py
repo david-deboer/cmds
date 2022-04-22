@@ -10,9 +10,30 @@ from . import MCDeclarativeBase, NotNull, cm
 import copy
 
 
-def get_times(cls):
-    stop = '_' if cls.stop_gpstime is None else str(cls.stop_gpstime)
-    return f"[{cls.start_gpstime} - {stop}]"
+def get_sstimes(cls):
+    """Return formatted start/stop."""
+    try:
+        start = cls.start_date.datetime.isoformat()
+    except AttributeError:
+        start = str(cls.start_gpstime)
+    if cls.stop_gpstime is None:
+        stop = '_'
+    else:
+        try:
+            stop = cls.stop_date.datetime.isoformat()
+        except AttributeError:
+            stop = str(cls.stop_gpstime)
+    return f"[{start} - {stop}]"
+
+
+def get_cptimes(cls, corp):
+    """Return formatted created/posted."""
+    cps = f"{corp}_date"
+    try:
+        return getattr(cls, cps).datetime.isoformat()
+    except AttributeError:
+        cps = f"{corp}_gpstime"
+    return str(getattr(cls, cps))
 
 
 class Stations(MCDeclarativeBase):
@@ -76,7 +97,7 @@ class Stations(MCDeclarativeBase):
         """Define representation."""
         a = f"<Station: name={self.station_name} type={self.station_type} "
         b = f"northing={self.northing} easting={self.easting} "
-        c = f"elevation={self.elevation}>"
+        c = f"elevation={self.elevation} {get_cptimes(self, 'created')}>"
         return a + b + c
 
 
@@ -155,7 +176,7 @@ class Parts(MCDeclarativeBase):
 
     def __repr__(self):
         """Define representation."""
-        return f"<Part: name={self.pn} type={self.ptype} {get_times(self)}>"
+        return f"<Part: name={self.pn} type={self.ptype} {get_sstimes(self)}>"
 
     def __eq__(self, other):
         """Define equality."""
@@ -278,7 +299,7 @@ class PartInfo(MCDeclarativeBase):
 
     def __repr__(self):
         """Define representation."""
-        return f"<Info:  name={self.pn} comment = {self.comment} {get_times(self)}>"
+        return f"<Info:  name={self.pn} comment = {self.comment} {get_cptimes(self, 'posting')}>"
 
     def gps2Time(self):
         """Add a posting_date attribute (astropy Time object) based on posting_gpstime."""
@@ -398,7 +419,7 @@ class Connections(MCDeclarativeBase):
         """Define representation."""
         up, down = f"{self.upstream_part}", f"{self.downstream_part}"
         uport, dport = f"{self.upstream_output_port}", f"{self.downstream_input_port}"
-        return f"<Connection: {up}<{uport}|{dport}>{down} {get_times(self)}>"
+        return f"<Connection: {up}<{uport}|{dport}>{down} {get_sstimes(self)}>"
 
     def __eq__(self, other):
         """Define equality."""
@@ -583,7 +604,7 @@ class AprioriStatus(MCDeclarativeBase):
 
     def __repr__(self):
         """Define representation."""
-        return f"<Apriori: name={self.pn} status={self.status} {get_times(self)}>"
+        return f"<Apriori: name={self.pn} status={self.status} {get_sstimes(self)}>"
 
     def apriori(self, **kwargs):
         """Add arbitrary attributes passed in a dict to this object."""
