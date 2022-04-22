@@ -10,6 +10,11 @@ from . import MCDeclarativeBase, NotNull, cm
 import copy
 
 
+def get_times(cls):
+    stop = '' if cls.stop_gpstime is None else str(cls.stop_gpstime)
+    return f" -- {cls.start_gpstime} - {stop}>"
+
+
 class Stations(MCDeclarativeBase):
     """
     A table logging stations, which are geographical locations.
@@ -69,7 +74,7 @@ class Stations(MCDeclarativeBase):
 
     def __repr__(self):
         """Define representation."""
-        a = f"<name={self.station_name} type={self.station_type} "
+        a = f"<Station: name={self.station_name} type={self.station_type} "
         b = f"northing={self.northing} easting={self.easting} "
         c = f"elevation={self.elevation}>"
         return a + b + c
@@ -150,13 +155,7 @@ class Parts(MCDeclarativeBase):
 
     def __repr__(self):
         """Define representation."""
-        return (
-            "<sysPartNumber id={self.pn} "
-            "type={self.ptype} :: "
-            "{self.start_gpstime} - {self.stop_gpstime}>".format(
-                self=self
-            )
-        )
+        return f"<Part: name={self.pn} type={self.ptype}{get_times(self)}"
 
     def __eq__(self, other):
         """Define equality."""
@@ -279,10 +278,7 @@ class PartInfo(MCDeclarativeBase):
 
     def __repr__(self):
         """Define representation."""
-        return (
-            "<heraPartNumber id = {self.pn} "
-            "comment = {self.comment}>".format(self=self)
-        )
+        return f"<Info:  name={self.pn} comment = {self.comment}{get_times(self)}"
 
     def gps2Time(self):
         """Add a posting_date attribute (astropy Time object) based on posting_gpstime."""
@@ -337,7 +333,7 @@ def update_info(infos, dates, session):
         if infox is None:
             info = PartInfo()
             updated += info.info(posting_gpstime=date.gps, **infod)
-            print(f"Adding {info}")
+            print(f"Add {info}")
             session.add(info)
         else:
             print(f"{pn} already has info at this time.  No action.")
@@ -400,13 +396,9 @@ class Connections(MCDeclarativeBase):
 
     def __repr__(self):
         """Define representation."""
-        up = "{self.upstream_part}".format(self=self)
-        down = "{self.downstream_part}".format(self=self)
-        return (
-            "<{}<{self.upstream_output_port}|{self.downstream_input_port}>{}>".format(
-                up, down, self=self
-            )
-        )
+        up, down = f"{self.upstream_part}", f"{self.downstream_part}"
+        uport, dport = f"{self.upstream_output_port}", f"{self.downstream_input_port}"
+        return f"<Connection: {up}<{uport}|{dport}>{down}{get_times(self)}>"
 
     def __eq__(self, other):
         """Define equality."""
@@ -591,9 +583,7 @@ class AprioriStatus(MCDeclarativeBase):
 
     def __repr__(self):
         """Define representation."""
-        return "<{}: {}  [{} - {}]>".format(
-            self.pn, self.status, self.start_gpstime, self.stop_gpstime
-        )
+        return f"<Apriori: name={self.pn} status={self.status}{get_times(self)}"
 
     def apriori(self, **kwargs):
         """Add arbitrary attributes passed in a dict to this object."""
@@ -651,7 +641,7 @@ def update_aprioris(aprioris, dates, session=None):
         for apx in aprioric:  # Stop all old ones.
             if apx.stop_gpstime is None:
                 updated += apx.apriori(stop_gpstime=date.gps)
-                print(f"Stopping {apx}")
+                print(f"Stop {apx}")
                 session.add(apx)
         if apriorid['action'].lower() == 'stop':
             if aprioric.count() == 0:
@@ -661,7 +651,7 @@ def update_aprioris(aprioris, dates, session=None):
                            'start_gpstime': date.gps, 'stop_gpstime': None}
             apriori = AprioriStatus()
             updated += apriori.apriori(**this_update)
-            print(f"Adding {apriori}")
+            print(f"Add {apriori}")
             session.add(apriori)
     if updated:
         session.commit()
