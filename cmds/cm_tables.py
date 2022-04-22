@@ -11,7 +11,7 @@ import copy
 
 
 def get_times(cls):
-    stop = '___' if cls.stop_gpstime is None else str(cls.stop_gpstime)
+    stop = '_' if cls.stop_gpstime is None else str(cls.stop_gpstime)
     return f"[{cls.start_gpstime} - {stop}]"
 
 
