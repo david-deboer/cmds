@@ -44,10 +44,6 @@ class Hookup(object):
         """
         Get the hookup dict from the database for the supplied match parameters.
 
-        This gets called by the get_hookup wrapper if the database needs to be
-        read (for instance, to generate a cache file, or search for parts
-        different than those keyed on in the cache file.)
-
         Parameters
         ----------
         pn : str, list
@@ -75,7 +71,7 @@ class Hookup(object):
         Returns
         -------
         dict
-            Hookup dossier dictionary as defined in cm_dossier.HookupEntry
+            Hookup dossier dictionary as defined in cm_dossier.HookupEntry keyed on part.
 
         """
         # Reset at_date
