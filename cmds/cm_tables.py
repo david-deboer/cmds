@@ -11,8 +11,8 @@ import copy
 
 
 def get_times(cls):
-    stop = '' if cls.stop_gpstime is None else str(cls.stop_gpstime)
-    return f" -- {cls.start_gpstime} - {stop}>"
+    stop = '___' if cls.stop_gpstime is None else str(cls.stop_gpstime)
+    return f"[{cls.start_gpstime} - {stop}]"
 
 
 class Stations(MCDeclarativeBase):
@@ -155,7 +155,7 @@ class Parts(MCDeclarativeBase):
 
     def __repr__(self):
         """Define representation."""
-        return f"<Part: name={self.pn} type={self.ptype}{get_times(self)}"
+        return f"<Part: name={self.pn} type={self.ptype} {get_times(self)}>"
 
     def __eq__(self, other):
         """Define equality."""
@@ -278,7 +278,7 @@ class PartInfo(MCDeclarativeBase):
 
     def __repr__(self):
         """Define representation."""
-        return f"<Info:  name={self.pn} comment = {self.comment}{get_times(self)}"
+        return f"<Info:  name={self.pn} comment = {self.comment} {get_times(self)}>"
 
     def gps2Time(self):
         """Add a posting_date attribute (astropy Time object) based on posting_gpstime."""
@@ -398,7 +398,7 @@ class Connections(MCDeclarativeBase):
         """Define representation."""
         up, down = f"{self.upstream_part}", f"{self.downstream_part}"
         uport, dport = f"{self.upstream_output_port}", f"{self.downstream_input_port}"
-        return f"<Connection: {up}<{uport}|{dport}>{down}{get_times(self)}>"
+        return f"<Connection: {up}<{uport}|{dport}>{down} {get_times(self)}>"
 
     def __eq__(self, other):
         """Define equality."""
@@ -583,7 +583,7 @@ class AprioriStatus(MCDeclarativeBase):
 
     def __repr__(self):
         """Define representation."""
-        return f"<Apriori: name={self.pn} status={self.status}{get_times(self)}"
+        return f"<Apriori: name={self.pn} status={self.status} {get_times(self)}>"
 
     def apriori(self, **kwargs):
         """Add arbitrary attributes passed in a dict to this object."""
