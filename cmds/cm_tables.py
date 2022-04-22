@@ -30,10 +30,10 @@ def get_cptimes(cls, corp):
     """Return formatted created/posted."""
     cps = f"{corp}_date"
     try:
-        return getattr(cls, cps).datetime.isoformat()
+        return f"[{getattr(cls, cps).datetime.isoformat()}]"
     except AttributeError:
         cps = f"{corp}_gpstime"
-    return str(getattr(cls, cps))
+    return f"[{getattr(cls, cps)}]"
 
 
 class Stations(MCDeclarativeBase):
@@ -97,7 +97,7 @@ class Stations(MCDeclarativeBase):
         """Define representation."""
         a = f"<Station: name={self.station_name} type={self.station_type} "
         b = f"northing={self.northing} easting={self.easting} "
-        c = f"elevation={self.elevation} {get_cptimes(self, 'created')}>"
+        c = f"elevation={self.elevation}  {get_cptimes(self, 'created')}>"
         return a + b + c
 
 
@@ -176,7 +176,7 @@ class Parts(MCDeclarativeBase):
 
     def __repr__(self):
         """Define representation."""
-        return f"<Part: name={self.pn} type={self.ptype} {get_sstimes(self)}>"
+        return f"<Part: name={self.pn} type={self.ptype}  {get_sstimes(self)}>"
 
     def __eq__(self, other):
         """Define equality."""
@@ -299,7 +299,7 @@ class PartInfo(MCDeclarativeBase):
 
     def __repr__(self):
         """Define representation."""
-        return f"<Info:  name={self.pn} comment = {self.comment} {get_cptimes(self, 'posting')}>"
+        return f"<Info:  name={self.pn} comment = {self.comment}  {get_cptimes(self, 'posting')}>"
 
     def gps2Time(self):
         """Add a posting_date attribute (astropy Time object) based on posting_gpstime."""
@@ -419,7 +419,7 @@ class Connections(MCDeclarativeBase):
         """Define representation."""
         up, down = f"{self.upstream_part}", f"{self.downstream_part}"
         uport, dport = f"{self.upstream_output_port}", f"{self.downstream_input_port}"
-        return f"<Connection: {up}<{uport}|{dport}>{down} {get_sstimes(self)}>"
+        return f"<Connection: {up}<{uport}|{dport}>{down}  {get_sstimes(self)}>"
 
     def __eq__(self, other):
         """Define equality."""
