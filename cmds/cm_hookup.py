@@ -149,25 +149,16 @@ class Hookup(object):
         sorted_hukeys = self._sort_hookup_display(hookup_dict, sortby, def_sort_order="NP")
         for hukey in sorted_hukeys:
             for ppk in cm_utils.put_keys_in_order(hookup_dict[hukey].hookup.keys(), sort_order="PN"):
-                if not len(hookup_dict[hukey].hookup[ppk]):
-                    continue
-                use_this_row = False
-                if state.lower() == "all":
-                    use_this_row = True
-                elif state.lower() == "full" and hookup_dict[hukey].fully_connected[ppk]:
-                    use_this_row = True
-                if not use_this_row:
-                    continue
-                total_shown += 1
-                td = hookup_dict[hukey].table_entry_row(ppk, headers, show)
-                if td not in table_data:
-                    table_data.append(td)
+                if len(hookup_dict[hukey].hookup[ppk]):
+                    this_state, is_full = state.lower(), hookup_dict[hukey].fully_connected[ppk]
+                    if this_state == "all" or (this_state == "full" and is_full):
+                        total_shown += 1
+                        td = hookup_dict[hukey].table_entry_row(ppk, headers, show)
+                        if td not in table_data:
+                            table_data.append(td)
         if total_shown == 0:
-            print(
-                "None found for {} (show-state is {})".format(
-                    cm_utils.get_time_for_display(self.at_date), state
-                )
-            )
+            print("None found for {} (show-state is {})".format(
+                cm_utils.get_time_for_display(self.at_date), state))
             return
         table = cm_utils.general_table_handler(headers, table_data, output_format)
         if filename is not None:
