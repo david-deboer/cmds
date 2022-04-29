@@ -442,9 +442,9 @@ class HookupEntry(object):
         Parameters
         ----------
         polport : str
-            Polarization type, 'e' or 'n' for HERA (specified in 'cm_sysdef')
-        part_types : dict
-            Dictionary containing part_types
+            Polarization type (specified in 'cm_sysdef')
+        cols : list
+            Columns to include
         show : dict
             Dictionary containing flags of what components to show.
 
@@ -455,29 +455,29 @@ class HookupEntry(object):
 
         """
         timing = self.timing[polport]
-        td = ["-"] * len(self.columns)
+        td = ["-"] * len(cols)
 
         # Get the first N-1 parts
         dip = ""
         for part_type, c in zip(self.part_type[polport], self.hookup[polport]):
-            if part_type in self.columns:
+            if part_type in cols:
                 new_row_entry = self._build_new_row_entry(
                     dip, c.upstream_part, c.upstream_output_port, show
                 )
-                td[self.columns.index(part_type)] = new_row_entry
+                td[cols.index(part_type)] = new_row_entry
             dip = c.downstream_input_port + "> "
         # Get the last part in the hookup
         part_type = self.part_type[polport][-1]
-        if part_type in self.columns:
+        if part_type in cols:
             new_row_entry = self._build_new_row_entry(
                 dip, c.downstream_part, None, show
             )
-            td[self.columns.index(part_type)] = new_row_entry
+            td[cols.index(part_type)] = new_row_entry
         # Add timing
-        if "start" in self.columns:
-            td[self.columns.index("start")] = timing[0]
-        if "stop" in self.columns:
-            td[self.columns.index("stop")] = timing[1]
+        if "start" in cols:
+            td[cols.index("start")] = timing[0]
+        if "stop" in cols:
+            td[cols.index("stop")] = timing[1]
         return td
 
     def _build_new_row_entry(self, dip, part, port, show):

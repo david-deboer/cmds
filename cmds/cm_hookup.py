@@ -106,7 +106,7 @@ class Hookup(object):
         return hookup_dict
 
     def show_hookup(self, hookup_dict, cols_to_show="all", state="full",
-                    pols_to_show="all", ports=False, sortby=None,
+                    pols_to_show="all", ports=False, sortby=None, timing=True,
                     filename=None, output_format="table"):
         """
         Generate a printable hookup table.
@@ -127,6 +127,8 @@ class Hookup(object):
             Columns to sort the listed hookup.  None uses the keys.  str is a csv-list
             List items may have an argument separated by ':' for 'N'umber'P'refix'R'ev
             order (see cm_utils.put_keys_in_order).  Not included uses 'NRP'
+        timing : bool
+            Include start/stop in table.
         filename : str or None
             File name to use, None goes to stdout.  The file that gets written is
             in all cases an "ascii" file
@@ -143,7 +145,7 @@ class Hookup(object):
 
         """
         show = {"ports": ports}
-        headers = self._make_header_row(hookup_dict, cols_to_show)
+        headers = self._make_header_row(hookup_dict, cols_to_show, timing=timing)
         table_data = []
         total_shown = 0
         sorted_hukeys = self._sort_hookup_display(hookup_dict, sortby, def_sort_order="NP")
@@ -402,7 +404,7 @@ class Hookup(object):
             sorted_keys.append(_v)
         return sorted_keys
 
-    def _make_header_row(self, hookup_dict, cols_to_show):
+    def _make_header_row(self, hookup_dict, cols_to_show, timing):
         """
         Generate the appropriate header row for the displayed hookup.
 
@@ -412,6 +414,8 @@ class Hookup(object):
             Hookup dictionary generated in self.get_hookup
         cols_to_show : list
             list of columns to include in hookup listing
+        timing : bool
+            flag to include timing
 
         Returns
         -------
@@ -423,16 +427,13 @@ class Hookup(object):
             return self.sysdef.hookup + ['start', 'stop']
         self.col_list = []
         for h in hookup_dict.values():
-            for cols in h.columns.values():
-                if len(cols) > len(self.col_list):
-                    self.col_list = copy.copy(cols)
-        if isinstance(cols_to_show, str):
-            cols_to_show = cols_to_show.split(",")
-        cols_to_show = [x.lower() for x in cols_to_show]
-        if "all" in cols_to_show:
-            return self.col_list
+            for col in h.columns:
+                if col not in self.col_list:
+                    self.col_list.append(col.lower())
         headers = []
-        for col in self.col_list:
-            if col.lower() in cols_to_show:
+        for col in cols_to_show:
+            if col.lower() in self.col_list:
                 headers.append(col)
+        if timing:
+            headers += ['start', 'stop']
         return headers

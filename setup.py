@@ -7,12 +7,8 @@
 
 import glob
 import io
-import sys
 from setuptools import setup
 
-# add hera_mc to our path in order to use the branch_scheme function
-sys.path.append("cmds")
-from branch_scheme import branch_scheme  # noqa
 
 with io.open("README.md", "r", encoding="utf-8") as readme_file:
     readme = readme_file.read()
@@ -25,7 +21,6 @@ setup_args = {
     "license": "BSD",
     "author": "David R. DeBoer",
     "author_email": "ddeboer@berkeley.edu",
-    "use_scm_version": {"local_scheme": branch_scheme},
     "packages": ["cmds"],
     "scripts": glob.glob("scripts/*"),
     "include_package_data": True,
