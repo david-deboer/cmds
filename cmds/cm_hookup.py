@@ -5,16 +5,15 @@
 
 """Find and display part hookups."""
 
-import copy
 from argparse import Namespace
 
 from . import cm, cm_utils, cm_sysdef, cm_dossier, cm_active
 
 
-def _polport(pol, port):
+def _polport(pol, port, demarc='-'):
     if port == 'split':
-        return pol.split('-')
-    return f"{pol}-{port}"
+        return pol.split(demarc)
+    return f"{pol}{demarc}{port}"
 
 
 class Hookup(object):
