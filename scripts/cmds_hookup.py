@@ -26,7 +26,7 @@ if __name__ == "__main__":
         action="store_true",
     )
     parser.add_argument(
-        "--pol", help="Define desired pol(s) for hookup. (e, n, all)", default="all"
+        "--pol", help="Define desired pol(s) for hookup or 'all'", default="all"
     )
     parser.add_argument(
         "--all",
@@ -37,15 +37,14 @@ if __name__ == "__main__":
         "--notes", help="If set, this will also show hookup notes.", action="store_true"
     )
     parser.add_argument(
+        "-c",
         "--hookup-cols",
-        help="Specify a subset of parts to show in hookup, "
-        "comma-delimited no-space list. (all])  NOT IMPLEMENTED",
-        dest="hookup_cols",
+        help="Specify a subset of parts to show in hookup, csv-list or all (all])",
         default="all",
     )
     parser.add_argument(
+        "-t",
         "--hookup-type",
-        dest="hookup_type",
         help="Use specified hookup type - the default is in the sysdef json file.",
         default=None,
     )
@@ -53,14 +52,15 @@ if __name__ == "__main__":
         "--ports", help="Show ports on hookup.", action="store_true"
     )
     parser.add_argument(
+        "-f",
         "--file",
-        help="output filename, if desired.  Tags are '.txt', "
-        "'.html', '.csv' to set type.",
+        help="output filename, if desired.  Tags are '.txt', '.html', '.csv' to set type.",
         default=None,
     )
     parser.add_argument(
+        "-s",
         "--sortby",
-        help="Part-type column order to sort display.  (csv-list) NOT IMPLEMENTED",
+        help="Part-type column order to sort display or None. (None)",
         default=None,
     )
     cm_utils.add_date_time_args(parser)
@@ -81,28 +81,14 @@ if __name__ == "__main__":
     session = db.sessionmaker()
     hookup = cm_hookup.Hookup(session)
 
-    hookup_dict = hookup.get_hookup(
-        pn=args.pn,
-        at_date=at_date,
-        exact_match=args.exact_match,
-        hookup_type=args.hookup_type,
-    )
-    show = hookup.show_hookup(
-        hookup_dict=hookup_dict,
-        cols_to_show=args.hookup_cols,
-        ports=args.ports,
-        sortby=args.sortby,
-        state=state,
-        filename=args.file,
-        output_format=output_format,
-    )
+    hookup_dict = hookup.get_hookup(pn=args.pn, at_date=at_date,
+                                    exact_match=args.exact_match, hookup_type=args.hookup_type)
+    show = hookup.show_hookup(hookup_dict=hookup_dict, cols_to_show=args.hookup_cols,
+                              ports=args.ports, sortby=args.sortby, state=state,
+                              filename=args.file, output_format=output_format)
     if output_format == "display":
         print(show)
     if args.notes:
-        print(
-            "\nNotes:\n---------------------------------------------------------------"
-        )
+        print("\nNotes:\n---------------------------------------------------------------")
         print(hookup.show_notes(hookup_dict=hookup_dict, state=state))
-        print(
-            "-------------------------------------------------------------------------"
-        )
+        print("-------------------------------------------------------------------------")
