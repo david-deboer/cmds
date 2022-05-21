@@ -7,13 +7,77 @@
 
 from argparse import Namespace
 
-from . import cm, cm_utils, cm_sysdef, cm_dossier, cm_active
+from . import cm_utils, cm_sysdef, cm_dossier, cm_active
 
 
 def _polport(pol, port, demarc='-'):
     if port == 'split':
         return pol.split(demarc)
     return f"{pol}{demarc}{port}"
+
+
+def get_hookup(
+    hpn,
+    pol="all",
+    at_date="now",
+    at_time=None,
+    float_format=None,
+    exact_match=False,
+    hookup_type="parts_hera",
+):
+    """
+    Return a single hookup dossier.
+
+    This allows for a simple way to get a part hookup, however if more
+    transactions are needed, please use the the sessionmaker in mc to
+    generate a context managed session and pass that session to the class.
+
+    Parameters
+    ----------
+    hpn : str, list
+        List/string of input hera part number(s) (whole or 'startswith')
+        If string
+            - 'default' uses default station prefixes in cm_sysdef
+            - otherwise converts as csv-list
+        If element of list is of format '.xxx:a/b/c' it finds the appropriate
+            method as cm_sysdef.Sysdef.xxx([a, b, c])
+    pol : str
+        A port polarization to follow, or 'all',  ('e', 'n', 'all')
+    at_date : anything interpretable by cm_utils.get_astropytime
+        Date at which to initialize.
+    at_time : anything interpretable by cm_utils.get_astropytime
+        Time at which to initialize, ignored if at_date is a float or contains time information
+    float_format : str
+        Format if at_date is a number denoting gps or unix seconds or jd day.
+    exact_match : bool
+        If False, will only check the first characters in each hpn entry.  E.g. 'HH1'
+        would allow 'HH1', 'HH10', 'HH123', etc
+    hookup_type : str or None
+        Type of hookup to use (current observing system is 'parts_hera').
+        If 'None' it will determine which system it thinks it is based on
+        the part-type.  The order in which it checks is specified in cm_sysdef.
+        Only change if you know you want a different system (like 'parts_paper').
+
+    Returns
+    -------
+    dict
+        Hookup dossier dictionary as defined in cm_dossier
+
+    """
+    from . import cm
+
+    db = cm.connect_to_mc_db(None)
+    with db.sessionmaker() as session:
+        hookup = Hookup(session)
+        return hookup.get_hookup_from_db(
+            hpn=hpn,
+            pol=pol,
+            at_date=at_date,
+            at_time=at_time,
+            float_format=float_format,
+            exact_match=exact_match,
+            hookup_type=hookup_type,
+        )
 
 
 class Hookup(object):
@@ -30,12 +94,8 @@ class Hookup(object):
 
     """
 
-    def __init__(self, session=None):
-        if session is None:  # pragma: no cover
-            db = cm.connect_to_cm_db(None)
-            self.session = db.sessionmaker()
-        else:
-            self.session = session
+    def __init__(self, session):
+        self.session = session
         self.active = None
 
     def get_hookup(self, pn, at_date='now', at_time=None, float_format=None,

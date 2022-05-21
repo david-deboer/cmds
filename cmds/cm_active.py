@@ -8,6 +8,42 @@
 from . import cm_utils, cm_tables
 
 
+def get_active(at_date="now", at_time=None, float_format=None, loading=["apriori"]):
+    """
+    Return an ActiveData object with specified loading.
+
+    This allows for a simple way to get the active data, however if more
+    transactions are needed, please use the sessionmaker in mc to generate a
+    context managed session and pass that session to the class.
+
+    Parameters
+    ----------
+    at_date : anything interpretable by cm_utils.get_astropytime
+        Date at which to initialize.
+    at_time : anything interpretable by cm_utils.get_astropytime
+        Time at which to initialize, ignored if at_date is a float or contains time information
+    float_format : str
+        Format if at_date is a number denoting gps or unix seconds or jd day.
+    loading : list
+        List of active components to load: parts, connections, apriori, info, geo
+
+    Returns
+    -------
+    active : ActiveData object
+        ActiveData objects with loading parameters as specified.
+    """
+    from . import cm
+
+    db = cm.connect_to_mc_db(None)
+    with db.sessionmaker() as session:
+        active = ActiveData(
+            session, at_date=at_date, at_time=at_time, float_format=float_format
+        )
+        for param in loading:
+            getattr(active, f"load_{param}")()
+        return active
+
+
 class ActiveData:
     """
     Object containing the active data (parts, connections, stations, etc) for a given date.
@@ -18,14 +54,10 @@ class ActiveData:
 
     """
 
-    def __init__(self, session=None, at_date="now", at_time=None, float_format=None):
+    def __init__(self, session, at_date="now", at_time=None, float_format=None):
         """
         Initialize ActiveData class attributes for at_date.
 
-        It creates all attributes and sets them to None.  Another attribute
-        'pytest_param' is set within to allow for fine-grained unit testing
-        without the need for an init argument.  It allows for certain keys to
-        be set in the method 'load_connections' to check edge cases.
 
         Parameters
         ----------
@@ -38,14 +70,9 @@ class ActiveData:
         float_format : str
             Format if at_date is a number denoting gps or unix seconds or jd day.
         """
-        if session is None:  # pragma: no cover
-            from . import cm
-            db = cm.connect_to_cm_db(None)
-            session = db.sessionmaker()
         self.session = session
         self.at_date = cm_utils.get_astropytime(at_date, at_time, float_format)
         self.reset_all()
-        self.pytest_param = False
 
     def reset_all(self):
         """Reset all active attributes to None."""
@@ -155,8 +182,6 @@ class ActiveData:
             )
         ):
             chk = f"{cnn.upstream_part}-{cnn.upstream_output_port}"
-            if self.pytest_param:
-                check_keys[self.pytest_param].append(chk)
             if chk in check_keys["up"]:
                 raise ValueError("Duplicate active port {}".format(chk))
             check_keys["up"].append(chk)

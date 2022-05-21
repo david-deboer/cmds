@@ -13,7 +13,7 @@ import copy
 from pyuvdata import utils as uvutils
 from numpy import radians
 
-from . import cm, cm_utils, cm_active, cm_sysdef
+from . import cm_utils, cm_active, cm_sysdef
 
 default_plot_values = {'xgraph': 'easting',
                        'ygraph': 'northing',
@@ -39,12 +39,8 @@ class Stations:
 
     lat_corr = {"J": 10000000, "T": 0}  # don't know about T
 
-    def __init__(self, at_date='now', at_time=None, float_format=None, session=None):
-        if session is None:  # pragma: no cover
-            db = cm.connect_to_cm_db(None)
-            self.session = db.sessionmaker()
-        else:
-            self.session = session
+    def __init__(self, session, at_date='now', at_time=None, float_format=None):
+        self.session = session
         self.date = cm_utils.get_astropytime(at_date, at_time, float_format)
         self.axes_set = False
         self.fp_out = None

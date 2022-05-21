@@ -6,7 +6,7 @@
 
 from sqlalchemy import func, and_, or_
 
-from . import cm, cm_tables, cm_utils, cm_sysdef, cm_hookup
+from . import cm_tables, cm_utils, cm_sysdef, cm_hookup
 from . import cm_stations
 
 
@@ -79,17 +79,12 @@ class Handling:
     Parameters
     ----------
     session : object
-        session on current database. If session is None, a new session
-        on the default database is created and used.
+        session on current database.
 
     """
 
-    def __init__(self, session=None):
-        if session is None:  # pragma: no cover
-            db = cm.connect_to_cm_db(None)
-            self.session = db.sessionmaker()
-        else:
-            self.session = session
+    def __init__(self, session):
+        self.session = session
         self.geo = cm_stations.Handling(self.session)
         self.H = None
         self.sysdef = cm_sysdef.Sysdef()
