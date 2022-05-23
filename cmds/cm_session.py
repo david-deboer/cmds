@@ -14,7 +14,7 @@ from sqlalchemy.sql.expression import func
 from astropy.time import Time
 
 
-class MCSession(Session):
+class CMSession(Session):
     """Primary session object that handles most DB queries."""
 
     def __enter__(self):

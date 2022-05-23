@@ -78,17 +78,17 @@ if __name__ == "__main__":
 
     # Start session
     db = cm.connect_to_cm_db(args)
-    session = db.sessionmaker()
-    hookup = cm_hookup.Hookup(session)
+    with db.sessionmaker() as session:
+        hookup = cm_hookup.Hookup(session)
 
-    hookup_dict = hookup.get_hookup(pn=args.pn, at_date=at_date,
-                                    exact_match=args.exact_match, hookup_type=args.hookup_type)
-    show = hookup.show_hookup(hookup_dict=hookup_dict, cols_to_show=args.hookup_cols,
-                              ports=args.ports, sortby=args.sortby, state=state,
-                              filename=args.file, output_format=output_format)
-    if output_format == "display":
-        print(show)
-    if args.notes:
-        print("\nNotes:\n---------------------------------------------------------------")
-        print(hookup.show_notes(hookup_dict=hookup_dict, state=state))
-        print("-------------------------------------------------------------------------")
+        hookup_dict = hookup.get_hookup(pn=args.pn, at_date=at_date,
+                                        exact_match=args.exact_match, hookup_type=args.hookup_type)
+        show = hookup.show_hookup(hookup_dict=hookup_dict, cols_to_show=args.hookup_cols,
+                                  ports=args.ports, sortby=args.sortby, state=state,
+                                  filename=args.file, output_format=output_format)
+        if output_format == "display":
+            print(show)
+        if args.notes:
+            print("\nNotes:\n---------------------------------------------------------------")
+            print(hookup.show_notes(hookup_dict=hookup_dict, state=state))
+            print("-------------------------------------------------------------------------")

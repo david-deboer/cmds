@@ -10,20 +10,6 @@ from . import MCDeclarativeBase, NotNull, cm
 import copy
 
 
-def enter_session(session):
-    close_when_done = False
-    if session is None:
-        db = cm.connect_cm_db()
-        session = db.sessionmaker()
-        close_when_done = True
-    return session, close_when_done
-
-
-def exit_session(session, close_when_done, updated=False):
-    if updated:
-        session.commit()
-
-
 def get_sstimes(cls):
     """Return formatted start/stop."""
     try:
@@ -136,20 +122,20 @@ def update_stations(stations, dates, session=None):
 
     """
 
-    session, close_when_done = enter_session(session)
+    C = cm.CMSessionMini(session)
     updated = 0
     for statd, date in zip(stations, dates):
         sn = statd['station_name'].upper()
-        statx = session.query(Stations).filter(
+        statx = C.session.query(Stations).filter(
             func.upper(Stations.station_name) == sn).first()
         if statx is None:
             station = Stations()
             updated += station.station(created_gpstime=date.gps, **statd)
             print(f"Add {station}")
-            session.add(station)
+            C.session.add(station)
         else:
             print(f"{sn} already present.  No action.")
-    exit_session(session, close_when_done, updated)
+    C.exit(updated)
     return updated
 
 
@@ -237,12 +223,11 @@ def update_parts(parts, dates, session=None):
     int
         Number of attributes changed.
     """
-    session, close_when_done = enter_session(session)
-
+    C = cm.CMSessionMini(session)
     updated = 0
     for partd, date in zip(parts, dates):
         pn = partd['pn'].upper()
-        part = session.query(Parts).filter(func.upper(Parts.pn) == pn).first()
+        part = C.session.query(Parts).filter(func.upper(Parts.pn) == pn).first()
         if partd['action'].lower() == 'stop':
             this_update = None
             if part is None:
@@ -262,8 +247,8 @@ def update_parts(parts, dates, session=None):
         if this_update is not None:
             updated += part.part(**this_update)
             print(f"{partd['action']} {part}")
-            session.add(part)
-    exit_session(session, close_when_done, updated)
+            C.session.add(part)
+    C.exit(updated)
     return updated
 
 
@@ -338,22 +323,21 @@ def update_info(infos, dates, session):
     int
         Number of attributes changed.
     """
-    session, close_when_done = enter_session(session)
-
+    C = cm.CMSessionMini(session)
     updated = 0
     for infod, date in zip(infos, dates):
         pn = infod['pn'].upper()
-        infox = session.query(PartInfo).filter((func.upper(PartInfo.pn) == pn)
-                                               & (PartInfo.posting_gpstime
-                                                  == date.gps)).first()
+        infox = C.session.query(PartInfo).filter((func.upper(PartInfo.pn) == pn)
+                                                 & (PartInfo.posting_gpstime
+                                                    == date.gps)).first()
         if infox is None:
             info = PartInfo()
             updated += info.info(posting_gpstime=date.gps, **infod)
             print(f"Add {info}")
-            session.add(info)
+            C.session.add(info)
         else:
             print(f"{pn} already has info at this time.  No action.")
-    exit_session(session, close_when_done, updated)
+    C.exit(updated)
     return updated
 
 
@@ -507,11 +491,11 @@ def update_connections(conns, dates, same_conn_sec=10, session=None):
     int
         Number of attributes changed.
     """
-    session, close_when_done = enter_session(session)
+    C = cm.CMSessionMini(session)
 
     updated = 0
     for connd, date in zip(conns, dates):
-        connections_to_check = session.query(Connections).filter(
+        connections_to_check = C.session.query(Connections).filter(
             (func.upper(Connections.upstream_part) == connd['upstream_part'].upper())
             & (func.lower(Connections.upstream_output_port)
                == connd['upstream_output_port'].lower())
@@ -550,8 +534,8 @@ def update_connections(conns, dates, same_conn_sec=10, session=None):
         if this_update is not None:
             updated += connection.connection(**this_update)
             print(f"{connd['action']} {connection}")
-            session.add(connection)
-    exit_session(session, close_when_done, updated)
+            C.session.add(connection)
+    C.exit(updated)
     return updated
 
 
@@ -634,17 +618,16 @@ def update_aprioris(aprioris, dates, session=None):
     int
         Number of attributes changed.
     """
-    session, close_when_done = enter_session(session)
-
+    C = cm.CMSessionMini(session)
     updated = 0
     for apriorid, date in zip(aprioris, dates):
         pn = apriorid['pn'].upper()
-        aprioric = session.query(AprioriStatus).filter(func.upper(AprioriStatus.pn) == pn)
+        aprioric = C.session.query(AprioriStatus).filter(func.upper(AprioriStatus.pn) == pn)
         for apx in aprioric:  # Stop all old ones.
             if apx.stop_gpstime is None:
                 updated += apx.apriori(stop_gpstime=date.gps)
                 print(f"Stop {apx}")
-                session.add(apx)
+                C.session.add(apx)
         if apriorid['action'].lower() == 'stop':
             if aprioric.count() == 0:
                 print(f"{pn} is not in database.  No update.")
@@ -654,6 +637,6 @@ def update_aprioris(aprioris, dates, session=None):
             apriori = AprioriStatus()
             updated += apriori.apriori(**this_update)
             print(f"Add {apriori}")
-            session.add(apriori)
-    exit_session(session, close_when_done, updated)
+            C.session.add(apriori)
+    C.exit(updated)
     return updated

@@ -22,12 +22,9 @@ if __name__ == "__main__":
     date = cm_utils.get_astropytime(args.date, args.time, args.format)
 
     db = cm.connect_to_cm_db(args)
-    session = db.sessionmaker()
-
-    cm_tables.update_info(
-        [{'pn': args.pn, 'comment': args.comment, 'reference': args.reference}],
-        dates=[date],
-        session=session
-    )
-
-    session.close()
+    with db.sessionmaker() as session:
+        cm_tables.update_info(
+            [{'pn': args.pn, 'comment': args.comment, 'reference': args.reference}],
+            dates=[date],
+            session=session
+        )

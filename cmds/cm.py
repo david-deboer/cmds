@@ -18,7 +18,7 @@ import json
 
 
 from . import MCDeclarativeBase
-from .cm_session import MCSession
+from .cm_session import CMSession
 from .data import DATA_PATH
 
 default_config_file = op.join(DATA_PATH, "db_config.json")
@@ -34,7 +34,7 @@ class DB(object, metaclass=ABCMeta):
     """
 
     engine = None
-    sessionmaker = sessionmaker(class_=MCSession)
+    sessionmaker = sessionmaker(class_=CMSession)
     sqlalchemy_base = None
 
     def __init__(self, sqlalchemy_base, db_url):  # noqa
@@ -91,6 +91,32 @@ class AutomappedDB(DB):
                 raise RuntimeError(
                     "database {0} does not match expected schema".format(db_url)
                 )
+
+
+class CMSessionMini():
+    """
+    Class to handle when a session may already exist.
+
+    Parameters
+    ----------
+    session : object or None
+        Supplied session, or None.
+
+    """
+    def __init__(self, session):
+        if session is None:
+            db = connect_to_cm_db()
+            self.session = db.sessionmaker()
+            self.close_when_done = True
+        else:
+            self.session = session
+            self.close_when_done = False
+
+    def exit(self, updated=False):
+        if updated:
+            self.session.commit()
+        if self.close_when_done:
+            self.session.close()
 
 
 def get_cm_argument_parser():

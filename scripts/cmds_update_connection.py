@@ -28,7 +28,5 @@ if __name__ == "__main__":
               }
 
     db = cm.connect_to_cm_db(args)
-    session = db.sessionmaker()
-
-    cm_tables.update_connections([update], [date], same_conn_sec=args.same_conn_sec, session=session)
-    session.close()
+    with db.sessionmaker() as session:
+        cm_tables.update_connections([update], [date], same_conn_sec=args.same_conn_sec, session=session)

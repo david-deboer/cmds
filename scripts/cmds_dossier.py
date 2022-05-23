@@ -89,99 +89,98 @@ notes_start_date = cm_utils.get_astropytime(
 
 # Start session
 db = cm.connect_to_cm_db(args)
-session = db.sessionmaker()
+with db.sessionmaker() as session:
+    if args.list_columns:
+        blank = cm_dossier.PartEntry(None, None)
+        print("\t{:30s}\t{}".format("Use", "For"))
+        print("\t{:30s}\t{}".format("--------------", "----------"))
+        for col in blank.col_hdr.keys():
+            print("\t{:30s}\t{}".format(col, blank.col_hdr[col]))
+    else:  # view == 'parts' or view == 'connections' or view == 'info'
+        args.pn = cm_utils.listify(args.pn)
+        if view == "parts":
+            if args.verbosity == 1:
+                columns = ["pn", "ptype", "input_ports", "output_ports"]
+            elif args.verbosity == 2:
+                columns = [
+                    "pn",
+                    "ptype",
+                    "manufacturer_id",
+                    "start_gpstime",
+                    "stop_gpstime",
+                    "input_ports",
+                    "output_ports",
+                    "stations",
+                ]
+            else:
+                columns = [
+                    "pn",
+                    "ptype",
+                    "manufacturer_id",
+                    "start_gpstime",
+                    "stop_gpstime",
+                    "input_ports",
+                    "output_ports",
+                    "stations",
+                    "comment",
+                ]
+        elif view == "connections":
+            if args.verbosity == 1:
+                columns = [
+                    "up.upstream_part",
+                    "up.upstream_output_port",
+                    "up.downstream_input_port",
+                    "pn",
+                    "down.upstream_output_port",
+                    "down.downstream_input_port",
+                    "down.downstream_part",
+                ]
+            elif args.verbosity == 2:
+                columns = [
+                    "up.upstream_part",
+                    "up.up_part_rev",
+                    "up.upstream_output_port",
+                    "up.downstream_input_port",
+                    "pn",
+                    "down.upstream_output_port",
+                    "down.downstream_input_port",
+                    "down.downstream_part",
+                    "down.down_part_rev",
+                ]
+            else:
+                columns = [
+                    "up.start_gpstime",
+                    "up.stop_gpstime",
+                    "up.upstream_part",
+                    "up.up_part_rev",
+                    "up.upstream_output_port",
+                    "up.downstream_input_port",
+                    "pn",
+                    "down.upstream_output_port",
+                    "down.downstream_input_port",
+                    "down.downstream_part",
+                    "down.down_part_rev",
+                    "down.start_gpstime",
+                    "down.stop_gpstime",
+                ]
+        elif view == "info":
+            if args.verbosity == 1:
+                columns = ["pn", "comment"]
+            elif args.verbosity == 2:
+                columns = ["pn", "posting_gpstime", "comment"]
+            else:
+                columns = ["pn", "posting_gpstime", "reference", "comment"]
 
-if args.list_columns:
-    blank = cm_dossier.PartEntry(None, None)
-    print("\t{:30s}\t{}".format("Use", "For"))
-    print("\t{:30s}\t{}".format("--------------", "----------"))
-    for col in blank.col_hdr.keys():
-        print("\t{:30s}\t{}".format(col, blank.col_hdr[col]))
-else:  # view == 'parts' or view == 'connections' or view == 'info'
-    args.pn = cm_utils.listify(args.pn)
-    if view == "parts":
-        if args.verbosity == 1:
-            columns = ["pn", "ptype", "input_ports", "output_ports"]
-        elif args.verbosity == 2:
-            columns = [
-                "pn",
-                "ptype",
-                "manufacturer_id",
-                "start_gpstime",
-                "stop_gpstime",
-                "input_ports",
-                "output_ports",
-                "stations",
-            ]
-        else:
-            columns = [
-                "pn",
-                "ptype",
-                "manufacturer_id",
-                "start_gpstime",
-                "stop_gpstime",
-                "input_ports",
-                "output_ports",
-                "stations",
-                "comment",
-            ]
-    elif view == "connections":
-        if args.verbosity == 1:
-            columns = [
-                "up.upstream_part",
-                "up.upstream_output_port",
-                "up.downstream_input_port",
-                "pn",
-                "down.upstream_output_port",
-                "down.downstream_input_port",
-                "down.downstream_part",
-            ]
-        elif args.verbosity == 2:
-            columns = [
-                "up.upstream_part",
-                "up.up_part_rev",
-                "up.upstream_output_port",
-                "up.downstream_input_port",
-                "pn",
-                "down.upstream_output_port",
-                "down.downstream_input_port",
-                "down.downstream_part",
-                "down.down_part_rev",
-            ]
-        else:
-            columns = [
-                "up.start_gpstime",
-                "up.stop_gpstime",
-                "up.upstream_part",
-                "up.up_part_rev",
-                "up.upstream_output_port",
-                "up.downstream_input_port",
-                "pn",
-                "down.upstream_output_port",
-                "down.downstream_input_port",
-                "down.downstream_part",
-                "down.down_part_rev",
-                "down.start_gpstime",
-                "down.stop_gpstime",
-            ]
-    elif view == "info":
-        if args.verbosity == 1:
-            columns = ["pn", "comment"]
-        elif args.verbosity == 2:
-            columns = ["pn", "posting_gpstime", "comment"]
-        else:
-            columns = ["pn", "posting_gpstime", "reference", "comment"]
-
-    if args.columns is not None:
-        columns = cm_utils.listify(args.columns)
-    if args.ports is not None:
-        args.ports = cm_utils.listify(args.ports)  # specify port names as list.
-    dossier = cm_dossier.Dossier(
-        pn=args.pn,
-        at_date=date_query,
-        active=None,
-        notes_start_date=notes_start_date,
-        exact_match=args.exact_match,
-    )
-    print(dossier.show_part_dossier(columns))
-print()
+        if args.columns is not None:
+            columns = cm_utils.listify(args.columns)
+        if args.ports is not None:
+            args.ports = cm_utils.listify(args.ports)  # specify port names as list.
+        dossier = cm_dossier.Dossier(
+            pn=args.pn,
+            at_date=date_query,
+            active=None,
+            notes_start_date=notes_start_date,
+            exact_match=args.exact_match,
+        )
+        print(dossier.show_part_dossier(columns))
+    print()

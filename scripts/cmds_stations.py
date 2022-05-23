@@ -77,15 +77,44 @@ if __name__ == "__main__":
 
     # start session and instances
     db = cm.connect_to_cm_db(args)
-    session = db.sessionmaker()
-    S = cm_stations.Stations(at_date=at_date, session=session)
+    with db.sessionmaker() as session:
+        S = cm_stations.Stations(session=session, at_date=at_date)
 
-    # Apply background
-    if args.background == "all":
-        S.load_stations()
-        S.plot_stations()
-    if not args.fg_action.startswith("i"):
-        if args.background == "installed" or args.background == "layers":
+        # Apply background
+        if args.background == "all":
+            S.load_stations()
+            S.plot_stations()
+        if not args.fg_action.startswith("i"):
+            if args.background == "installed" or args.background == "layers":
+                S.plot_station_types(
+                    station_types_to_use=args.station_types,
+                    query_date=at_date,
+                    xgraph=args.xgraph,
+                    ygraph=args.ygraph,
+                    label=args.label,
+                )
+
+        # Process foreground action.
+        fg_markersize = 10
+        if args.file is not None:
+            S.start_file(args.file)
+
+        if args.fg_action.startswith("a"):
+            located = S.get_active_stations(
+                station_types_to_use=args.station_types,
+                query_date=at_date,
+                hookup_type=args.hookup_type,
+            )
+            S.plot_stations(
+                located,
+                xgraph=args.xgraph,
+                ygraph=args.ygraph,
+                label=args.label,
+                marker_color="k",
+                marker_shape="*",
+                marker_size=fg_markersize,
+            )
+        elif args.fg_action.startswith("i"):
             S.plot_station_types(
                 station_types_to_use=args.station_types,
                 query_date=at_date,
@@ -93,56 +122,27 @@ if __name__ == "__main__":
                 ygraph=args.ygraph,
                 label=args.label,
             )
-
-    # Process foreground action.
-    fg_markersize = 10
-    if args.file is not None:
-        S.start_file(args.file)
-
-    if args.fg_action.startswith("a"):
-        located = S.get_active_stations(
-            station_types_to_use=args.station_types,
-            query_date=at_date,
-            hookup_type=args.hookup_type,
-        )
-        S.plot_stations(
-            located,
-            xgraph=args.xgraph,
-            ygraph=args.ygraph,
-            label=args.label,
-            marker_color="k",
-            marker_shape="*",
-            marker_size=fg_markersize,
-        )
-    elif args.fg_action.startswith("i"):
-        S.plot_station_types(
-            station_types_to_use=args.station_types,
-            query_date=at_date,
-            xgraph=args.xgraph,
-            ygraph=args.ygraph,
-            label=args.label,
-        )
-    elif args.fg_action.startswith("p"):
-        located = S.get_location(position, at_date)
-        S.print_loc_info(located)
-        S.plot_stations(
-            located,
-            xgraph=args.xgraph,
-            ygraph=args.ygraph,
-            label=args.label,
-            marker_color="k",
-            marker_shape="*",
-            marker_size=fg_markersize,
-        )
-    elif args.fg_action.startswith("c"):
-        cofa = S.cofa()
-        S.print_loc_info(cofa)
-        S.plot_stations(
-            cofa,
-            xgraph=args.xgraph,
-            ygraph=args.ygraph,
-            label="name",
-            marker_color="k",
-            marker_shape="*",
-            marker_size=fg_markersize,
-        )
+        elif args.fg_action.startswith("p"):
+            located = S.get_location(position, at_date)
+            S.print_loc_info(located)
+            S.plot_stations(
+                located,
+                xgraph=args.xgraph,
+                ygraph=args.ygraph,
+                label=args.label,
+                marker_color="k",
+                marker_shape="*",
+                marker_size=fg_markersize,
+            )
+        elif args.fg_action.startswith("c"):
+            cofa = S.cofa()
+            S.print_loc_info(cofa)
+            S.plot_stations(
+                cofa,
+                xgraph=args.xgraph,
+                ygraph=args.ygraph,
+                label="name",
+                marker_color="k",
+                marker_shape="*",
+                marker_size=fg_markersize,
+            )
