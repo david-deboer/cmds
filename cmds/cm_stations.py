@@ -9,7 +9,7 @@ Top modules are generally called by external (to CM) scripts.
 Bottom part is the class that does the work.
 """
 
-import copy
+from copy import copy
 from pyuvdata import utils as uvutils
 from numpy import radians
 
@@ -53,30 +53,6 @@ class Stations:
         self.active.load_stations()
         self.sysdef = cm_sysdef.Sysdef()
 
-    def start_file(self, fname):
-        """
-        Open file for writing.
-
-        Parameters
-        ----------
-        fname :  str
-            File name to write to.
-
-        """
-        import os.path as op
-
-        self.file_type = fname.split(".")[-1]
-        write_header = False
-        if op.isfile(fname):  # pragma: no cover
-            print("{} exists so appending to it".format(fname))
-        else:
-            write_header = True
-            print("Writing to new {}".format(fname))
-        if not self.testing:  # pragma: no cover
-            self.fp_out = open(fname, "a")
-            if write_header:
-                self.fp_out.write("{}\n".format(self._stn_line("header")))
-
     def _parse_tile(self, stn):
         tile = self.active.stations[stn].tile
         return int(tile[:2]), tile[-1]
@@ -117,7 +93,7 @@ class Stations:
             tile = self._parse_tile(station_name)
             utm_p = ccrs.UTM(tile[0])
             lat_corr = self.lat_corr[tile[1]]
-            stn = copy.copy(self.active.stations[station_name])
+            stn = copy(self.active.stations[station_name])
             # a.desc = self.station_types[a.station_type_name]["Description"] from Sysdef now
             stn.lon, stn.lat = latlon_p.transform_point(
                 stn.easting, stn.northing - lat_corr, utm_p
@@ -229,7 +205,7 @@ class Stations:
                 lbl = self.active.parts[conn].manufacturer_id
         return lbl[cm_utils.str2slice(show, lbl)]
 
-    def plot_stations(self, **kwargs):  # pragma: no cover
+    def plot_stations(self, **kwargs):
         """
         Plot self.stations.
 
@@ -282,13 +258,13 @@ class Stations:
 
         Returns
         -------
-        list of GeoLocation objects
+        list of Stations
             List of GeoLocation objects for all active stations.
 
         """
         from . import cm_hookup
 
-        hookup = cm_hookup.Hookup(self.session)  # noqa
+        hookup = cm_hookup.get_hookup(self.session)  # noqa
 
     def plot_station_types(self, station_types='all', **kwargs):
         """

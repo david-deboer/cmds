@@ -4,51 +4,49 @@
 
 """Defines the system architecture for the telescope."""
 import json
+
 from .cm import default_config_file
 
 opposite_direction = {"up": "down", "down": "up"}
-
-
-def get_sysdef(args):
-    """
-    Return the sysdef json file.
-    """
-    sysdef_file = None
-    if args is None:
-        config_file = default_config_file
-    elif hasattr(args, "sysdef_file"):
-        sysdef_file = args.sysdef_file
-    else:
-        config_file = args.config_file
-    if sysdef_file is None:
-        with open(config_file) as fp:
-            config = json.load(fp)
-            sysdef_file = config["sysdef_files"][config['default_sysdef_name']]
-    with open(sysdef_file) as fp:
-        return sysdef_file, json.load(fp)
 
 
 class Sysdef:
     """
     Defines the system architecture for the telescope array for given architecture.
 
-    """
+    Parameters
+    ----------
+    hookup_type : str or None
+    sysdef : str or None
 
+    """
     def __init__(self, hookup_type=None, sysdef=None):
+        self.get_sysdef(hookup_type, sysdef)
+
+    def get_sysdef(self, hookup_type, sysdef=None):
+        """
+        Return the sysdef json file information as attributes.
+
+        """
         if sysdef is None:
-            self.sysdef_filename, sysdef = get_sysdef(None)
+            with open(default_config_file) as fp:
+                config = json.load(fp)
+                self.sysdef_file = config["sysdef_files"][config['default_sysdef_name']]
+        else:
+            self.sysdef_file = sysdef
+        with open(self.sysdef_file) as fp:
+            self.sysdef_json = json.load(fp)
+
         if hookup_type is None:
-            hookup_type = sysdef['default_type']
+            hookup_type = self.sysdef_json['default_type']
         self.type = hookup_type
+
         self.polarizations = sysdef['polarization_defs'][self.type]
         self.components = sysdef['components']
-        self._set_hookup(sysdef['hookup_defs'][self.type])  # Set attribute hookup
         self.station_types = sysdef['station_types']
         self.apriori_statuses = sysdef['apriori_statuses']
-
-    def _set_hookup(self, hdef):
         self.hookup = []
-        for i, hd in enumerate(hdef):
+        for i, hd in enumerate(self.sysdef_json['hookup_defs'][self.type]):
             if isinstance(hd, dict):
                 self.hookup.append(list(hd.keys())[0])
                 self.components.update(hd)

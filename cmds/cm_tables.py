@@ -591,7 +591,9 @@ class AprioriStatus(MCDeclarativeBase):
 
     def valid_statuses(self):
         """Get defined current valid statuses."""
-        return cm.get_sysdef(None)["apriori_statuses"]
+        from . import cm_sysdef
+        apstat = cm_sysdef.Sysdef(None)
+        return apstat.apriori_statuses
 
 
 def get_allowed_apriori_statuses():

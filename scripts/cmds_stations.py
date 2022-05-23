@@ -20,14 +20,8 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "-b", "--background",
-        help="Set background type (layers)",
-        choices=["none", "installed", "layers", "all"],
-        default="all",
-    )
-    parser.add_argument(
-        "-f", "--file",
-        help="Name of file to write out 'foreground' antenna positions",
-        default=None,
+        help="Plot background of all stations.",
+        action='store_true',
     )
     cm_utils.add_date_time_args(parser)
     parser.add_argument(
@@ -66,7 +60,6 @@ if __name__ == "__main__":
     if len(args.fg_action) > 1:
         position = cm_utils.listify(args.fg_action[1])
     args.fg_action = args.fg_action[0].lower()
-    args.background = args.background.lower()
     args.station_types = args.station_types.lower()
     args.label = args.label.lower()
     at_date = cm_utils.get_astropytime(args.date, args.time, args.format)
@@ -81,23 +74,12 @@ if __name__ == "__main__":
         S = cm_stations.Stations(session=session, at_date=at_date)
 
         # Apply background
-        if args.background == "all":
+        if args.background:
             S.load_stations()
             S.plot_stations()
-        if not args.fg_action.startswith("i"):
-            if args.background == "installed" or args.background == "layers":
-                S.plot_station_types(
-                    station_types_to_use=args.station_types,
-                    query_date=at_date,
-                    xgraph=args.xgraph,
-                    ygraph=args.ygraph,
-                    label=args.label,
-                )
 
         # Process foreground action.
         fg_markersize = 10
-        if args.file is not None:
-            S.start_file(args.file)
 
         if args.fg_action.startswith("a"):
             located = S.get_active_stations(
