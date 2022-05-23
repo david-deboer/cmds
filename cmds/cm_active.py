@@ -294,7 +294,7 @@ class ActiveData:
             key = asta.station_name
             self.stations[key] = copy(asta)
 
-    def get_ptype(self, ptypes='all'):
+    def get_ptypes(self, ptypes='all'):
         """
         Return a dict of all active parts of type ptype or 'all'.
 
@@ -320,4 +320,5 @@ class ActiveData:
                     ptype_list.setdefault(partclass.ptype, [])
                     ptype_list[partclass.ptype].append(partclass.pn)
                     break
+        print(f"Part types {self.at_date.isoformat()}: {', '.join(sorted(ptype_list.keys()))}")
         return ptype_list
