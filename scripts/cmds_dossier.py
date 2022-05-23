@@ -17,7 +17,6 @@ all_views = {
     "p": "parts",
     "c": "connections",
     "i": "info",
-    "n": "node",
 }
 
 parser = cm.get_cm_argument_parser()
@@ -110,7 +109,7 @@ with db.sessionmaker() as session:
                     "stop_gpstime",
                     "input_ports",
                     "output_ports",
-                    "stations",
+                    "station",
                 ]
             else:
                 columns = [
@@ -121,7 +120,7 @@ with db.sessionmaker() as session:
                     "stop_gpstime",
                     "input_ports",
                     "output_ports",
-                    "stations",
+                    "station",
                     "comment",
                 ]
         elif view == "connections":
@@ -181,6 +180,7 @@ with db.sessionmaker() as session:
             active=None,
             notes_start_date=notes_start_date,
             exact_match=args.exact_match,
+            session=session,
         )
         print(dossier.show_part_dossier(columns))
     print()

@@ -49,7 +49,7 @@ class Stations:
         self.fp_out = None
         self.stations = None
         self.station_types_plotted = False
-        self.active = cm_active.ActiveData(at_date=self.date)
+        self.active = cm_active.ActiveData(session=session, at_date=self.date)
         self.active.load_stations()
         self.sysdef = cm_sysdef.Sysdef()
 
