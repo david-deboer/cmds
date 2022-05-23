@@ -320,5 +320,6 @@ class ActiveData:
                     ptype_list.setdefault(partclass.ptype, [])
                     ptype_list[partclass.ptype].append(partclass.pn)
                     break
-        print(f"Part types {self.at_date.isoformat()}: {', '.join(sorted(ptype_list.keys()))}")
+        print(f"Part types ({self.at_date.datetime.isoformat(timespec='minutes')}): "
+              "{', '.join(sorted(ptype_list.keys()))}")
         return ptype_list
