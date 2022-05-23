@@ -10,6 +10,20 @@ from . import MCDeclarativeBase, NotNull, cm
 import copy
 
 
+def enter_session(session):
+    close_when_done = False
+    if session is None:
+        db = cm.connect_cm_db()
+        session = db.sessionmaker()
+        close_when_done = True
+    return session, close_when_done
+
+
+def exit_session(session, close_when_done, updated=False):
+    if updated:
+        session.commit()
+
+
 def get_sstimes(cls):
     """Return formatted start/stop."""
     try:
@@ -122,12 +136,7 @@ def update_stations(stations, dates, session=None):
 
     """
 
-    close_session_when_done = False
-    if session is None:
-        db = cm.connect_cm_db()
-        session = db.sessionmaker()
-        close_session_when_done = True
-
+    session, close_when_done = enter_session(session)
     updated = 0
     for statd, date in zip(stations, dates):
         sn = statd['station_name'].upper()
@@ -140,10 +149,7 @@ def update_stations(stations, dates, session=None):
             session.add(station)
         else:
             print(f"{sn} already present.  No action.")
-    if updated:
-        session.commit()
-    if close_session_when_done:  # pragma: no cover
-        session.close()
+    exit_session(session, close_when_done, updated)
     return updated
 
 
@@ -231,11 +237,7 @@ def update_parts(parts, dates, session=None):
     int
         Number of attributes changed.
     """
-    close_session_when_done = False
-    if session is None:
-        db = cm.connect_to_cm_db(None)
-        session = db.sessionmaker()
-        close_session_when_done = True
+    session, close_when_done = enter_session(session)
 
     updated = 0
     for partd, date in zip(parts, dates):
@@ -261,10 +263,7 @@ def update_parts(parts, dates, session=None):
             updated += part.part(**this_update)
             print(f"{partd['action']} {part}")
             session.add(part)
-    if updated:
-        session.commit()
-    if close_session_when_done:
-        session.close()
+    exit_session(session, close_when_done, updated)
     return updated
 
 
@@ -339,11 +338,7 @@ def update_info(infos, dates, session):
     int
         Number of attributes changed.
     """
-    close_session_when_done = False
-    if session is None:  # pragma: no cover
-        db = cm.connect_to_cm_db(None)
-        session = db.sessionmaker()
-        close_session_when_done = True
+    session, close_when_done = enter_session(session)
 
     updated = 0
     for infod, date in zip(infos, dates):
@@ -358,10 +353,7 @@ def update_info(infos, dates, session):
             session.add(info)
         else:
             print(f"{pn} already has info at this time.  No action.")
-    if updated:
-        session.commit()
-    if close_session_when_done:  # pragma: no cover
-        session.close()
+    exit_session(session, close_when_done, updated)
     return updated
 
 
@@ -515,11 +507,7 @@ def update_connections(conns, dates, same_conn_sec=10, session=None):
     int
         Number of attributes changed.
     """
-    close_session_when_done = False
-    if session is None:  # pragma: no cover
-        db = cm.connect_to_cm_db(None)
-        session = db.sessionmaker()
-        close_session_when_done = True
+    session, close_when_done = enter_session(session)
 
     updated = 0
     for connd, date in zip(conns, dates):
@@ -563,10 +551,7 @@ def update_connections(conns, dates, same_conn_sec=10, session=None):
             updated += connection.connection(**this_update)
             print(f"{connd['action']} {connection}")
             session.add(connection)
-    if updated:
-        session.commit()
-    if close_session_when_done:
-        session.close()
+    exit_session(session, close_when_done, updated)
     return updated
 
 
@@ -649,11 +634,7 @@ def update_aprioris(aprioris, dates, session=None):
     int
         Number of attributes changed.
     """
-    close_session_when_done = False
-    if session is None:
-        db = cm.connect_to_cm_db(None)
-        session = db.sessionmaker()
-        close_session_when_done = True
+    session, close_when_done = enter_session(session)
 
     updated = 0
     for apriorid, date in zip(aprioris, dates):
@@ -674,8 +655,5 @@ def update_aprioris(aprioris, dates, session=None):
             updated += apriori.apriori(**this_update)
             print(f"Add {apriori}")
             session.add(apriori)
-    if updated:
-        session.commit()
-    if close_session_when_done:
-        session.close()
+    exit_session(session, close_when_done, updated)
     return updated

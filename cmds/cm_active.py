@@ -5,6 +5,7 @@
 
 """Methods to load all active data for a given date."""
 
+from copy import copy
 from . import cm_utils, cm_tables
 
 
@@ -61,8 +62,8 @@ class ActiveData:
 
         Parameters
         ----------
-        session : session object or None
-            If None, it will start a new session on the database.
+        session : session object
+            sqalchemy session to use for getting data
         at_date : anything interpretable by cm_utils.get_astropytime
             Date at which to initialize.
         at_time : anything interpretable by cm_utils.get_astropytime
@@ -107,6 +108,7 @@ class ActiveData:
         if at_date is not None:
             this_date = cm_utils.get_astropytime(at_date, at_time, float_format)
             if abs(this_date.gps - self.at_date.gps) > 1:
+                print("New date does not agree with class date - resetting attributes.")
                 self.at_date = this_date
                 self.reset_all()
         return self.at_date.gps
@@ -141,7 +143,7 @@ class ActiveData:
             )
         ):
             key = prt.pn
-            self.parts[key] = prt
+            self.parts[key] = copy(prt)
             self.parts[key].logical_pn = None
 
     def load_connections(self, at_date=None, at_time=None, float_format=None):
@@ -191,10 +193,10 @@ class ActiveData:
             check_keys["down"].append(chk)
             key = cnn.upstream_part
             self.connections["up"].setdefault(key, {})
-            self.connections["up"][key][cnn.upstream_output_port.lower()] = cnn
+            self.connections["up"][key][cnn.upstream_output_port.lower()] = copy(cnn)
             key = cnn.downstream_part
             self.connections["down"].setdefault(key, {})
-            self.connections["down"][key][cnn.downstream_input_port.lower()] = cnn
+            self.connections["down"][key][cnn.downstream_input_port.lower()] = copy(cnn)
 
     def load_info(self, at_date=None, at_time=None, float_format=None):
         """
@@ -223,7 +225,7 @@ class ActiveData:
         ):
             key = info.pn
             self.info.setdefault(key, [])
-            self.info[key].append(info)
+            self.info[key].append(copy(info))
 
     def load_apriori(self, at_date=None, at_time=None, float_format=None, rev="A"):
         """
@@ -261,7 +263,7 @@ class ActiveData:
             if key in apriori_keys:
                 raise ValueError("{} already has an active apriori state.".format(key))
             apriori_keys.append(key)
-            self.apriori[key] = astat
+            self.apriori[key] = copy(astat)
 
     def load_stations(self, at_date=None, at_time=None, float_format=None):
         """
@@ -290,7 +292,7 @@ class ActiveData:
             cm_tables.Stations.created_gpstime <= gps_time
         ):
             key = asta.station_name
-            self.stations[key] = asta
+            self.stations[key] = copy(asta)
 
     def get_ptype(self, ptype):
         """

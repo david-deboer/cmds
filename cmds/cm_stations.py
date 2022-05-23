@@ -32,8 +32,11 @@ class Stations:
     Parameters
     ----------
     session : Session object
-        session on current database. If session is None, a new session
-        on the default database is created and used.
+        session on current database.
+    at_date : see cm_utils.get_astropytime
+        "
+    at_time : "
+    float_format :"
 
     """
 

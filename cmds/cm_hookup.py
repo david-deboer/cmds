@@ -89,8 +89,8 @@ class Hookup(object):
 
     Parameters
     ----------
-    session : session object or None
-        If None, it will start a new session on the database.
+    session : session object
+        Session from sessionmaker
 
     """
 
