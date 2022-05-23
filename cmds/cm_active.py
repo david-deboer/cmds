@@ -294,25 +294,30 @@ class ActiveData:
             key = asta.station_name
             self.stations[key] = copy(asta)
 
-    def get_ptype(self, ptype):
+    def get_ptype(self, ptypes='all'):
         """
-        Return a list of all active parts of type ptype.
+        Return a dict of all active parts of type ptype or 'all'.
 
         Note that this assumes that self.load_parts() has been run and will error
         otherwise.  This is to keep the 'at_date' clearer.
 
         Parameters
         ----------
-        hptype : str
+        ptypes : list or 'all'
             Valid HERA part type name (e.g. node, antenna, fem, ...)
 
         Returns
         -------
-        list
-            Contains all part number keys of that type.
+        dict
+            Contains all part number keys of that type keyed on ptype.
         """
-        ptype_list = []
+        ptype_list = {}
+        if isinstance(ptypes, str):
+            ptypes = ptypes.split(',')
         for key, partclass in self.parts.items():
-            if partclass.ptype == ptype:
-                ptype_list.append(key)
+            for this_ptype in ptypes:
+                if partclass.ptype == this_ptype or this_ptype == 'all':
+                    ptype_list.setdefault(partclass.ptype, [])
+                    ptype_list[partclass.ptype].append(partclass.pn)
+                    break
         return ptype_list
