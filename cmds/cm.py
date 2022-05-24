@@ -93,7 +93,7 @@ class AutomappedDB(DB):
                 )
 
 
-class CMSessionMini():
+class CMSessionWrapper():
     """
     Class to handle when a session may already exist.
 
@@ -105,12 +105,24 @@ class CMSessionMini():
     """
     def __init__(self, session):
         if session is None:
-            db = connect_to_cm_db()
+            db = connect_to_cm_db(None)
             self.session = db.sessionmaker()
             self.close_when_done = True
         else:
             self.session = session
             self.close_when_done = False
+
+    def __enter__(self):
+        return self.session
+
+    def __exit__(self, exception_type, exception_value, traceback):
+        """Exit the session, rollback if there's an error otherwise commit."""
+        if exception_type is not None:
+            self.session.rollback()  # exception raised
+        else:
+            self.session.commit()  # success
+        self.exit(updated=False)
+        return False  # propagate exception if any occurred
 
     def exit(self, updated=False):
         if updated:

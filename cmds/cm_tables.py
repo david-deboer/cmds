@@ -122,20 +122,19 @@ def update_stations(stations, dates, session=None):
 
     """
 
-    C = cm.CMSessionMini(session)
     updated = 0
-    for statd, date in zip(stations, dates):
-        sn = statd['station_name'].upper()
-        statx = C.session.query(Stations).filter(
-            func.upper(Stations.station_name) == sn).first()
-        if statx is None:
-            station = Stations()
-            updated += station.station(created_gpstime=date.gps, **statd)
-            print(f"Add {station}")
-            C.session.add(station)
-        else:
-            print(f"{sn} already present.  No action.")
-    C.exit(updated)
+    with cm.CMSessionWrapper(session) as session:
+        for statd, date in zip(stations, dates):
+            sn = statd['station_name'].upper()
+            statx = session.query(Stations).filter(
+                func.upper(Stations.station_name) == sn).first()
+            if statx is None:
+                station = Stations()
+                updated += station.station(created_gpstime=date.gps, **statd)
+                print(f"Add {station}")
+                session.add(station)
+            else:
+                print(f"{sn} already present.  No action.")
     return updated
 
 
@@ -223,32 +222,31 @@ def update_parts(parts, dates, session=None):
     int
         Number of attributes changed.
     """
-    C = cm.CMSessionMini(session)
     updated = 0
-    for partd, date in zip(parts, dates):
-        pn = partd['pn'].upper()
-        part = C.session.query(Parts).filter(func.upper(Parts.pn) == pn).first()
-        if partd['action'].lower() == 'stop':
-            this_update = None
-            if part is None:
-                print(f"{pn} is not in database.  No update.")
-            elif part.stop_gpstime is not None:
-                print(f"{pn} already has a stop time ({part.stop_gpstime}).  No update.")
-            else:
-                this_update = {'stop_gpstime': date.gps}
-        elif partd['action'].lower() == 'add':
-            this_update = {'pn': pn, 'ptype': partd['ptype'], 'manufacturer_id': partd['manufacturer_id'],
-                           'start_gpstime': date.gps, 'stop_gpstime': None}
-            if part is None:
-                part = Parts()
-            else:
-                print(f"{pn} already in database.  No update.")
+    with cm.CMSessionWrapper(session) as session:
+        for partd, date in zip(parts, dates):
+            pn = partd['pn'].upper()
+            part = session.query(Parts).filter(func.upper(Parts.pn) == pn).first()
+            if partd['action'].lower() == 'stop':
                 this_update = None
-        if this_update is not None:
-            updated += part.part(**this_update)
-            print(f"{partd['action']} {part}")
-            C.session.add(part)
-    C.exit(updated)
+                if part is None:
+                    print(f"{pn} is not in database.  No update.")
+                elif part.stop_gpstime is not None:
+                    print(f"{pn} already has a stop time ({part.stop_gpstime}).  No update.")
+                else:
+                    this_update = {'stop_gpstime': date.gps}
+            elif partd['action'].lower() == 'add':
+                this_update = {'pn': pn, 'ptype': partd['ptype'], 'manufacturer_id': partd['manufacturer_id'],
+                               'start_gpstime': date.gps, 'stop_gpstime': None}
+                if part is None:
+                    part = Parts()
+                else:
+                    print(f"{pn} already in database.  No update.")
+                    this_update = None
+            if this_update is not None:
+                updated += part.part(**this_update)
+                print(f"{partd['action']} {part}")
+                session.add(part)
     return updated
 
 
@@ -323,21 +321,20 @@ def update_info(infos, dates, session):
     int
         Number of attributes changed.
     """
-    C = cm.CMSessionMini(session)
     updated = 0
-    for infod, date in zip(infos, dates):
-        pn = infod['pn'].upper()
-        infox = C.session.query(PartInfo).filter((func.upper(PartInfo.pn) == pn)
-                                                 & (PartInfo.posting_gpstime
-                                                    == date.gps)).first()
-        if infox is None:
-            info = PartInfo()
-            updated += info.info(posting_gpstime=date.gps, **infod)
-            print(f"Add {info}")
-            C.session.add(info)
-        else:
-            print(f"{pn} already has info at this time.  No action.")
-    C.exit(updated)
+    with cm.CMSessionWrapper(session) as session:
+        for infod, date in zip(infos, dates):
+            pn = infod['pn'].upper()
+            infox = session.query(PartInfo).filter((func.upper(PartInfo.pn) == pn)
+                                                   & (PartInfo.posting_gpstime
+                                                      == date.gps)).first()
+            if infox is None:
+                info = PartInfo()
+                updated += info.info(posting_gpstime=date.gps, **infod)
+                print(f"Add {info}")
+                session.add(info)
+            else:
+                print(f"{pn} already has info at this time.  No action.")
     return updated
 
 
@@ -490,52 +487,51 @@ def update_connections(conns, dates, same_conn_sec=10, session=None):
     -------
     int
         Number of attributes changed.
-    """
-    C = cm.CMSessionMini(session)
 
+    """
     updated = 0
-    for connd, date in zip(conns, dates):
-        connections_to_check = C.session.query(Connections).filter(
-            (func.upper(Connections.upstream_part) == connd['upstream_part'].upper())
-            & (func.lower(Connections.upstream_output_port)
-               == connd['upstream_output_port'].lower())
-            & (func.upper(Connections.downstream_part) == connd['downstream_part'].upper())
-            & (func.lower(Connections.downstream_input_port)
-               == connd['downstream_input_port'].lower())
-        )
-        if connd['action'].lower() == 'stop':
-            this_update = None
-            if connections_to_check.count() == 0:
-                print(f"No connection in database {connd}.")
-            else:
-                for connx in connections_to_check:
-                    if connx.stop_gpstime is None:
-                        if this_update is None:
-                            this_update = {'stop_gpstime', date.gps}
-                            connection = copy(connx)
-                        else:
-                            print(f"Multiple open connections for {connx}. No action.")
+    with cm.CMSessionWrapper(session) as session:
+        for connd, date in zip(conns, dates):
+            connections_to_check = session.query(Connections).filter(
+                (func.upper(Connections.upstream_part) == connd['upstream_part'].upper())
+                & (func.lower(Connections.upstream_output_port)
+                   == connd['upstream_output_port'].lower())
+                & (func.upper(Connections.downstream_part) == connd['downstream_part'].upper())
+                & (func.lower(Connections.downstream_input_port)
+                   == connd['downstream_input_port'].lower())
+            )
+            if connd['action'].lower() == 'stop':
+                this_update = None
+                if connections_to_check.count() == 0:
+                    print(f"No connection in database {connd}.")
+                else:
+                    for connx in connections_to_check:
+                        if connx.stop_gpstime is None:
+                            if this_update is None:
+                                this_update = {'stop_gpstime', date.gps}
+                                connection = copy(connx)
+                            else:
+                                print(f"Multiple open connections for {connx}. No action.")
+                                this_update = None
+                                break
+            elif connd['action'].lower() == 'add':
+                this_update = {"upstream_part": connd['upstream_part'],
+                               "upstream_output_port": connd['upstream_output_port'],
+                               "downstream_part": connd['downstream_part'],
+                               "downstream_input_port": connd['downstream_input_port'],
+                               "start_gpstime": date.gps, "stop_gpstime": None}
+                if connections_to_check.count() == 0:
+                    connection = Connections()
+                else:
+                    for connection in connections_to_check:
+                        if abs(connection.start_gpstime - date.gps) < same_conn_sec:
+                            print(f"{connection} is already present.  No action.")  # noqa
                             this_update = None
-                            break
-        elif connd['action'].lower() == 'add':
-            this_update = {"upstream_part": connd['upstream_part'],
-                           "upstream_output_port": connd['upstream_output_port'],
-                           "downstream_part": connd['downstream_part'],
-                           "downstream_input_port": connd['downstream_input_port'],
-                           "start_gpstime": date.gps, "stop_gpstime": None}
-            if connections_to_check.count() == 0:
-                connection = Connections()
-            else:
-                for connection in connections_to_check:
-                    if abs(connection.start_gpstime - date.gps) < same_conn_sec:
-                        print(f"{connection} is already present.  No action.")  # noqa
-                        this_update = None
-                connection = Connections()
-        if this_update is not None:
-            updated += connection.connection(**this_update)
-            print(f"{connd['action']} {connection}")
-            C.session.add(connection)
-    C.exit(updated)
+                    connection = Connections()
+            if this_update is not None:
+                updated += connection.connection(**this_update)
+                print(f"{connd['action']} {connection}")
+                session.add(connection)
     return updated
 
 
@@ -619,26 +615,26 @@ def update_aprioris(aprioris, dates, session=None):
     -------
     int
         Number of attributes changed.
+
     """
-    C = cm.CMSessionMini(session)
     updated = 0
-    for apriorid, date in zip(aprioris, dates):
-        pn = apriorid['pn'].upper()
-        aprioric = C.session.query(AprioriStatus).filter(func.upper(AprioriStatus.pn) == pn)
-        for apx in aprioric:  # Stop all old ones.
-            if apx.stop_gpstime is None:
-                updated += apx.apriori(stop_gpstime=date.gps)
-                print(f"Stop {apx}")
-                C.session.add(apx)
-        if apriorid['action'].lower() == 'stop':
-            if aprioric.count() == 0:
-                print(f"{pn} is not in database.  No update.")
-        elif apriorid['action'].lower() == 'add':
-            this_update = {'pn': pn, 'status': apriorid['status'], 'comment': apriorid['comment'],
-                           'start_gpstime': date.gps, 'stop_gpstime': None}
-            apriori = AprioriStatus()
-            updated += apriori.apriori(**this_update)
-            print(f"Add {apriori}")
-            C.session.add(apriori)
-    C.exit(updated)
+    with cm.CMSessionWrapper(session) as session:
+        for apriorid, date in zip(aprioris, dates):
+            pn = apriorid['pn'].upper()
+            aprioric = session.query(AprioriStatus).filter(func.upper(AprioriStatus.pn) == pn)
+            for apx in aprioric:  # Stop all old ones.
+                if apx.stop_gpstime is None:
+                    updated += apx.apriori(stop_gpstime=date.gps)
+                    print(f"Stop {apx}")
+                    session.add(apx)
+            if apriorid['action'].lower() == 'stop':
+                if aprioric.count() == 0:
+                    print(f"{pn} is not in database.  No update.")
+            elif apriorid['action'].lower() == 'add':
+                this_update = {'pn': pn, 'status': apriorid['status'], 'comment': apriorid['comment'],
+                               'start_gpstime': date.gps, 'stop_gpstime': None}
+                apriori = AprioriStatus()
+                updated += apriori.apriori(**this_update)
+                print(f"Add {apriori}")
+                session.add(apriori)
     return updated
