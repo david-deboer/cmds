@@ -7,7 +7,7 @@
 from sqlalchemy import func, and_, or_
 
 from . import cm_tables, cm_utils, cm_sysdef, cm_hookup
-from . import cm_stations
+from . import cm_stations, cm
 
 
 class SystemInfo:
@@ -89,10 +89,6 @@ class Handling:
         self.H = None
         self.sysdef = cm_sysdef.Sysdef()
         self.apriori_status_set = None
-
-    def close(self):  # pragma: no cover
-        """Close the session."""
-        self.session.close()
 
     def cofa(self):
         """
@@ -490,17 +486,18 @@ def node_antennas(source="file", session=None):
                     prefix = "HH"
                 ants_per_node[node_hpn].append("{}{}".format(prefix, ant))
     else:
-        if isinstance(source, str) and source.lower().startswith("h"):
-            source = cm_hookup.Hookup(session=session)
-        hu_dict = source.get_hookup(
-            cm_sysdef.hera_zone_prefixes, hookup_type="parts_hera"
-        )
-        for this_ant, vna in hu_dict.items():
-            key = vna.hookup["E<ground"][-1].downstream_part
-            if key[0] != "N":
-                continue
-            ants_per_node.setdefault(key, [])
-            ants_per_node[key].append(cm_utils.split_part_key(this_ant)[0])
+        with cm.CMSessionWrapper(session) as session:
+            if isinstance(source, str) and source.lower().startswith("h"):
+                source = cm_hookup.Hookup(session=session)
+            hu_dict = source.get_hookup(
+                cm_sysdef.hera_zone_prefixes, hookup_type="parts_hera"
+            )
+            for this_ant, vna in hu_dict.items():
+                key = vna.hookup["E<ground"][-1].downstream_part
+                if key[0] != "N":
+                    continue
+                ants_per_node.setdefault(key, [])
+                ants_per_node[key].append(cm_utils.split_part_key(this_ant)[0])
     return ants_per_node
 
 
@@ -552,9 +549,10 @@ def which_node(ant_num, session=None):
     dict
         Contains antenna and node
     """
-    na_from_file = node_antennas("file", session=session)
-    na_from_hookup = node_antennas("hookup", session=session)
-    ant_num = cm_utils.listify(ant_num)
+    with cm.CMSessionWrapper(session) as session:
+        na_from_file = node_antennas("file", session=session)
+        na_from_hookup = node_antennas("hookup", session=session)
+        ant_num = cm_utils.listify(ant_num)
     ant_node = {}
     for pn in ant_num:
         pnint = cm_utils.peel_key(str(pn), "NPR")[0]
@@ -624,84 +622,85 @@ def node_info(node_num="active", session=None):
     dict
         Contains node and node component information
     """
-    hu = cm_hookup.Hookup(session)
-    na_from_file = node_antennas("file", session=session)
-    na_from_hookup = node_antennas(hu, session=session)
+    with cm.CMSessionWrapper(session) as session:
+        hu = cm_hookup.Hookup(session)
+        na_from_file = node_antennas("file", session=session)
+        na_from_hookup = node_antennas(hu, session=session)
 
-    if node_num == "active":
-        node_num = sorted(na_from_hookup)
-    elif node_num == "all":
-        node_num = sorted(na_from_file)
-    info = {"nodes": []}
-    for node in node_num:
-        # Set up
-        if isinstance(node, int):
-            node = "N{:02d}".format(node)
-        npk = cm_utils.make_part_key(node, "A")
-        info["nodes"].append(node)
-        info[node] = {}
-        # Get antenna info
-        info[node]["ants-file"] = na_from_file[node] if node in na_from_file else []
-        info[node]["ants-hookup"] = (
-            na_from_hookup[node] if node in na_from_hookup else []
-        )
-
-        # Get hookup info
-        snaps = hu.get_hookup(node, hookup_type="parts_hera")
-        wr = hu.get_hookup(node, hookup_type="wr_hera")
-        rd = hu.get_hookup(node, hookup_type="arduino_hera")
-
-        # Find snaps
-        info[node]["snaps"] = ["", "", "", ""]
-        for snp in snaps.keys():
-            loc = int(snaps[snp].hookup["E<e2"][-1].downstream_input_port[-1])
-            info[node]["snaps"][loc] = cm_utils.split_part_key(snp)[0]
-        # Find white rabbit, arduino and node control module
-        wr_ret = _get_dict_elements(npk, wr, "wr", "ncm")
-        info[node]["wr"] = wr_ret["wr"]
-        rd_ret = _get_dict_elements(npk, rd, "rd", "ncm")
-        info[node]["arduino"] = rd_ret["rd"]
-        info[node]["ncm"] = ""
-        if (
-            len(wr_ret["ncm"]) and len(rd_ret["ncm"]) and wr_ret["ncm"] != rd_ret["ncm"]
-        ):  # pragma: no cover
-            raise ValueError(
-                "NCMs don't match for node {}:  {} vs {}".format(
-                    node, wr_ret["ncm"], rd_ret["ncm"]
-                )
+        if node_num == "active":
+            node_num = sorted(na_from_hookup)
+        elif node_num == "all":
+            node_num = sorted(na_from_file)
+        info = {"nodes": []}
+        for node in node_num:
+            # Set up
+            if isinstance(node, int):
+                node = "N{:02d}".format(node)
+            npk = cm_utils.make_part_key(node, "A")
+            info["nodes"].append(node)
+            info[node] = {}
+            # Get antenna info
+            info[node]["ants-file"] = na_from_file[node] if node in na_from_file else []
+            info[node]["ants-hookup"] = (
+                na_from_hookup[node] if node in na_from_hookup else []
             )
-        elif len(wr_ret["ncm"]):
-            info[node]["ncm"] = wr_ret["ncm"]
-        elif len(rd_ret["ncm"]):  # pragma: no cover
-            info[node]["ncm"] = rd_ret["ncm"]
 
-        # Get notes
-        notes = hu.get_notes(snaps, state="all", return_dict=True)
-        for snp in info[node]["snaps"]:
-            spk = cm_utils.make_part_key(snp, "A")
+            # Get hookup info
+            snaps = hu.get_hookup(node, hookup_type="parts_hera")
+            wr = hu.get_hookup(node, hookup_type="wr_hera")
+            rd = hu.get_hookup(node, hookup_type="arduino_hera")
+
+            # Find snaps
+            info[node]["snaps"] = ["", "", "", ""]
+            for snp in snaps.keys():
+                loc = int(snaps[snp].hookup["E<e2"][-1].downstream_input_port[-1])
+                info[node]["snaps"][loc] = cm_utils.split_part_key(snp)[0]
+            # Find white rabbit, arduino and node control module
+            wr_ret = _get_dict_elements(npk, wr, "wr", "ncm")
+            info[node]["wr"] = wr_ret["wr"]
+            rd_ret = _get_dict_elements(npk, rd, "rd", "ncm")
+            info[node]["arduino"] = rd_ret["rd"]
+            info[node]["ncm"] = ""
+            if (
+                len(wr_ret["ncm"]) and len(rd_ret["ncm"]) and wr_ret["ncm"] != rd_ret["ncm"]
+            ):  # pragma: no cover
+                raise ValueError(
+                    "NCMs don't match for node {}:  {} vs {}".format(
+                        node, wr_ret["ncm"], rd_ret["ncm"]
+                    )
+                )
+            elif len(wr_ret["ncm"]):
+                info[node]["ncm"] = wr_ret["ncm"]
+            elif len(rd_ret["ncm"]):  # pragma: no cover
+                info[node]["ncm"] = rd_ret["ncm"]
+
+            # Get notes
+            notes = hu.get_notes(snaps, state="all", return_dict=True)
+            for snp in info[node]["snaps"]:
+                spk = cm_utils.make_part_key(snp, "A")
+                try:
+                    snnt = notes[spk][spk]
+                    info[snp] = [f"{snnt[x]['note']}|{x}" for x in snnt.keys()]
+                except KeyError:
+                    info[snp] = []
+            notes = hu.get_notes(wr, state="all", return_dict=True)
+            wpk = cm_utils.make_part_key(info[node]["wr"], "A")
             try:
-                snnt = notes[spk][spk]
-                info[snp] = [f"{snnt[x]['note']}|{x}" for x in snnt.keys()]
+                wrnt = notes[npk][wpk]
+                info[info[node]["wr"]] = [f"{wrnt[x]['note']}|{x}" for x in wrnt.keys()]
             except KeyError:
-                info[snp] = []
-        notes = hu.get_notes(wr, state="all", return_dict=True)
-        wpk = cm_utils.make_part_key(info[node]["wr"], "A")
-        try:
-            wrnt = notes[npk][wpk]
-            info[info[node]["wr"]] = [f"{wrnt[x]['note']}|{x}" for x in wrnt.keys()]
-        except KeyError:
-            info[info[node]["wr"]] = []
-        notes = hu.get_notes(rd, state="all", return_dict=True)
-        apk = cm_utils.make_part_key(info[node]["arduino"], "A")
-        try:
-            rdnt = notes[npk][apk]
-            info[info[node]["arduino"]] = [
-                f"{rdnt[x]['note']}|{x}" for x in rdnt.keys()
-            ]
-        except KeyError:
-            info[info[node]["arduino"]] = []
-        if "" in info.keys():
-            del info[""]
+                info[info[node]["wr"]] = []
+            notes = hu.get_notes(rd, state="all", return_dict=True)
+            apk = cm_utils.make_part_key(info[node]["arduino"], "A")
+            try:
+                rdnt = notes[npk][apk]
+                info[info[node]["arduino"]] = [
+                    f"{rdnt[x]['note']}|{x}" for x in rdnt.keys()
+                ]
+            except KeyError:
+                info[info[node]["arduino"]] = []
+            if "" in info.keys():
+                del info[""]
     return info
 
 

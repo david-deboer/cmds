@@ -103,7 +103,7 @@ class CMSessionWrapper():
         Supplied session, or None.
 
     """
-    def __init__(self, session):
+    def __init__(self, session=None):
         if session is None:
             db = connect_to_cm_db(None)
             self.session = db.sessionmaker()
