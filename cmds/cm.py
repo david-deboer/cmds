@@ -121,10 +121,10 @@ class CMSessionWrapper():
             self.session.rollback()  # exception raised
         else:
             self.session.commit()  # success
-        self.exit(updated=False)
+        self.wrapup(updated=False)
         return False  # propagate exception if any occurred
 
-    def exit(self, updated=False):
+    def wrapup(self, updated=False):
         if updated:
             self.session.commit()
         if self.close_when_done:
