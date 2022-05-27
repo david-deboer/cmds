@@ -77,8 +77,7 @@ if __name__ == "__main__":
         output_format = args.file.split(".")[-1]
 
     # Start session
-    db = cm.connect_to_cm_db(args)
-    with db.sessionmaker() as session:
+    with cm.CMSessionWrapper() as session:
         hookup = cm_hookup.Hookup(session)
 
         hookup_dict = hookup.get_hookup(pn=args.pn, at_date=at_date,

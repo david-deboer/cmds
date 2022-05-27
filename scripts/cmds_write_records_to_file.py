@@ -72,8 +72,7 @@ if __name__ == "__main__":
         start_time = cm_utils.get_astropytime(args.start_date, args.start_time)
         stop_time = cm_utils.get_astropytime(args.stop_date, args.stop_time)
 
-    db = cm.connect_to_mc_db(args)
-    with db.sessionmaker() as session:
+    with cm.CMSessionWrapper() as session:
         relevant_arg_name = valid_tables[args.table]["arg_name"]
         for arg in list_of_filter_args:
             if getattr(args, arg) is not None and arg != relevant_arg_name:

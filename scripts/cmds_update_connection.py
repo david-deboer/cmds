@@ -27,6 +27,5 @@ if __name__ == "__main__":
               "downstream_part": args.dnpart.upper(), "downstream_input_port": args.dnport.lower()
               }
 
-    db = cm.connect_to_cm_db(args)
-    with db.sessionmaker() as session:
+    with cm.CMSessionWrapper() as session:
         cm_tables.update_connections([update], [date], same_conn_sec=args.same_conn_sec, session=session)

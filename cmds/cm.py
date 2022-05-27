@@ -117,14 +117,18 @@ class CMSessionWrapper():
 
     def __exit__(self, exception_type, exception_value, traceback):
         """Exit the session, rollback if there's an error otherwise commit."""
-        if exception_type is not None:
-            self.session.rollback()  # exception raised
-        else:
-            self.session.commit()  # success
+        if isinstance(self.session, CMSession):
+            if exception_type is not None:
+                self.session.rollback()  # exception raised
+            else:
+                self.session.commit()  # success
         self.wrapup(updated=False)
         return False  # propagate exception if any occurred
 
     def wrapup(self, updated=False):
+        """Close out the session in a non-context manner."""
+        if not isinstance(self.session, CMSession):
+            return None
         if updated:
             self.session.commit()
         if self.close_when_done:
@@ -252,22 +256,3 @@ def connect_to_cm_db(args, check_connect=True):
                 )
 
     return db
-
-
-def connect_to_cm_testing_db(forced_db_name="testing"):
-    """
-    Get a DB object that is connected to the testing CM database.
-
-    Parameters
-    ----------
-    forced_db_name : str
-        Database name to use.
-
-    Returns
-    -------
-    DB object
-        An instance of the `DB` class providing access to the testing CM
-        database.
-
-    """
-    return connect_to_cm_db(None, forced_db_name=forced_db_name)

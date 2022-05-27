@@ -28,6 +28,5 @@ if __name__ == "__main__":
         update['ptype'] = args.type
         update['manufacturer_id'] = args.mfg
 
-    db = cm.connect_to_cm_db(args)
-    with db.sessionmaker() as session:
+    with cm.CMSessionWrapper() as session:
         cm_tables.update_parts(parts=[update], dates=[date], session=session)

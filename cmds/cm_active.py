@@ -14,7 +14,7 @@ def get_active(at_date="now", at_time=None, float_format=None, loading=["apriori
     Return an ActiveData object with specified loading.
 
     This allows for a simple way to get the active data, however if more
-    transactions are needed, please use the sessionmaker in mc to generate a
+    transactions are needed, please use the session wrapper in cm to generate a
     context managed session and pass that session to the class.
 
     Parameters
@@ -35,8 +35,7 @@ def get_active(at_date="now", at_time=None, float_format=None, loading=["apriori
     """
     from . import cm
 
-    db = cm.connect_to_mc_db(None)
-    with db.sessionmaker() as session:
+    with cm.CMSessionWrapper() as session:
         active = ActiveData(
             session=session, at_date=at_date, at_time=at_time, float_format=float_format
         )

@@ -87,8 +87,7 @@ notes_start_date = cm_utils.get_astropytime(
 )
 
 # Start session
-db = cm.connect_to_cm_db(args)
-with db.sessionmaker() as session:
+with cm.CMSessionWrapper() as session:
     if args.list_columns:
         blank = cm_dossier.PartEntry(None, None)
         print("\t{:30s}\t{}".format("Use", "For"))

@@ -43,7 +43,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
     date = cm_utils.get_astropytime(args.date, args.time, args.format)
 
-    db = cm.connect_to_cm_db(args)
-    with db.sessionmaker() as session:
+    with cm.CMSessionWrapper() as session:
         cm_tables.update_stations([station_data(args)], [date], session)
         cm_tables.update_parts([part_data(args)], [date], session)

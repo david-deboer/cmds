@@ -69,8 +69,7 @@ if __name__ == "__main__":
         args.label = False
 
     # start session and instances
-    db = cm.connect_to_cm_db(args)
-    with db.sessionmaker() as session:
+    with cm.CMSessionWrapper() as session:
         S = cm_stations.Stations(session=session, at_date=at_date)
 
         # Apply background

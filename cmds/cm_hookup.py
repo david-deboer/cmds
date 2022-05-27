@@ -29,7 +29,7 @@ def get_hookup(
     Return a single hookup dossier.
 
     This allows for a simple way to get a part hookup, however if more
-    transactions are needed, please use the the sessionmaker in mc to
+    transactions are needed, please use the the session wrapper in cm to
     generate a context managed session and pass that session to the class.
 
     Parameters
@@ -66,8 +66,7 @@ def get_hookup(
     """
     from . import cm
 
-    db = cm.connect_to_mc_db(None)
-    with db.sessionmaker() as session:
+    with cm.CMSessionWrapper() as session:
         hookup = Hookup(session=session)
         return hookup.get_hookup_from_db(
             hpn=hpn,

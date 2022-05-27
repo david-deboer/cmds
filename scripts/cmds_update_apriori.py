@@ -29,6 +29,5 @@ if __name__ == "__main__":
         update['status'] = args.status
         update['comment'] = args.comment
 
-    db = cm.connect_to_cm_db(args)
-    with db.sessionmaker() as session:
+    with cm.CMSessionWrapper() as session:
         cm_tables.update_aprioris(parts=[update], dates=[date], session=session)
