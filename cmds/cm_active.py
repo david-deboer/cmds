@@ -38,7 +38,7 @@ def get_active(at_date="now", at_time=None, float_format=None, loading=["apriori
     db = cm.connect_to_mc_db(None)
     with db.sessionmaker() as session:
         active = ActiveData(
-            session, at_date=at_date, at_time=at_time, float_format=float_format
+            session=session, at_date=at_date, at_time=at_time, float_format=float_format
         )
         for param in loading:
             getattr(active, f"load_{param}")()

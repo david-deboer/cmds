@@ -68,7 +68,7 @@ def get_hookup(
 
     db = cm.connect_to_mc_db(None)
     with db.sessionmaker() as session:
-        hookup = Hookup(session)
+        hookup = Hookup(session=session)
         return hookup.get_hookup_from_db(
             hpn=hpn,
             pol=pol,
