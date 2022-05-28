@@ -41,10 +41,10 @@ class Sysdef:
             hookup_type = self.sysdef_json['default_type']
         self.type = hookup_type
 
-        self.polarizations = sysdef['polarization_defs'][self.type]
-        self.components = sysdef['components']
-        self.station_types = sysdef['station_types']
-        self.apriori_statuses = sysdef['apriori_statuses']
+        self.polarizations = self.sysdef_json['polarization_defs'][self.type]
+        self.components = self.sysdef_json['components']
+        self.station_types = self.sysdef_json['station_types']
+        self.apriori_statuses = self.sysdef_json['apriori_statuses']
         self.hookup = []
         for i, hd in enumerate(self.sysdef_json['hookup_defs'][self.type]):
             if isinstance(hd, dict):
