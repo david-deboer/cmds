@@ -152,7 +152,7 @@ class Checks:
                                 print(f"{hpn} ({posting_gpstime}): {comments[i]}")
         if duplicates_found:
             print("{} duplicates found".format(duplicates_found))
-            print("run 'psql hera_mc -f {}'".format(filename))
+            print("run 'psql XXX -f {}'".format(filename))
         else:
             print("No duplicates found.")
 

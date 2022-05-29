@@ -10,7 +10,6 @@ from cmds.data import DATA_PATH
 config = context.config
 
 # this will overwrite the init file sqlalchemy.url
-# path with the path from ~/.hera_mc/mc_config.json
 
 default_config_file = op.join(DATA_PATH, "db_config.json")
 with open(default_config_file) as f:

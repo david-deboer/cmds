@@ -9,7 +9,7 @@
 
 from astropy.time import Time, TimeDelta
 
-from hera_mc import cm, cm_utils
+from cmds import cm, cm_utils
 
 valid_tables = {
     "antenna_status": {

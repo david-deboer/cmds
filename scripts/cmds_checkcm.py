@@ -9,7 +9,7 @@ Checks the database for:
     duplicated comments
     concurrent apriori states
 """
-from hera_cm import cm_checks
+from cmds import cm_checks
 import argparse
 
 if __name__ == '__main__':
@@ -24,7 +24,7 @@ if __name__ == '__main__':
                     action='store_true')
     ap.add_argument('-a', '--apriori', help="Check for overlapping apriori states XXX",
                     action='store_true')
-    ap.add_argument('-e', '--ethers', help="Check the hosts/ethers hera_mc vs redis",
+    ap.add_argument('-e', '--ethers', help="Check the hosts/ethers XXX vs redis",
                     action='store_true')
     ap.add_argument('-d', '--daemons', help="Check running daemons",
                     action='store_true')
