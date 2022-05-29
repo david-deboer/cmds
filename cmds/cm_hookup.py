@@ -11,7 +11,7 @@ from . import cm_hookup_entry, cm_utils, cm_sysdef, cm_dossier, cm_active
 
 
 def get_hookup(
-    hpn,
+    pn,
     pol="all",
     at_date="now",
     at_time=None,
@@ -28,8 +28,8 @@ def get_hookup(
 
     Parameters
     ----------
-    hpn : str, list
-        List/string of input hera part number(s) (whole or 'startswith')
+    pn : str, list
+        List/string of input part number(s) (whole or 'startswith')
         If string
             - 'default' uses default station prefixes in cm_sysdef
             - otherwise converts as csv-list
@@ -47,7 +47,7 @@ def get_hookup(
         If False, will only check the first characters in each hpn entry.  E.g. 'HH1'
         would allow 'HH1', 'HH10', 'HH123', etc
     hookup_type : str or None
-        Type of hookup to use (current observing system is 'parts_hera').
+        Type of hookup to use (current observing system is 'parts_').
         If 'None' it will determine which system it thinks it is based on
         the part-type.  The order in which it checks is specified in cm_sysdef.
         Only change if you know you want a different system (like 'parts_paper').
@@ -63,7 +63,7 @@ def get_hookup(
     with cm.CMSessionWrapper() as session:
         hookup = Hookup(session=session)
         hookup.get_hookup(
-            hpn=hpn,
+            pn=pn,
             pol=pol,
             at_date=at_date,
             at_time=at_time,
