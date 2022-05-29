@@ -92,7 +92,7 @@ class Hookup(object):
         self.session = session
         self.active = None
 
-    def get_hookup(self, pn, at_date='now', at_time=None, float_format=None,
+    def get_hookup(self, pn, pol='all', at_date='now', at_time=None, float_format=None,
                    exact_match=False, hookup_type=None):
         """
         Get the hookup dict from the database for the supplied match parameters.
@@ -100,12 +100,14 @@ class Hookup(object):
         Parameters
         ----------
         pn : str, list
-            List/string of input hera part number(s) (whole or 'startswith')
+            List/string of input part number(s) (whole or 'startswith')
             If string
                 - 'default' uses default station prefixes in cm_sysdef
                 - otherwise converts as csv-list
             If element of list is of format '.xxx:a/b/c' it finds the appropriate
                 method as cm_sysdef.Sysdef.xxx([a, b, c])
+        pol : str
+            A port polarization to follow, or 'all',  ('e', 'n', 'all')
         at_date : anything interpretable by cm_utils.get_astropytime
             Date at which to initialize.
         at_time : anything interpretable by cm_utils.get_astropytime
@@ -127,6 +129,7 @@ class Hookup(object):
             Hookup dossier dictionary as defined in cm_hookup_entry.HookupEntry keyed on part.
 
         """
+        print("UPDATE - Need to reintegrate pol.")
         # Reset at_date
         at_date = cm_utils.get_astropytime(at_date, at_time, float_format)
         self.at_date = at_date
@@ -134,7 +137,7 @@ class Hookup(object):
         self.active.load_parts(at_date=None)
         self.active.load_connections(at_date=None)
         self.type = hookup_type
-        self.sysdef = cm_sysdef.Sysdef(hookup_type)
+        self.sysdef = cm_sysdef.Sysdef(self.type)
         pn = cm_utils.listify(pn)
         parts_list = cm_utils.get_pn_list(pn, list(self.active.parts.keys()), exact_match)
         self.dossier = cm_dossier.Dossier(pn=parts_list, at_date=at_date, active=self.active,

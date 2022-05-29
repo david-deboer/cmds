@@ -80,7 +80,7 @@ if __name__ == "__main__":
     with cm.CMSessionWrapper() as session:
         hookup = cm_hookup.Hookup(session)
 
-        hookup_dict = hookup.get_hookup(pn=args.pn, at_date=at_date,
+        hookup_dict = hookup.get_hookup(pn=args.pn, pol=args.pol, at_date=at_date,
                                         exact_match=args.exact_match, hookup_type=args.hookup_type)
         show = hookup.show_hookup(cols_to_show=args.hookup_cols,
                                   ports=args.ports, sortby=args.sortby, state=state,
