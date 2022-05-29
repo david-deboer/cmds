@@ -3,7 +3,7 @@
 # Copyright 2019 the HERA Collaboration
 # Licensed under the 2-clause BSD license.
 
-"""Contains the Dossier and XEntry classes which serves as a "dossier" for part and hookup entries."""
+"""Contains the HookupEntry class for  hookup entries."""
 
 from copy import copy
 

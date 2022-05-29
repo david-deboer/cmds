@@ -82,12 +82,12 @@ if __name__ == "__main__":
 
         hookup_dict = hookup.get_hookup(pn=args.pn, at_date=at_date,
                                         exact_match=args.exact_match, hookup_type=args.hookup_type)
-        show = hookup.show_hookup(hookup_dict=hookup_dict, cols_to_show=args.hookup_cols,
+        show = hookup.show_hookup(cols_to_show=args.hookup_cols,
                                   ports=args.ports, sortby=args.sortby, state=state,
                                   filename=args.file, output_format=output_format)
         if output_format == "display":
             print(show)
         if args.notes:
             print("\nNotes:\n---------------------------------------------------------------")
-            print(hookup.show_notes(hookup_dict=hookup_dict, state=state))
+            print(hookup.show_notes(state=state))
             print("-------------------------------------------------------------------------")
