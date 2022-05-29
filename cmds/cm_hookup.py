@@ -7,13 +7,7 @@
 
 from argparse import Namespace
 
-from . import cm_utils, cm_sysdef, cm_dossier, cm_active
-
-
-def _polport(pol, port, demarc='-'):
-    if port == 'split':
-        return pol.split(demarc)
-    return f"{pol}{demarc}{port}"
+from . import cm_hookup_entry, cm_utils, cm_sysdef, cm_dossier, cm_active
 
 
 def get_hookup(
@@ -26,7 +20,7 @@ def get_hookup(
     hookup_type="parts_hera",
 ):
     """
-    Return a single hookup dossier.
+    Return a hookup object.
 
     This allows for a simple way to get a part hookup, however if more
     transactions are needed, please use the the session wrapper in cm to
@@ -60,15 +54,15 @@ def get_hookup(
 
     Returns
     -------
-    dict
-        Hookup dossier dictionary as defined in cm_dossier
+    Hookup object
+        Hookup dossier object
 
     """
     from . import cm
 
     with cm.CMSessionWrapper() as session:
         hookup = Hookup(session=session)
-        return hookup.get_hookup_from_db(
+        hookup.get_hookup(
             hpn=hpn,
             pol=pol,
             at_date=at_date,
@@ -77,6 +71,7 @@ def get_hookup(
             exact_match=exact_match,
             hookup_type=hookup_type,
         )
+        return hookup
 
 
 class Hookup(object):
@@ -129,7 +124,7 @@ class Hookup(object):
         Returns
         -------
         dict
-            Hookup dossier dictionary as defined in cm_dossier.HookupEntry keyed on part.
+            Hookup dossier dictionary as defined in cm_hookup_entry.HookupEntry keyed on part.
 
         """
         # Reset at_date
@@ -138,32 +133,64 @@ class Hookup(object):
         self.active = cm_active.ActiveData(self.session, at_date=at_date)
         self.active.load_parts(at_date=None)
         self.active.load_connections(at_date=None)
-        self.hookup_type = hookup_type
+        self.type = hookup_type
         self.sysdef = cm_sysdef.Sysdef(hookup_type)
         pn = cm_utils.listify(pn)
         parts_list = cm_utils.get_pn_list(pn, list(self.active.parts.keys()), exact_match)
         self.dossier = cm_dossier.Dossier(pn=parts_list, at_date=at_date, active=self.active,
                                           skip_pn_list_gather=True)
-        hookup_dict = {}
+        self.hookup = {}
         for this_part in parts_list:
             part = self.active.parts[this_part]
-            hookup_dict[this_part] = cm_dossier.HookupEntry(entry_key=this_part, sysdef=self.sysdef)
+            self.hookup[this_part] = cm_hookup_entry.HookupEntry(entry_key=this_part, sysdef=self.sysdef)
             for pol in self.sysdef.polarizations:
                 for port in self.dossier.dossier[this_part].input_ports:
                     if port in self.sysdef.components[part.ptype]['up'][pol]:
-                        polport = _polport(pol, port)
-                        hookup_dict[this_part].hookup[polport] = self._follow_hookup_stream(
+                        polport = cm_hookup_entry._polport(pol, port)
+                        self.hookup[this_part].hookup[polport] = self._follow_hookup_stream(
                             part=this_part, pol=pol, port=port, dir="up")
-                        hookup_dict[this_part].add_extras(polport, self.part_type_cache)
+                        self.hookup[this_part].add_extras(polport, self.part_type_cache)
                 for port in self.dossier.dossier[this_part].output_ports:
                     if port in self.sysdef.components[part.ptype]['down'][pol]:
-                        polport = _polport(pol, port)
-                        hookup_dict[this_part].hookup[polport] = self._follow_hookup_stream(
+                        polport = cm_hookup_entry._polport(pol, port)
+                        self.hookup[this_part].hookup[polport] = self._follow_hookup_stream(
                             part=this_part, pol=pol, port=port, dir="down")
-                        hookup_dict[this_part].add_extras(polport, self.part_type_cache)
-        return hookup_dict
+                        self.hookup[this_part].add_extras(polport, self.part_type_cache)
 
-    def show_hookup(self, hookup_dict, cols_to_show="all", state="full",
+    def _make_header_row(self, cols_to_show, timing):
+        """
+        Generate the appropriate header row for the hookup object.
+
+        Parameters
+        ----------
+        cols_to_show : list
+            list of columns to include in hookup listing
+        timing : bool
+            flag to include timing
+
+        Returns
+        -------
+        list
+            List of header titles.
+
+        """
+        if cols_to_show[0] == 'all':
+            headers = self.sysdef.hookup
+        else:
+            self.col_list = []
+            for h in self.hookup.values():
+                for col in h.columns:
+                    if col not in self.col_list:
+                        self.col_list.append(col.lower())
+            headers = []
+            for col in cols_to_show:
+                if col.lower() in self.col_list:
+                    headers.append(col)
+        if timing:
+            headers += ['start', 'stop']
+        return headers
+
+    def show_hookup(self, cols_to_show="all", state="full",
                     pols_to_show="all", ports=False, sortby=None, timing=True,
                     filename=None, output_format="table"):
         """
@@ -171,8 +198,6 @@ class Hookup(object):
 
         Parameters
         ----------
-        hookup_dict : dict
-            Hookup dictionary generated in self.get_hookup
         cols_to_show : list, str
             list of columns to include in hookup listing
         state : str
@@ -203,17 +228,17 @@ class Hookup(object):
 
         """
         show = {"ports": ports}
-        headers = self._make_header_row(hookup_dict, cols_to_show, timing=timing)
+        headers = self._make_header_row(cols_to_show, timing=timing)
         table_data = []
         total_shown = 0
-        sorted_hukeys = self._sort_hookup_display(hookup_dict, sortby, def_sort_order="NP")
+        sorted_hukeys = self._sort_hookup_display(sortby, def_sort_order="NP")
         for hukey in sorted_hukeys:
-            for ppk in cm_utils.put_keys_in_order(hookup_dict[hukey].hookup.keys(), sort_order="PN"):
-                if len(hookup_dict[hukey].hookup[ppk]):
-                    this_state, is_full = state.lower(), hookup_dict[hukey].fully_connected[ppk]
+            for ppk in cm_utils.put_keys_in_order(self.hookup[hukey].hookup.keys(), sort_order="PN"):
+                if len(self.hookup[hukey].hookup[ppk]):
+                    this_state, is_full = state.lower(), self.hookup[hukey].fully_connected[ppk]
                     if this_state == "all" or (this_state == "full" and is_full):
                         total_shown += 1
-                        td = hookup_dict[hukey].table_entry_row(ppk, headers, show)
+                        td = self.hookup[hukey].table_entry_row(ppk, headers, show)
                         if td not in table_data:
                             table_data.append(td)
         if total_shown == 0:
@@ -227,14 +252,12 @@ class Hookup(object):
         return table
 
     # ##################################### Notes ############################################
-    def get_notes(self, hookup_dict, state="all", return_dict=False):
+    def get_notes(self, state="all", return_dict=False):
         """
         Retrieve information for hookup.
 
         Parameters
         ----------
-        hookup_dict : dict
-            Hookup dictionary generated in self.get_hookup
         state : str
             String designating whether to show the full hookups only, or all
         return_dict : bool
@@ -251,40 +274,37 @@ class Hookup(object):
         if self.active.info is None:
             self.active.load_info(self.at_date)
         info_keys = list(self.active.info.keys())
-        hu_notes = {}
-        for hkey in hookup_dict.keys():
+        self.notes = {}
+        for hkey in self.hookup.keys():
             all_hu_hpn = set()
-            for pol in hookup_dict[hkey].hookup.keys():
-                for hpn in hookup_dict[hkey].hookup[pol]:
+            for pol in self.hookup[hkey].hookup.keys():
+                for hpn in self.hookup[hkey].hookup[pol]:
                     if state == "all" or (
-                        state == "full" and hookup_dict[hkey].fully_connected[pol]
+                        state == "full" and self.hookup[hkey].fully_connected[pol]
                     ):
                         all_hu_hpn.add(hpn.upstream_part)
                         all_hu_hpn.add(hpn.downstream_part)
-            hu_notes[hkey] = {}
+            self.notes[hkey] = {}
             for ikey in all_hu_hpn:
                 if ikey in info_keys:
-                    hu_notes[hkey][ikey] = {}
+                    self.notes[hkey][ikey] = {}
                     for entry in self.active.info[ikey]:
                         if return_dict:
-                            hu_notes[hkey][ikey][entry.posting_gpstime] = {
+                            self.notes[hkey][ikey][entry.posting_gpstime] = {
                                 "note": entry.comment.replace("\\n", "\n"),
                                 "ref": entry.reference,
                             }
                         else:
-                            hu_notes[hkey][ikey][
+                            self.notes[hkey][ikey][
                                 entry.posting_gpstime
                             ] = entry.comment.replace("\\n", "\n")
-        return hu_notes
 
-    def show_notes(self, hookup_dict, state="all"):
+    def show_notes(self, state="all"):
         """
         Print out the information for hookup.
 
         Parameters
         ----------
-        hookup_dict : dict
-            Hookup dictionary generated in self.get_hookup
         state : str
             String designating whether to show the full hookups only, or all
 
@@ -294,26 +314,24 @@ class Hookup(object):
             Content as a string
 
         """
-        hu_notes = self.get_notes(
-            hookup_dict=hookup_dict, state=state, return_dict=True
-        )
+        self.get_notes(state=state, return_dict=True)
         full_info_string = ""
-        for hkey in cm_utils.put_keys_in_order(list(hu_notes.keys()), sort_order="NPR"):
+        for hkey in cm_utils.put_keys_in_order(list(self.notes.keys()), sort_order="NPR"):
             hdr = "---{}---".format(hkey)
             entry_info = ""
             part_hu_hpn = cm_utils.put_keys_in_order(
-                list(hu_notes[hkey].keys()), sort_order="PNR"
+                list(self.notes[hkey].keys()), sort_order="PNR"
             )
             if hkey in part_hu_hpn:  # Do the hkey first
                 part_hu_hpn.remove(hkey)
                 part_hu_hpn = [hkey] + part_hu_hpn
             for ikey in part_hu_hpn:
-                gps_times = sorted(hu_notes[hkey][ikey].keys())
+                gps_times = sorted(self.notes[hkey][ikey].keys())
                 for gtime in gps_times:
                     atime = cm_utils.get_time_for_display(gtime, float_format="gps")
                     this_note = "{} ({})".format(
-                        hu_notes[hkey][ikey][gtime]["note"],
-                        hu_notes[hkey][ikey][gtime]["ref"],
+                        self.notes[hkey][ikey][gtime]["note"],
+                        self.notes[hkey][ikey][gtime]["ref"],
                     )
                     entry_info += "\t{} ({})  {}\n".format(ikey, atime, this_note)
             if len(entry_info):
@@ -430,9 +448,9 @@ class Hookup(object):
                 current.port = None
         return this_conn, current
 
-    def _sort_hookup_display(self, hookup_dict, sortby=None, def_sort_order="NP"):
+    def _sort_hookup_display(self, sortby=None, def_sort_order="NP"):
         if sortby is None:
-            return cm_utils.put_keys_in_order(hookup_dict.keys(), sort_order="NP")
+            return cm_utils.put_keys_in_order(self.hookup.keys(), sort_order="NP")
         if isinstance(sortby, str):
             sortby = sortby.split(",")
         sort_order_dict = {}
@@ -447,7 +465,7 @@ class Hookup(object):
             sort_order_dict["station"] = "NP"
         key_bucket = {}
         show = {"ports": False}
-        for this_key, this_hu in hookup_dict.items():
+        for this_key, this_hu in self.hookup.items():
             pk = list(this_hu.hookup.keys())[0]
             this_entry = this_hu.table_entry_row(pk, sortby, self.part_type_cache, show)
             ekey = []
@@ -461,37 +479,3 @@ class Hookup(object):
         for _k, _v in sorted(key_bucket.items()):
             sorted_keys.append(_v)
         return sorted_keys
-
-    def _make_header_row(self, hookup_dict, cols_to_show, timing):
-        """
-        Generate the appropriate header row for the displayed hookup.
-
-        Parameters
-        ----------
-        hookup_dict : dict
-            Hookup dictionary generated in self.get_hookup
-        cols_to_show : list
-            list of columns to include in hookup listing
-        timing : bool
-            flag to include timing
-
-        Returns
-        -------
-        list
-            List of header titles.
-
-        """
-        if cols_to_show[0] == 'all':
-            return self.sysdef.hookup + ['start', 'stop']
-        self.col_list = []
-        for h in hookup_dict.values():
-            for col in h.columns:
-                if col not in self.col_list:
-                    self.col_list.append(col.lower())
-        headers = []
-        for col in cols_to_show:
-            if col.lower() in self.col_list:
-                headers.append(col)
-        if timing:
-            headers += ['start', 'stop']
-        return headers
