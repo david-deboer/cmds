@@ -17,7 +17,8 @@ def get_hookup(
     at_time=None,
     float_format=None,
     exact_match=False,
-    hookup_type="parts_hera",
+    hookup_type=None,
+    show=True,
 ):
     """
     Return a hookup object.
@@ -71,6 +72,8 @@ def get_hookup(
             exact_match=exact_match,
             hookup_type=hookup_type,
         )
+        if show:
+            print(hookup.show_hookup())
         return hookup
 
 
@@ -177,8 +180,10 @@ class Hookup(object):
             List of header titles.
 
         """
+        if isinstance(cols_to_show, str):
+            cols_to_show = cols_to_show.split(',')
         if cols_to_show[0] == 'all':
-            headers = self.sysdef.hookup
+            headers = self.sysdef.hookup + []
         else:
             self.col_list = []
             for h in self.hookup.values():
