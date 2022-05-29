@@ -17,7 +17,7 @@ from sqlalchemy.orm import sessionmaker
 import json
 
 
-from . import MCDeclarativeBase
+from . import CMDeclarativeBase
 from .cm_session import CMSession
 from .data import DATA_PATH
 
@@ -38,7 +38,7 @@ class DB(object, metaclass=ABCMeta):
     sqlalchemy_base = None
 
     def __init__(self, sqlalchemy_base, db_url):  # noqa
-        self.sqlalchemy_base = MCDeclarativeBase
+        self.sqlalchemy_base = CMDeclarativeBase
         self.engine = create_engine(db_url)
         self.sessionmaker.configure(bind=self.engine)
 
@@ -55,7 +55,7 @@ class DeclarativeDB(DB):
     """
 
     def __init__(self, db_url):
-        super(DeclarativeDB, self).__init__(MCDeclarativeBase, db_url)
+        super(DeclarativeDB, self).__init__(CMDeclarativeBase, db_url)
 
     def create_tables(self):
         """Create all CM tables."""
@@ -87,7 +87,7 @@ class AutomappedDB(DB):
         from .db_check import is_valid_database
 
         with self.sessionmaker() as session:
-            if not is_valid_database(MCDeclarativeBase, session):
+            if not is_valid_database(CMDeclarativeBase, session):
                 raise RuntimeError(
                     "database {0} does not match expected schema".format(db_url)
                 )

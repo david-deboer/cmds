@@ -55,9 +55,9 @@ def is_valid_database(base, session):
 
     """
     if base is None:
-        from . import MCDeclarativeBase
+        from . import CMDeclarativeBase
 
-        base = MCDeclarativeBase
+        base = CMDeclarativeBase
 
     engine = session.get_bind()
     try:  # This tries thrice with 5sec sleeps in between

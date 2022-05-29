@@ -38,7 +38,7 @@ DEFAULT_MIN_TOL = {"atol": 1e-3 / (3600), "rtol": 0}  # ms
 DEFAULT_GPS_TOL = {"atol": 1e-3, "rtol": 0}  # ms
 
 
-class MCDeclarativeBase(object):
+class CMDeclarativeBase(object):
     """Base table object."""
 
     def __repr__(self):
@@ -109,7 +109,7 @@ class MCDeclarativeBase(object):
         return True
 
 
-MCDeclarativeBase = declarative_base(cls=MCDeclarativeBase)
+CMDeclarativeBase = declarative_base(cls=CMDeclarativeBase)
 
 import logging  # noqa
 

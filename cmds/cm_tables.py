@@ -6,7 +6,7 @@
 
 from astropy.time import Time
 from sqlalchemy import BigInteger, Column, ForeignKeyConstraint, String, Text, Float, func
-from . import MCDeclarativeBase, NotNull, cm
+from . import CMDeclarativeBase, NotNull, cm
 import copy
 
 
@@ -36,7 +36,7 @@ def get_cptimes(cls, corp):
     return f"[{getattr(cls, cps)}]"
 
 
-class Stations(MCDeclarativeBase):
+class Stations(CMDeclarativeBase):
     """
     A table logging stations, which are geographical locations.
 
@@ -138,7 +138,7 @@ def update_stations(stations, dates, session=None):
     return updated
 
 
-class Parts(MCDeclarativeBase):
+class Parts(CMDeclarativeBase):
     """
     A table logging parts within the system.
 
@@ -250,7 +250,7 @@ def update_parts(parts, dates, session=None):
     return updated
 
 
-class PartInfo(MCDeclarativeBase):
+class PartInfo(CMDeclarativeBase):
     """
     A table for logging test information etc for parts.
 
@@ -338,7 +338,7 @@ def update_info(infos, dates, session):
     return updated
 
 
-class Connections(MCDeclarativeBase):
+class Connections(CMDeclarativeBase):
     """
     A table for logging connections between parts.
 
@@ -535,7 +535,7 @@ def update_connections(conns, dates, same_conn_sec=10, session=None):
     return updated
 
 
-class AprioriStatus(MCDeclarativeBase):
+class AprioriStatus(CMDeclarativeBase):
     """
     Table for a priori status (generally antenna-based).
 
