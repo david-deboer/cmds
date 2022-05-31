@@ -139,35 +139,37 @@ class Hookup(object):
             Hookup dossier dictionary as defined in cm_hookup_entry.HookupEntry keyed on part.
 
         """
-        print("UPDATE - Need to reintegrate pol.")
-        # Reset at_date
-        at_date = cm_utils.get_astropytime(at_date, at_time, float_format)
-        self.at_date = at_date
-        self.active = cm_active.ActiveData(self.session, at_date=at_date)
+        if isinstance(pol, str):
+            if pol == 'all':
+                pol = self.sysdef.polarizations
+            else:
+                pol = pol.split(',')
+        self.at_date = cm_utils.get_astropytime(at_date, at_time, float_format)
+        self.active = cm_active.ActiveData(self.session, at_date=self.at_date)
         self.active.load_parts(at_date=None)
         self.active.load_connections(at_date=None)
         self.type = hookup_type
         self.sysdef = cm_sysdef.Sysdef(self.type)
         pn = cm_utils.listify(pn)
         parts_list = cm_utils.get_pn_list(pn, list(self.active.parts.keys()), exact_match)
-        self.dossier = cm_dossier.Dossier(pn=parts_list, at_date=at_date, active=self.active,
+        self.dossier = cm_dossier.Dossier(pn=parts_list, at_date=self.at_date, active=self.active,
                                           skip_pn_list_gather=True)
         self.hookup = {}
         for this_part in parts_list:
             part = self.active.parts[this_part]
             self.hookup[this_part] = HookupEntry(entry_key=this_part, sysdef=self.sysdef)
-            for pol in self.sysdef.polarizations:
-                for port in self.dossier.dossier[this_part].input_ports:
-                    if port in self.sysdef.components[part.ptype]['up'][pol]:
-                        polport = _polport(pol, port)
+            for this_pol in pol:
+                for this_port in self.dossier.dossier[this_part].input_ports:
+                    if this_port in self.sysdef.components[part.ptype]['up'][this_pol]:
+                        polport = _polport(this_pol, this_port)
                         self.hookup[this_part].hookup[polport] = self._follow_hookup_stream(
-                            part=this_part, pol=pol, port=port, dir="up")
+                            part=this_part, pol=this_pol, port=this_port, dir="up")
                         self.hookup[this_part].add_extras(polport, self.part_type_cache)
-                for port in self.dossier.dossier[this_part].output_ports:
-                    if port in self.sysdef.components[part.ptype]['down'][pol]:
-                        polport = _polport(pol, port)
+                for this_port in self.dossier.dossier[this_part].output_ports:
+                    if this_port in self.sysdef.components[part.ptype]['down'][this_pol]:
+                        polport = _polport(this_pol, this_port)
                         self.hookup[this_part].hookup[polport] = self._follow_hookup_stream(
-                            part=this_part, pol=pol, port=port, dir="down")
+                            part=this_part, pol=this_pol, port=this_port, dir="down")
                         self.hookup[this_part].add_extras(polport, self.part_type_cache)
 
     def _make_header_row(self, cols_to_show, timing):
