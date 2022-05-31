@@ -15,11 +15,11 @@ class Dossier:
 
     def __init__(self, **kwargs):
         self.dossier = {}
-        self.get_part_dossier(**kwargs)
+        self.get_dossier(**kwargs)
 
-    def get_part_dossier(self, pn, at_date="now", at_time=None, float_format=None,
-                         active=None, notes_start_date="<", notes_start_time=None,
-                         notes_float_format=None, exact_match=True, session=None, **kwargs):
+    def get_dossier(self, pn, at_date="now", at_time=None, float_format=None,
+                    active=None, notes_start_date="<", notes_start_time=None,
+                    notes_float_format=None, exact_match=True, session=None, **kwargs):
         """
         Get information on a part or parts.
 
@@ -50,7 +50,7 @@ class Dossier:
         Returns
         -------
         dict
-            dictionary keyed on the part_number:rev containing PartEntry
+            dictionary keyed on the part_number:rev containing DossierEntry
             dossier classes
 
         """
@@ -86,7 +86,7 @@ class Dossier:
             pn_list = cm_utils.get_pn_list(pn, list(active.parts.keys()), exact_match)
 
         for this_pn in pn_list:
-            this_part = PartEntry(
+            this_part = DossierEntry(
                 pn=this_pn,
                 at_date=at_date,
                 notes_start_date=notes_start_date,
@@ -94,7 +94,7 @@ class Dossier:
             this_part.get_entry(active)
             self.dossier[this_pn] = this_part
 
-    def show_part_dossier(self, columns=None):
+    def show_dossier(self, columns=None):
         """
         Generate part information print string.  Uses tabulate package.
 
@@ -122,7 +122,7 @@ class Dossier:
         return "\n" + tabulate(table_data, headers=headers, tablefmt="orgtbl") + "\n"
 
 
-class PartEntry:
+class DossierEntry:
     """
     Holds all of the information on a given part.
 
