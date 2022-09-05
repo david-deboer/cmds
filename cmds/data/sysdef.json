@@ -4,13 +4,17 @@
     {
         "ata-rfsoc": ["x", "y"],
         "ata-snap": ["x", "y"],
-        "ata-usrp": ["x", "y"]
+        "ata-usrp": ["x", "y"],
+        "ata-pax": ["x", "y"],
+        "nrdz-rf": ["x", "y"]
     },
     "hookup_defs":
     {
-        "ata-rfsoc": ["station", "antenna", "feed", "pax", {"rfcb": {"down": {"x": ["xa"], "y": ["ya"]}}}, "attemplifier", "rfsoc"],
-        "ata-snap": ["station", "antenna", "feed", "pax", "rfcb", "attemplifier", "snap"],
-        "ata-usrp": ["station", "antenna", "feed", "pax", "rfcb", "rf-switch", "usrp"]
+        "ata-rfsoc": ["station", "antenna", "feed", "pax", {"rfcb": {"down": {"x": ["xb", "xc"], "y": ["yb", "yc"]}}}, "attemplifier", "rfsoc"],
+        "ata-snap": ["station", "antenna", "feed", "pax", {"rfcb": {"down": {"x": ["xa"], "y": ["ya"]}}}, "attemplifier", "snap"],
+        "ata-usrp": ["station", "antenna", "feed", "pax", "rfcb", "rf-switch", "usrp"],
+        "ata-pax": ["pam", "otx", "ctrl?"],
+        "nrdz-rf": []
     },
     "components":
     {
@@ -30,6 +34,14 @@
             "up": {"x": ["x"], "y": ["y"]},
             "down": {"x": ["x"], "y": ["y"]}
         },
+        "pam": {
+            "up": {"x": ["in"], "y": ["in"]},
+            "down": {"x": ["out"], "y": ["out"]}
+        },
+        "otx": {
+            "up": {"x": ["in"], "y": ["in"]},
+            "down": {"x": ["out"], "y": ["out"]}
+        },
         "rfcb": {
             "up": {"x": ["x"], "y": ["y"]},
             "down": {"x": ["xa", "xb", "xc", "xd"], "y": ["ya", "yb", "yc", "yd"]}
@@ -45,7 +57,7 @@
             "down": {"x": ["x"], "y": ["y"]}
         },
         "rfsoc": {
-            "up": {"x": ["x"], "y": ["y"]},
+            "up": {"x": ["x1", "x2", "x3", "x4"], "y": ["y1", "y1", "y3", "y4"]},
             "down": {"x": [null],"y": [null]}
         },
         "snap": {

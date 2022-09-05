@@ -5,7 +5,7 @@
 """Defines the system architecture for the telescope."""
 import json
 
-from .cm import default_config_file
+from .cm import default_config_file, default_sysdef_file
 
 opposite_direction = {"up": "down", "down": "up"}
 
@@ -29,13 +29,19 @@ class Sysdef:
 
         """
         if sysdef is None:
-            with open(default_config_file) as fp:
+            with open(default_config_file, 'r') as fp:
                 config = json.load(fp)
                 self.sysdef_file = config["sysdef_files"][config['default_sysdef_name']]
         else:
             self.sysdef_file = sysdef
-        with open(self.sysdef_file) as fp:
-            self.sysdef_json = json.load(fp)
+        try:
+            with open(self.sysdef_file, 'r') as fp:
+                self.sysdef_json = json.load(fp)
+        except FileNotFoundError:
+            print(f"{self.sysdef_file} not found\n\t--> using default {default_sysdef_file}.")
+            self.sysdef_file = default_sysdef_file
+            with open(self.sysdef_file, 'r') as fp:
+                self.sysdef_json = json.load(fp)
 
         if hookup_type is None:
             hookup_type = self.sysdef_json['default_type']

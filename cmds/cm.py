@@ -22,6 +22,7 @@ from .cm_session import CMSession
 from .data import DATA_PATH
 
 default_config_file = op.join(DATA_PATH, "db_config.json")
+default_sysdef_file = op.join(DATA_PATH, "sysdef.json")
 
 
 class DB(object, metaclass=ABCMeta):

@@ -251,7 +251,7 @@ class Hookup(object):
         sorted_hukeys = self._sort_hookup_display(sortby, def_sort_order="NP")
         for hukey in sorted_hukeys:
             for ppk in cm_utils.put_keys_in_order(self.hookup[hukey].hookup.keys(), sort_order="PN"):
-                if len(self.hookup[hukey].hookup[ppk]):
+                if self.hookup[hukey].hookup[ppk] is not None and len(self.hookup[hukey].hookup[ppk]):
                     this_state, is_full = state.lower(), self.hookup[hukey].fully_connected[ppk]
                     if this_state == "all" or (this_state == "full" and is_full):
                         total_shown += 1
@@ -392,12 +392,16 @@ class Hookup(object):
         self._recursive_connect(current)
         port = self.sysdef.get_thru_port(port, dir, pol, starting_part_type)
         dir = cm_sysdef.opposite_direction[dir]
+        try:
+            plower = port.lower()
+        except AttributeError:
+            return
         current = Namespace(
             direction=dir,
             part=starting_part,
             pol=pol,
             type=starting_part_type,
-            port=port.lower(),
+            port=plower,
             stream=stream[dir]
         )
         self._recursive_connect(current)
@@ -537,6 +541,8 @@ class HookupEntry(object):
             Part port to get.
 
         """
+        if polport is None or self.hookup[polport] is None:
+            return
         full_hookup_length = len(self.sysdef.hookup) - 1
         latest_start = 0
         earliest_stop = None
