@@ -139,8 +139,9 @@ class Hookup(object):
             Hookup dossier dictionary as defined in cm_hookup_entry.HookupEntry keyed on part.
 
         """
-        self.type = hookup_type
-        self.sysdef = cm_sysdef.Sysdef(self.type)
+        self.sysdef = cm_sysdef.Sysdef(hookup_type)
+        print(f"Checking for hookup_type {self.sysdef.type}")
+
         if isinstance(pol, str):
             if pol == 'all':
                 pol = self.sysdef.polarizations
