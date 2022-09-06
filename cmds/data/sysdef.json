@@ -71,10 +71,10 @@
     },
     "station_types":
     {
-      "antenna": "Antenna location",
-      "node": "Node location",
-      "core": "Core antenna",
-      "outrigger": "Outrigger antenna",
+      "ata": "ATA Antenna location",
+      "node": "ATA Node location",
+      "core": "HERA Core antenna",
+      "outrigger": "HERA Outrigger antenna",
       "seismo": "seismo.berkeley.edu",
       "unavco": "unavc.org",
       "nrdz": "NRDZ",

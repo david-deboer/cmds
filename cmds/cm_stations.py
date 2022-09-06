@@ -57,7 +57,7 @@ class Stations:
         tile = self.active.stations[stn].tile
         return int(tile[:2]), tile[-1]
 
-    def load_stations(self, station_list='all', station_types="all"):
+    def get_stations(self, station_list='all', station_types="all"):
         """
         Load Station objects into self.stations to use for plotting/listing/etc
 
@@ -65,24 +65,25 @@ class Stations:
         ----------
         station_list :  list of str
             station names to find or 'all'
-        station_type : list of str
+        station_types : list or str
             station_types to find or 'all':
-
-
-        Returns
-        -------
-        list of Station objects
-            Station objects corresponding to station names.
 
         """
         import cartopy.crs as ccrs
-
+        allactive = list(self.active.stations.keys())
         if station_list == 'all':
-            station_list = list(self.active.stations.keys())
+            station_list = allactive
+        elif station_list == 'active':
+            from cmds import cm_hookup
+            hookup = cm_hookup.Hookup(self.session)
+            station_list = []
+            hookup.get_hookup(allactive, at_date=self.active.at_date, exact_match=True, active=self.active)
+            print("STATION HOOKUP NOT WORKING")
+            print(hookup.hookup)
         if station_types == 'all':
             station_types = list(self.sysdef.station_types.keys())
         latlon_p = ccrs.Geodetic()
-        self.stations = []
+        self.stations = {}
         for station_name in station_list:
             try:
                 this_station = self.active.stations[station_name]
@@ -101,8 +102,8 @@ class Stations:
             stn.X, stn.Y, stn.Z = uvutils.XYZ_from_LatLonAlt(
                 radians(stn.lat), radians(stn.lon), stn.elevation
             )
-            stn.desc = self.sysdef.station_types[stn.station_type]['description']
-            self.stations.append(stn)
+            stn.desc = self.sysdef.station_types[stn.station_type]
+            self.stations[stn.station_name] = stn
             if self.fp_out is not None:
                 self.fp_out.write("{}\n".format(self._stn_line(stn)))
 
@@ -205,14 +206,14 @@ class Stations:
                 lbl = self.active.parts[conn].manufacturer_id
         return lbl[cm_utils.str2slice(show, lbl)]
 
-    def plot_stations(self, **kwargs):
+    def plot_stations(self, stations_to_plot=None, **kwargs):
         """
         Plot self.stations.
 
         Parameters
         ----------
         stations_to_plot : list of Stations
-            list containing stations classes to plot
+            list containing stations classes to plot.  If None, use self.stations.
         kwargs :  dict
             arguments for [xgraph, ygraph, label, lblrng, marker_color, marker_shape, marker_size]
 
@@ -226,9 +227,12 @@ class Stations:
         fig_label = "{} vs {} stations".format(
             kwargs["xgraph"], kwargs["ygraph"]
         )
+        if stations_to_plot is None:
+            stations_to_plot = self.stations
 
         import matplotlib.pyplot as plt
-        for a in self.stations:
+        for sta in stations_to_plot:
+            a = self.active.stations[sta]
             x_vals = getattr(a, kwargs["xgraph"])
             y_vals = getattr(a, kwargs["ygraph"])
             plt.plot(x_vals, y_vals, color=kwargs["color"], label=a.station_name,
@@ -243,48 +247,3 @@ class Stations:
             plt.xlabel(kwargs["xgraph"])
             plt.ylabel(kwargs["ygraph"])
             plt.title(fig_label)
-        plt.show()
-
-    def get_active_stations(self, station_types_to_use, hookup_type='default'):
-        """
-        Get active stations.
-
-        Parameters
-        ----------
-        station_types_to_use : str or list of str
-            Stations to use, can be a list of stations or "all" or "default".
-        hookup_type : str
-            hookup_type to use
-
-        Returns
-        -------
-        list of Stations
-            List of GeoLocation objects for all active stations.
-
-        """
-        from . import cm_hookup
-
-        hookup = cm_hookup.get_hookup(self.session)  # noqa
-
-    def plot_station_types(self, station_types='all', **kwargs):
-        """
-        Plot the various sub-array types.
-
-        Parameters
-        ----------
-        station_types : str or list of str
-            station_types to plot.
-        kwargs :  dict
-            matplotlib arguments for marker_color, marker_shape, marker_size, label, xgraph, ygraph
-
-        """
-        if isinstance(station_types, str) and station_types == 'all':
-            station_types = list(self.sysdef.station_types.keys())
-        for st in sorted(station_types):
-            kwargs["color"] = self.sysdef.station_types[st]["color"]
-            kwargs["shape"] = self.sysdef.station_types[st]["marker"]
-            kwargs["size"] = 5
-            self.load_stations(station_types=[st])
-            mkr = "{}{}".format(kwargs["color"], kwargs["shape"])
-            print(f"Station type {st} -> {mkr}")
-            self.plot_stations(**kwargs)

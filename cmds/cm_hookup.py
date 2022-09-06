@@ -103,7 +103,7 @@ class Hookup(object):
         self.active = None
 
     def get_hookup(self, pn, pol='all', at_date='now', at_time=None, float_format=None,
-                   exact_match=False, hookup_type=None):
+                   exact_match=False, hookup_type=None, active=None):
         """
         Get the hookup dict from the database for the supplied match parameters.
 
@@ -132,6 +132,8 @@ class Hookup(object):
             If 'None' it will determine which system it thinks it is based on
             the part-type.  The order in which it checks is specified in cm_sysdef.
             Only change if you know you want a different system (like 'parts_paper').
+        active : None or ActiveData object
+            If None, read in new.
 
         Returns
         -------
@@ -147,7 +149,10 @@ class Hookup(object):
             else:
                 pol = pol.split(',')
         self.at_date = cm_utils.get_astropytime(at_date, at_time, float_format)
-        self.active = cm_active.ActiveData(self.session, at_date=self.at_date)
+        if active is None:
+            self.active = cm_active.ActiveData(self.session, at_date=self.at_date)
+        else:
+            self.active = active
         self.active.load_parts(at_date=None)
         self.active.load_connections(at_date=None)
         pn = cm_utils.listify(pn)
