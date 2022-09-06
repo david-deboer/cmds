@@ -157,6 +157,7 @@ class Hookup(object):
         self.active.load_connections(at_date=None)
         pn = cm_utils.listify(pn)
         parts_list = cm_utils.get_pn_list(pn, list(self.active.parts.keys()), exact_match)
+        print(parts_list)
         self.dossier = cm_dossier.Dossier(pn=parts_list, at_date=self.at_date, active=self.active,
                                           skip_pn_list_gather=True)
         self.hookup = {}
