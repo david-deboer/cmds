@@ -1,6 +1,5 @@
 {
     "default_db_name": "hcro_sqlite",
-    "default_sysdef_name": "ata",
     "databases":
     {
         "hera_mc":
@@ -23,9 +22,5 @@
             "url": "sqlite:////Users/ddeboer/Documents/ubase/Projects/Oliver/cm_ata/hcro.db",
             "mode": "production"
         }
-    },
-    "sysdef_files":
-    {
-        "ata": "/Users/ddeboer/Documents/ubase/Projects/Oliver/cm_ata/sysdef.json"
     }
 }

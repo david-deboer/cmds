@@ -21,8 +21,16 @@ from . import CMDeclarativeBase
 from .cm_session import CMSession
 from .data import DATA_PATH
 
-default_config_file = op.join(DATA_PATH, "db_config.json")
-default_sysdef_file = op.join(DATA_PATH, "sysdef.json")
+
+def file_finder(filename, default_path_list=['.', op.join(op.expanduser('~'), '.cm'), DATA_PATH]):
+    for this_path in default_path_list:
+        default_file = op.join(this_path, filename)
+        if op.exists(default_file):
+            return default_file
+    return None
+
+
+default_config_file = file_finder('db_config.json')
 
 
 class DB(object, metaclass=ABCMeta):

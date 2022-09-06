@@ -140,7 +140,6 @@ class Hookup(object):
 
         """
         self.sysdef = cm_sysdef.Sysdef(hookup_type)
-        print(f"Checking for hookup_type {self.sysdef.type}")
 
         if isinstance(pol, str):
             if pol == 'all':
