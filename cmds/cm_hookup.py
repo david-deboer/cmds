@@ -157,7 +157,6 @@ class Hookup(object):
         self.active.load_connections(at_date=None)
         pn = cm_utils.listify(pn)
         parts_list = cm_utils.get_pn_list(pn, list(self.active.parts.keys()), exact_match)
-        print(parts_list)
         self.dossier = cm_dossier.Dossier(pn=parts_list, at_date=self.at_date, active=self.active,
                                           skip_pn_list_gather=True)
         self.hookup = {}
@@ -167,12 +166,14 @@ class Hookup(object):
             for this_pol in pol:
                 for this_port in self.dossier.dossier[this_part].input_ports:
                     if this_port in self.sysdef.components[part.ptype]['up'][this_pol]:
+                        print('CMH169:  up', this_part, this_pol, this_port)
                         polport = _polport(this_pol, this_port)
                         self.hookup[this_part].hookup[polport] = self._follow_hookup_stream(
                             part=this_part, pol=this_pol, port=this_port, dir="up")
                         self.hookup[this_part].add_extras(polport, self.part_type_cache)
                 for this_port in self.dossier.dossier[this_part].output_ports:
                     if this_port in self.sysdef.components[part.ptype]['down'][this_pol]:
+                        print('CMH176:  down', this_part, this_pol, this_port)
                         polport = _polport(this_pol, this_port)
                         self.hookup[this_part].hookup[polport] = self._follow_hookup_stream(
                             part=this_part, pol=this_pol, port=this_port, dir="down")
@@ -431,6 +432,10 @@ class Hookup(object):
         conn, current = self._get_connection(current)  # rewrites current
         if conn is None:
             return None
+        if current.direction == 'down':
+            print(f"CMH433-----{current.direction} {current.port}: {conn.upstream_part} --> {conn.downstream_part}")
+        else:
+            print(f"CMH436-----{current.direction} {current.port}: {conn.downstream_part} --> {conn.upstream_part}")
         current.stream.append(conn)
         self._recursive_connect(current)
 
