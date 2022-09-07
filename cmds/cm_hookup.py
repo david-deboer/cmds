@@ -163,21 +163,27 @@ class Hookup(object):
         for this_part in parts_list:
             part = self.active.parts[this_part]
             self.hookup[this_part] = HookupEntry(entry_key=this_part, sysdef=self.sysdef)
+            self.hookup[this_part]._stream = {'up': {}, 'down': {}}
+
             for this_pol in pol:
+                self.hookup[this_part]._stream['up'][this_pol] = {}
                 for this_port in self.dossier.dossier[this_part].input_ports:
                     if this_port in self.sysdef.components[part.ptype]['up'][this_pol]:
                         print('CMH169:  up', this_part, this_pol, this_port)
-                        polport = _polport(this_pol, this_port)
-                        self.hookup[this_part].hookup[polport] = self._follow_hookup_stream(
+                        #polport = _polport(this_pol, this_port)
+                        #self.hookup[this_part].hookup[polport]
+                        self.hookup[this_part]._stream['up'][this_pol][this_port] = self._follow_hookup_stream(
                             part=this_part, pol=this_pol, port=this_port, dir="up")
-                        self.hookup[this_part].add_extras(polport, self.part_type_cache)
+                        #self.hookup[this_part].add_extras(polport, self.part_type_cache)
+                self.hookup[this_part]._stream['down'][this_pol] = {}
                 for this_port in self.dossier.dossier[this_part].output_ports:
                     if this_port in self.sysdef.components[part.ptype]['down'][this_pol]:
                         print('CMH176:  down', this_part, this_pol, this_port)
-                        polport = _polport(this_pol, this_port)
-                        self.hookup[this_part].hookup[polport] = self._follow_hookup_stream(
+                        #polport = _polport(this_pol, this_port)
+                        #self.hookup[this_part].hookup[polport]
+                        self.hookup[this_part]._stream['down'][this_pol][this_port] = self._follow_hookup_stream(
                             part=this_part, pol=this_pol, port=this_port, dir="down")
-                        self.hookup[this_part].add_extras(polport, self.part_type_cache)
+                        #self.hookup[this_part].add_extras(polport, self.part_type_cache)
 
     def _make_header_row(self, cols_to_show, timing):
         """
@@ -398,11 +404,13 @@ class Hookup(object):
         )
         self._recursive_connect(current)
         port = self.sysdef.get_thru_port(port, dir, pol, starting_part_type)
+        print("CMH407: ",dir)
         dir = cm_sysdef.opposite_direction[dir]
-        try:
+        print("CMH409: ",dir)
+        if port is not None:
             plower = port.lower()
-        except AttributeError:
-            return
+        else:
+            plower = None
         current = Namespace(
             direction=dir,
             part=starting_part,
@@ -520,27 +528,27 @@ class HookupEntry(object):
     Parameters
     ----------
     entry_key : str
-        Entry key to use for the entry.  Must be None if input_dict is not None.
-    input_dict : dict
-        Dictionary with seed hookup.  If it is None, entry_key and sysdef must both be provided.
+        Entry key to use for the entry.
+    sysdef : Sysdef object
 
     """
 
-    def __init__(self, entry_key=None, sysdef=None):
+    def __init__(self, entry_key, sysdef):
         self.hookup = {}  # actual hookup connection information
         self.fully_connected = {}  # flag if fully connected
         self.columns = {}  # list with the actual column headers in hookup
         self.timing = {}  # aggregate hookup start and stop
         self.part_type = {}
+        self.key = entry_key
         self.sysdef = sysdef
-        self.columns = copy(self.sysdef.hookup)
+        self.columns = copy(self.sysdef.hookup)  # REDEFINE LATER TO ALLOW SUBSET
         self.columns.append("start")
         self.columns.append("stop")
 
-    def __repr__(self):
-        """Define representation."""
-        s = str(self.hookup)
-        return s
+    # def __repr__(self):
+    #     """Define representation."""
+    #     s = str(self.hookup)
+    #     return s
 
     def add_extras(self, polport, pt_cache):
         """
