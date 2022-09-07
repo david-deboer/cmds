@@ -11,12 +11,6 @@ from copy import copy
 from . import cm_utils, cm_sysdef, cm_dossier, cm_active
 
 
-def _polport(pol, port, demarc='-'):
-    if port == 'split':
-        return pol.split(demarc)
-    return f"{pol}{demarc}{port}"
-
-
 def get_hookup(
     pn,
     pol="all",
@@ -72,15 +66,15 @@ def get_hookup(
         hookup = Hookup(session=session)
         hookup.get_hookup(
             pn=pn,
-            pol=pol,
             at_date=at_date,
             at_time=at_time,
             float_format=float_format,
             exact_match=exact_match,
             hookup_type=hookup_type,
+            active=None
         )
         if show:
-            print(hookup.show_hookup())
+            print(hookup.show_hookup(pols_to_show=pol))
         return hookup
 
 
@@ -102,10 +96,12 @@ class Hookup(object):
         self.session = session
         self.active = None
 
-    def get_hookup(self, pn, pol='all', at_date='now', at_time=None, float_format=None,
+    def get_hookup(self, pn, at_date='now', at_time=None, float_format=None,
                    exact_match=False, hookup_type=None, active=None):
         """
         Get the hookup dict from the database for the supplied match parameters.
+
+        Gets all polarizations and ports - can show subset in show_hookup
 
         Parameters
         ----------
@@ -116,8 +112,6 @@ class Hookup(object):
                 - otherwise converts as csv-list
             If element of list is of format '.xxx:a/b/c' it finds the appropriate
                 method as cm_sysdef.Sysdef.xxx([a, b, c])
-        pol : str
-            A port polarization to follow, or 'all',  ('e', 'n', 'all')
         at_date : anything interpretable by cm_utils.get_astropytime
             Date at which to initialize.
         at_time : anything interpretable by cm_utils.get_astropytime
@@ -143,11 +137,6 @@ class Hookup(object):
         """
         self.sysdef = cm_sysdef.Sysdef(hookup_type)
 
-        if isinstance(pol, str):
-            if pol == 'all':
-                pol = self.sysdef.polarizations
-            else:
-                pol = pol.split(',')
         self.at_date = cm_utils.get_astropytime(at_date, at_time, float_format)
         if active is None:
             self.active = cm_active.ActiveData(self.session, at_date=self.at_date)
@@ -163,27 +152,19 @@ class Hookup(object):
         for this_part in parts_list:
             part = self.active.parts[this_part]
             self.hookup[this_part] = HookupEntry(entry_key=this_part, sysdef=self.sysdef)
-            self.hookup[this_part]._stream = {'up': {}, 'down': {}}
-
-            for this_pol in pol:
-                self.hookup[this_part]._stream['up'][this_pol] = {}
+            for this_pol in self.sysdef.polarizations:
+                self.hookup[this_part]._strm['up'][this_pol] = {}
                 for this_port in self.dossier.dossier[this_part].input_ports:
                     if this_port in self.sysdef.components[part.ptype]['up'][this_pol]:
-                        print('CMH169:  up', this_part, this_pol, this_port)
-                        #polport = _polport(this_pol, this_port)
-                        #self.hookup[this_part].hookup[polport]
-                        self.hookup[this_part]._stream['up'][this_pol][this_port] = self._follow_hookup_stream(
+                        self.hookup[this_part]._strm['up'][this_pol][this_port] = self._follow_hookup(
                             part=this_part, pol=this_pol, port=this_port, dir="up")
-                        #self.hookup[this_part].add_extras(polport, self.part_type_cache)
-                self.hookup[this_part]._stream['down'][this_pol] = {}
+                self.hookup[this_part]._strm['down'][this_pol] = {}
                 for this_port in self.dossier.dossier[this_part].output_ports:
                     if this_port in self.sysdef.components[part.ptype]['down'][this_pol]:
-                        print('CMH176:  down', this_part, this_pol, this_port)
-                        #polport = _polport(this_pol, this_port)
-                        #self.hookup[this_part].hookup[polport]
-                        self.hookup[this_part]._stream['down'][this_pol][this_port] = self._follow_hookup_stream(
+                        self.hookup[this_part]._strm['down'][this_pol][this_port] = self._follow_hookup(
                             part=this_part, pol=this_pol, port=this_port, dir="down")
-                        #self.hookup[this_part].add_extras(polport, self.part_type_cache)
+            self.hookup[this_part].consolidate_strm2hookup()
+            self.hookup[this_part].add_extras(self.part_type_cache)
 
     def _make_header_row(self, cols_to_show, timing):
         """
@@ -258,19 +239,22 @@ class Hookup(object):
 
         """
         show = {"ports": ports}
+        if pols_to_show == 'all':
+            pols_to_show = self.sysdef.polarizations
         headers = self._make_header_row(cols_to_show, timing=timing)
         table_data = []
         total_shown = 0
         sorted_hukeys = self._sort_hookup_display(sortby, def_sort_order="NP")
         for hukey in sorted_hukeys:
-            for ppk in cm_utils.put_keys_in_order(self.hookup[hukey].hookup.keys(), sort_order="PN"):
-                if self.hookup[hukey].hookup[ppk] is not None and len(self.hookup[hukey].hookup[ppk]):
-                    this_state, is_full = state.lower(), self.hookup[hukey].fully_connected[ppk]
-                    if this_state == "all" or (this_state == "full" and is_full):
-                        total_shown += 1
-                        td = self.hookup[hukey].table_entry_row(ppk, headers, show)
-                        if td not in table_data:
-                            table_data.append(td)
+            for this_pol in pols_to_show:
+                for this_port in cm_utils.put_keys_in_order(self.hookup[hukey].hookup[this_pol].keys(), sort_order="PN"):  # noqa
+                    if self.hookup[hukey].hookup[this_pol][this_port] is not None and len(self.hookup[hukey].hookup[this_pol][this_port]):  # noqa
+                        this_state, is_full = state.lower(), self.hookup[hukey].fully_connected[this_pol][this_port]  # noqa
+                        if this_state == "all" or (this_state == "full" and is_full):
+                            total_shown += 1
+                            td = self.hookup[hukey].table_entry_row(this_pol, this_port, headers, show)
+                            if td not in table_data:
+                                table_data.append(td)
         if total_shown == 0:
             print("None found for {} (show-state is {})".format(
                 cm_utils.get_time_for_display(self.at_date), state))
@@ -369,7 +353,7 @@ class Hookup(object):
         return full_info_string
 
     # ################################ Internal methods ######################################
-    def _follow_hookup_stream(self, part, pol, port, dir):
+    def _follow_hookup(self, part, pol, port, dir):
         """
         Follow a list of connections upstream and downstream.
 
@@ -404,10 +388,8 @@ class Hookup(object):
         )
         self._recursive_connect(current)
         port = self.sysdef.get_thru_port(port, dir, pol, starting_part_type)
-        print("CMH407: ",dir)
         dir = cm_sysdef.opposite_direction[dir]
-        print("CMH409: ",dir)
-        if port is not None:
+        if isinstance(port, str):
             plower = port.lower()
         else:
             plower = None
@@ -440,10 +422,6 @@ class Hookup(object):
         conn, current = self._get_connection(current)  # rewrites current
         if conn is None:
             return None
-        if current.direction == 'down':
-            print(f"CMH433-----{current.direction} {current.port}: {conn.upstream_part} --> {conn.downstream_part}")
-        else:
-            print(f"CMH436-----{current.direction} {current.port}: {conn.downstream_part} --> {conn.upstream_part}")
         current.stream.append(conn)
         self._recursive_connect(current)
 
@@ -489,36 +467,10 @@ class Hookup(object):
         return this_conn, current
 
     def _sort_hookup_display(self, sortby=None, def_sort_order="NP"):
-        if sortby is None:
-            return cm_utils.put_keys_in_order(self.hookup.keys(), sort_order="NP")
-        if isinstance(sortby, str):
-            sortby = sortby.split(",")
-        sort_order_dict = {}
-        for stmp in sortby:
-            ss = stmp.split(":")
-            if ss[0] in self.col_list:
-                if len(ss) == 1:
-                    ss.append(def_sort_order)
-                sort_order_dict[ss[0]] = ss[1]
-        if "station" not in sort_order_dict.keys():
-            sortby.append("station")
-            sort_order_dict["station"] = "NP"
-        key_bucket = {}
-        show = {"ports": False}
-        for this_key, this_hu in self.hookup.items():
-            pk = list(this_hu.hookup.keys())[0]
-            this_entry = this_hu.table_entry_row(pk, sortby, self.part_type_cache, show)
-            ekey = []
-            for eee in [
-                cm_utils.peel_key(x, sort_order_dict[sortby[i]])
-                for i, x in enumerate(this_entry)
-            ]:
-                ekey += eee
-            key_bucket[tuple(ekey)] = this_key
-        sorted_keys = []
-        for _k, _v in sorted(key_bucket.items()):
-            sorted_keys.append(_v)
-        return sorted_keys
+        """
+        For now only sort on keys.
+        """
+        return cm_utils.put_keys_in_order(self.hookup.keys(), sort_order=def_sort_order)
 
 
 class HookupEntry(object):
@@ -534,7 +486,6 @@ class HookupEntry(object):
     """
 
     def __init__(self, entry_key, sysdef):
-        self.hookup = {}  # actual hookup connection information
         self.fully_connected = {}  # flag if fully connected
         self.columns = {}  # list with the actual column headers in hookup
         self.timing = {}  # aggregate hookup start and stop
@@ -544,50 +495,74 @@ class HookupEntry(object):
         self.columns = copy(self.sysdef.hookup)  # REDEFINE LATER TO ALLOW SUBSET
         self.columns.append("start")
         self.columns.append("stop")
+        self._strm = {'up': {}, 'down': {}}  # Temporary to collect all options for hookup
 
-    # def __repr__(self):
-    #     """Define representation."""
-    #     s = str(self.hookup)
-    #     return s
+    def __repr__(self):
+        """Define representation."""
+        s = str(self.hookup)
+        return s
 
-    def add_extras(self, polport, pt_cache):
+    def consolidate_strm2hookup(self, verbose=False):
+        """
+        Consolidate the superset of information from _strm into hookup. (Needed?)
+        """
+        self.hookup = {}
+        tmplisting = {}
+        for this_pol in self._strm['up']:  # pick one direction for pols to use
+            self.hookup[this_pol] = {}
+            tmplisting[this_pol] = []
+            for dir in self._strm.keys():
+                for this_port, connct in self._strm[dir][this_pol].items():
+                    entrystr = str(connct)
+                    if entrystr not in tmplisting[this_pol]:
+                        self.hookup[this_pol][this_port] = connct
+                        tmplisting[this_pol].append(entrystr)
+                    elif verbose:
+                        print(f"Already found {dir} {this_pol} {this_port} {entrystr}")
+
+    def add_extras(self, pt_cache):
         """
         Add the timing and fully_connected flag for the hookup.
 
         Parameters
         ----------
-        polport : str
-            Part port to get.
+        pt_cache : ?
+            ?
 
         """
-        if polport is None or self.hookup[polport] is None:
-            return
         full_hookup_length = len(self.sysdef.hookup) - 1
         latest_start = 0
         earliest_stop = None
-        self.part_type[polport] = []
-        for c in self.hookup[polport]:
-            self.part_type[polport].append(pt_cache[c.upstream_part])
-            if c.start_gpstime > latest_start:
-                latest_start = c.start_gpstime
-            if c.stop_gpstime is None:
-                pass
-            elif earliest_stop is None:
-                earliest_stop = c.stop_gpstime
-            elif c.stop_gpstime < earliest_stop:
-                earliest_stop = c.stop_gpstime
-        self.part_type[polport].append(pt_cache[self.hookup[polport][-1].downstream_part])
-        self.timing[polport] = [latest_start, earliest_stop]
-        self.fully_connected[polport] = len(self.hookup[polport]) == full_hookup_length
+        for this_pol in self.sysdef.polarizations:
+            self.part_type[this_pol] = {}
+            self.timing[this_pol] = {}
+            self.fully_connected[this_pol] = {}
+            for this_port in self.hookup[this_pol]:
+                self.part_type[this_pol][this_port] = []
+                for c in self.hookup[this_pol][this_port]:
+                    self.part_type[this_pol][this_port].append(pt_cache[c.upstream_part])
+                    if c.start_gpstime > latest_start:
+                        latest_start = c.start_gpstime
+                    if c.stop_gpstime is None:
+                        pass
+                    elif earliest_stop is None:
+                        earliest_stop = c.stop_gpstime
+                    elif c.stop_gpstime < earliest_stop:
+                        earliest_stop = c.stop_gpstime
+                self.part_type[this_pol][this_port].append(pt_cache[self.hookup[this_pol][this_port][-1].downstream_part])  # noqa
+                self.timing[this_pol][this_port] = [latest_start, earliest_stop]
+                self.fully_connected[this_pol][this_port] = len(self.hookup[this_pol][this_port]) == full_hookup_length  # noqa
 
-    def table_entry_row(self, polport, cols, show):
+    def table_entry_row(self, pol, port, cols, show):
         """
         Produce the hookup table row for given parameters.
 
         Parameters
         ----------
-        polport : str
-            Polarization type (specified in 'cm_sysdef')
+        pol : str
+            Polarization
+        port : str
+            Port
         cols : list
             Columns to include
         show : dict
@@ -599,12 +574,12 @@ class HookupEntry(object):
             List containing the table entry.
 
         """
-        timing = self.timing[polport]
+        timing = self.timing[pol][port]
         td = ["-"] * len(cols)
 
         # Get the first N-1 parts
         dip = ""
-        for part_type, c in zip(self.part_type[polport], self.hookup[polport]):
+        for part_type, c in zip(self.part_type[pol][port], self.hookup[pol][port]):
             if part_type in cols:
                 new_row_entry = self._build_new_row_entry(
                     dip, c.upstream_part, c.upstream_output_port, show
@@ -612,7 +587,7 @@ class HookupEntry(object):
                 td[cols.index(part_type)] = new_row_entry
             dip = c.downstream_input_port + "> "
         # Get the last part in the hookup
-        part_type = self.part_type[polport][-1]
+        part_type = self.part_type[pol][port][-1]
         if part_type in cols:
             new_row_entry = self._build_new_row_entry(
                 dip, c.downstream_part, None, show
