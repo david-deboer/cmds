@@ -33,7 +33,7 @@ def get_pn_list(pnreq, pnlist, exact_match):
 
     """
     if isinstance(pnreq, str):
-        pnreq = [pnreq]
+        pnreq = listify(pnreq)
     pnreq = to_upper(pnreq)
     pnlist = to_upper(pnlist)
     pnfnd = []

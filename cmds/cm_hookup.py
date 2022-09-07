@@ -107,11 +107,6 @@ class Hookup(object):
         ----------
         pn : str, list
             List/string of input part number(s) (whole or 'startswith')
-            If string
-                - 'default' uses default station prefixes in cm_sysdef
-                - otherwise converts as csv-list
-            If element of list is of format '.xxx:a/b/c' it finds the appropriate
-                method as cm_sysdef.Sysdef.xxx([a, b, c])
         at_date : anything interpretable by cm_utils.get_astropytime
             Date at which to initialize.
         at_time : anything interpretable by cm_utils.get_astropytime
@@ -122,10 +117,7 @@ class Hookup(object):
             If False, will only check the first characters in each hpn entry.  E.g. 'HH1'
             would allow 'HH1', 'HH10', 'HH123', etc
         hookup_type : str or None
-            Type of hookup to use (current observing system is 'parts_hera').
-            If 'None' it will determine which system it thinks it is based on
-            the part-type.  The order in which it checks is specified in cm_sysdef.
-            Only change if you know you want a different system (like 'parts_paper').
+            Type of hookup to use.  If None, uses default in sysdef.
         active : None or ActiveData object
             If None, read in new.
 
@@ -144,10 +136,9 @@ class Hookup(object):
             self.active = active
         self.active.load_parts(at_date=None)
         self.active.load_connections(at_date=None)
-        pn = cm_utils.listify(pn)
         parts_list = cm_utils.get_pn_list(pn, list(self.active.parts.keys()), exact_match)
-        self.dossier = cm_dossier.Dossier(pn=parts_list, at_date=self.at_date, active=self.active,
-                                          skip_pn_list_gather=True)
+        self.dossier = cm_dossier.Dossier(pn=parts_list, at_date=self.at_date,
+                                          active=self.active, skip_pn_list_gather=True)
         self.hookup = {}
         for this_part in parts_list:
             part = self.active.parts[this_part]
