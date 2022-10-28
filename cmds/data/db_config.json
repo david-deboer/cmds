@@ -14,12 +14,12 @@
         },
         "hera_mc_sqlite":
         {
-            "url": "sqlite:////Users/ddeboer/Documents/ubase/Projects/HERA/ops/hera_cm_db_updates/hera_mc.db",
+            "url": "sqlite:////Users/ddeboer/Home/Projects/HERA/repos/hera_cm_db_updates/hera_mc.db",
             "mode": "production"
         },
         "hcro_sqlite":
         {
-            "url": "sqlite:////Users/ddeboer/Documents/ubase/Projects/Oliver/cm_ata/hcro.db",
+            "url": "sqlite:////Users/ddeboer/Home/Projects/Oliver/cm_ata/hcro.db",
             "mode": "production"
         }
     }
