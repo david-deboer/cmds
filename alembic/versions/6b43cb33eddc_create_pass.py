@@ -27,10 +27,10 @@ def upgrade():
     sa.PrimaryKeyConstraint('pn')
     )
     op.create_table('apriori_status',
-    sa.Column('pn', sa.Text(), nullable=False),
+    sa.Column('pn', sa.String(length=64), nullable=False),
     sa.Column('start_gpstime', sa.BigInteger(), nullable=False),
     sa.Column('stop_gpstime', sa.BigInteger(), nullable=True),
-    sa.Column('status', sa.Text(), nullable=False),
+    sa.Column('status', sa.String(length=64), nullable=False),
     sa.Column('comment', sa.Text(), nullable=True),
     sa.ForeignKeyConstraint(['pn'], ['parts.pn'], ),
     sa.PrimaryKeyConstraint('pn', 'start_gpstime')

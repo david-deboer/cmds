@@ -1,5 +1,5 @@
 {
-    "default_db_name": "hcro_sqlite",
+    "default_db_name": "hcro_mysql",
     "databases":
     {
         "hera_mc":
@@ -20,6 +20,11 @@
         "hcro_sqlite":
         {
             "url": "sqlite:////Users/ddeboer/Home/Projects/Oliver/cm_ata/hcro.db",
+            "mode": "production"
+        },
+        "hcro_mysql":
+        {
+            "url": "mysql://root:Napa_Wh1ne@localhost/cmdata",
             "mode": "production"
         }
     }

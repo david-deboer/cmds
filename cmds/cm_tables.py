@@ -555,10 +555,10 @@ class AprioriStatus(CMDeclarativeBase):
 
     __tablename__ = "apriori_status"
 
-    pn = Column(Text, primary_key=True)
+    pn = Column(String(64), primary_key=True)
     start_gpstime = Column(BigInteger, primary_key=True)
     stop_gpstime = Column(BigInteger)
-    status = Column(Text, nullable=False)
+    status = Column(String(64), nullable=False)
     comment = Column(Text)
 
     __table_args__ = (
