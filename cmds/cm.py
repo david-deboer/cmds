@@ -264,4 +264,6 @@ def connect_to_cm_db(args, check_connect=True):
                     "Could not establish valid connection to " "database."
                 )
 
+    print(f"Using database {db_data['url']} ({db_name})")
+
     return db

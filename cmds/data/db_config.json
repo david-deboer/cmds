@@ -1,5 +1,5 @@
 {
-    "default_db_name": "hcro_mysql",
+    "default_db_name": "hcro_sqlite",
     "databases":
     {
         "hera_mc":
