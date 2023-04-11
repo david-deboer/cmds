@@ -127,7 +127,7 @@ class Hookup(object):
             Hookup dossier dictionary as defined in cm_hookup_entry.HookupEntry keyed on part.
 
         """
-        self.sysdef = cm_sysdef.Sysdef(hookup_type)
+        self.sysdef = cm_sysdef.Sysdef('sysdef.json', hookup_type)
 
         self.at_date = cm_utils.get_astropytime(at_date, at_time, float_format)
         if active is None:

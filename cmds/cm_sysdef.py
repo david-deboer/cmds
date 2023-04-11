@@ -23,17 +23,17 @@ class Sysdef:
         Name of sysdef file to use.  If None, use default value.
 
     """
-    def __init__(self, hookup_type=None, sysdef=None):
-        self.get_sysdef(hookup_type, sysdef)
+    def __init__(self, sysdef=None, hookup_type=None):
+        self.get_sysdef(sysdef=sysdef)
+        if hookup_type is not None:
+            self.get_hookup(hookup_type)
 
-    def get_sysdef(self, hookup_type, sysdef=None):
+    def get_sysdef(self, sysdef='sysdef.json'):
         """
         Return the sysdef json file information as attributes.
 
         Parameters
         ----------
-        hookup_type : str or None
-            Hookup type to use from sysdef file.  If None, use default value.
         sysdef : str or None
             Name of sysdef file to use.  If None, use default value.
 
@@ -43,26 +43,46 @@ class Sysdef:
             Name of sysdef file that was read.
         sysdef_json : dict
             Content of the sysdef json file.
+        components
+        station_types
+        apriori_statuses
 
-        """
-
-        self.sysdef_file = file_finder('sysdef.json')
+                """
+        if sysdef is None:
+            sysdef = 'sysdef.json'
+        self.sysdef_file = file_finder(sysdef)
         if self.sysdef_file is None:
             print("No sysdef file found.")
             self.sysdef_json = None
             return
         with open(self.sysdef_file, 'r') as fp:
             self.sysdef_json = json.load(fp)
-
-        if hookup_type is None:
-            hookup_type = self.sysdef_json['default_type']
-        self.type = hookup_type
-        print(f"Reading {self.sysdef_file} for hookup type {self.type}")
-
-        self.polarizations = self.sysdef_json['polarization_defs'][self.type]
         self.components = self.sysdef_json['components']
         self.station_types = self.sysdef_json['station_types']
         self.apriori_statuses = self.sysdef_json['apriori_statuses']
+
+    def get_hookup(self, hookup_type):
+        """
+        Pull the specific hookup sysdef parameters.
+
+        Parameters
+        ----------
+        hookup_type : str or None
+            Hookup type to use from sysdef file.  If None, use default value.
+
+        Attributes
+        ----------
+        type : str
+            Hookup type
+        polarizations
+            
+        """
+        if hookup_type is None:
+            hookup_type = self.sysdef_json['default_type']
+        self.type = hookup_type
+        # print(f"Reading {self.sysdef_file} for hookup type {self.type}")
+
+        self.polarizations = self.sysdef_json['polarization_defs'][self.type]
         self.hookup = []
         for i, hd in enumerate(self.sysdef_json['hookup_defs'][self.type]):
             if isinstance(hd, dict):  # Reconfigure the base component
@@ -71,6 +91,9 @@ class Sysdef:
                     self.components[dir].update(dat)
             else:
                 self.hookup.append(hd)
+
+    def print_sysdef(self):
+        print(f"{self.type}: {', '.join(self.hookup)}")
 
     def get_thru_port(self, port, side, pol, part_type):
         """

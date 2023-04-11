@@ -23,6 +23,8 @@ from .data import DATA_PATH
 
 
 def file_finder(filename, default_path_list=['.', op.join(op.expanduser('~'), '.cm'), DATA_PATH]):
+    if filename is None:
+        return None
     for this_path in default_path_list:
         default_file = op.join(this_path, filename)
         if op.exists(default_file):

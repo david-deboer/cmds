@@ -10,10 +10,10 @@
     },
     "hookup_defs":
     {
-        "ata-rfsoc": ["station", "antenna", "feed", "pax", {"rfcb": {"down": {"x": ["xb", "xc"], "y": ["yb", "yc"]}}}, "attemplifier", "rfsoc"],
-        "ata-snap": ["station", "antenna", "feed", "pax", {"rfcb": {"down": {"x": ["xa"], "y": ["ya"]}}}, "attemplifier", "snap"],
-        "ata-usrp": ["station", "antenna", "feed", "pax", "rfcb", "rf-switch", "usrp"],
-        "ata-pax": ["pam", "otx", "ctrl?"],
+        "ata-rfsoc": ["station", "antenna", "feed", "pax", {"rfcb": {"down": {"x": ["xb", "xc"], "y": ["yb", "yc"]}}}, "attemplifier", "rfsoc", "switch"],
+        "ata-snap": ["station", "antenna", "feed", "pax", {"rfcb": {"down": {"x": ["xa"], "y": ["ya"]}}}, "attemplifier", "snap", "switch"],
+        "ata-usrp": ["station", "antenna", "feed", "pax", "rfcb", "rf-switch", "usrp", "switch"],
+        "ata-pax": ["pam", "otx", "ctrl"],
         "nrdz-rf": []
     },
     "components":
@@ -58,7 +58,11 @@
         },
         "rfsoc": {
             "up": {"x": ["x1", "x2", "x3", "x4"], "y": ["y1", "y1", "y3", "y4"]},
-            "down": {"x": [null],"y": [null]}
+            "down": {"x": ["eth"],"y": ["eth"]}
+        },
+        "switch": {
+            "up": {"x": ["port"], "y": ["port"]},
+            "down": {"x": [null], "y": [null]}
         },
         "snap": {
             "up": {"x": ["x"], "y": ["y"]},
