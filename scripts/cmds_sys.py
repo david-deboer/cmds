@@ -2,6 +2,8 @@
 
 from cmds import cm_sysdef
 import argparse
+from copy import copy
+
 
 ap = argparse.ArgumentParser()
 ap.add_argument('-s', '--sysdef', help="Sysdef json file name.", default="sysdef.json")
@@ -10,6 +12,9 @@ args = ap.parse_args()
 
 sys = cm_sysdef.Sysdef(args.sysdef, None)
 
-for hu in sys.sysdef_json['hookup_defs']:
+if args.hookup is None:
+    args.hookup = copy(sys.sysdef_json['hookup_defs'])
+
+for hu in args.hookup:
     sys.get_hookup(hu)
     sys.print_sysdef()
