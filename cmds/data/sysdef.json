@@ -13,8 +13,8 @@
         "ata-rfsoc": ["station", "antenna", "feed", "pax", {"rfcb": {"down": {"x": ["xb", "xc"], "y": ["yb", "yc"]}}}, "attemplifier", "rfsoc", "switch"],
         "ata-snap": ["station", "antenna", "feed", "pax", {"rfcb": {"down": {"x": ["xa"], "y": ["ya"]}}}, "attemplifier", "snap", "switch"],
         "ata-usrp": ["station", "antenna", "feed", "pax", "rfcb", "rf-switch", "usrp", "switch"],
-        "ata-pax": ["pam", "otx", "ctrl"],
-        "nrdz-rf": []
+        "ata-pax": ["pam", "otx", "paxctrl"],
+        "nrdz-rf": ["station", "antenna"]
     },
     "components":
     {
@@ -70,6 +70,10 @@
         },
         "usrp": {
             "up": {"x": ["x"], "y": ["y"]},
+            "down": {"x": [null], "y": [null]}
+        },
+        "paxctrl": {
+            "up": {"x": ["input"], "y": ["input"]},
             "down": {"x": [null], "y": [null]}
         }
     },

@@ -93,7 +93,22 @@ class Sysdef:
                 self.hookup.append(hd)
 
     def print_sysdef(self):
-        print(f"{self.type}: {', '.join(self.hookup)}")
+        ports = ['', '']
+        dir = ['down', 'up']
+        print()
+        for pol in self.sysdef_json['polarization_defs'][self.type]:
+            print(f"{self.type}: {pol}")
+            for i in range(len(self.hookup) - 1):
+                cmp = [self.hookup[i], self.hookup[i+1]]
+                sp = [['', ''], ['', '']]
+                for j in range(2):
+                    ports[j] = ','.join([str(x) for x in self.sysdef_json['components'][cmp[j]][dir[j]][pol]])
+                    if ',' in ports[j]:
+                        sp[j] = ['(', ')']
+                print(f"{(i+1) * '  '}{cmp[0]}  < {sp[0][0]}{ports[0]}{sp[0][1]} | {sp[1][0]}{ports[1]}{sp[1][1]} >  {cmp[1]}")
+        print()
+
+        #print(f"{self.type}: {', '.join(self.hookup)}")
 
     def get_thru_port(self, port, side, pol, part_type):
         """
