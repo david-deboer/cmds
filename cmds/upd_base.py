@@ -51,12 +51,12 @@ class Update():
     def load_gsheet(self, node_csv='none', tabs=None, path='', time_tag='_%y%m%d'):
         """Get the googlesheet information from the internet."""
         if self.gsheet is None:
-            self.gsheet = cm_gsheet.SheetData()
+            self.gsheet = cm_gsheet_ata.SheetData()
         self.gsheet.load_sheet(node_csv=node_csv, tabs=None, path=path, time_tag=time_tag)
 
     def load_gworkflow(self):
         if self.gsheet is None:
-            self.gsheet = cm_gsheet.SheetData()
+            self.gsheet = cm_gsheet_ata.SheetData()
         self.gsheet.load_workflow()
 
     def finish(self, cron_script=None, archive_to=None):

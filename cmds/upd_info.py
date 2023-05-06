@@ -41,7 +41,7 @@ class UpdateInfo(upd_base.Update):
     def load_gnodes(self):
         """Load node notes tab of googlesheet."""
         if self.gsheet is None:
-            self.gsheet = cm_gsheet.SheetData()
+            self.gsheet = cm_gsheet_ata.SheetData()
         lnn = {}
         self.gsheet.load_node_notes()
         for line in self.gsheet.node_notes:
@@ -167,7 +167,7 @@ class UpdateInfo(upd_base.Update):
             ptime = self.ctime + ''
             for this_note in notes:
                 if not self.is_duplicate(ndkey, this_note, duplication_window, view_duplicate):
-                    pkey, pdate, ptime = util.get_unique_pkey(node, rev, pdate, ptime, primary_keys)
+                    pkey, pdate, ptime = upd_util.get_unique_pkey(node, rev, pdate, ptime, primary_keys)
                     refout = 'infoupd'
                     self.new_notes.setdefault(ndkey, [])
                     self.new_notes[ndkey].append(this_note)
@@ -196,7 +196,7 @@ class UpdateInfo(upd_base.Update):
             pdate = self.cdate + ''
             ptime = self.ctime + ''
             for i, col in enumerate(self.gsheet.header[tab]):
-                if col in cm_gsheet.hu_col.keys() or not len(col) or col == 'APriori':
+                if col in cm_gsheet_ata.hu_col.keys() or not len(col) or col == 'APriori':
                     continue
                 try:
                     col_data = self.gsheet.data[sheet_key][i]
@@ -204,9 +204,9 @@ class UpdateInfo(upd_base.Update):
                     continue
                 if len(col_data) == 0:
                     continue
-                pkey, pdate, ptime = util.get_unique_pkey(ant, rev, pdate, ptime, primary_keys)
+                pkey, pdate, ptime = upd_util.get_unique_pkey(ant, rev, pdate, ptime, primary_keys)
                 # ##Get prefix for entry
-                if col in cm_gsheet.no_prefix:
+                if col in cm_gsheet_ata.no_prefix:
                     prefix = ''
                 else:
                     prefix = '{}: '.format(col)

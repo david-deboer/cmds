@@ -35,7 +35,7 @@ class UpdateConnect(upd_base.Update):
         self.show_summary_of_compare()
 
     def get_hpn_from_col(self, col, key, header):
-        return util.gen_hpn(col, self.gsheet.data[key][header.index(col)])
+        return upd_util.gen_hpn(col, self.gsheet.data[key][header.index(col)])
 
     def load_active(self):
         """
@@ -59,7 +59,7 @@ class UpdateConnect(upd_base.Update):
                 tab = self.gsheet.ant_to_node[sant]
                 header = self.gsheet.header[tab]
                 for i, col in enumerate(header):
-                    if col not in cm_gsheet.hu_col.keys():
+                    if col not in cm_gsheet_ata.hu_col.keys():
                         continue
                     if self.gsheet.data[gkey][i] is None:
                         continue
@@ -93,7 +93,7 @@ class UpdateConnect(upd_base.Update):
                             self._ugconn(keyup, pku, [feed, 'A', 'terminals'], [fem, 'A', 'input'])
                     elif col == 'FEM':  # Make fem-nbp
                         fem = self.get_hpn_from_col('FEM', gkey, header)
-                        nbp = util.gen_hpn('NBP', node_num)
+                        nbp = upd_util.gen_hpn('NBP', node_num)
                         port = '{}{}'.format(pol,
                                              self.gsheet.data[gkey][header.index('NBP/PAMloc')])
                         if port is not None:
@@ -102,7 +102,7 @@ class UpdateConnect(upd_base.Update):
                         if self._status_OK(keyup, pol, [fem, port]):
                             self._ugconn(keyup, pol, [fem, 'A', pol.lower()], [nbp, 'A', port])
                     elif col == 'NBP/PAMloc':  # nbp-pam
-                        nbp = util.gen_hpn('NBP', node_num)
+                        nbp = upd_util.gen_hpn('NBP', node_num)
                         port = '{}{}'.format(pol,
                                              self.gsheet.data[gkey][header.index('NBP/PAMloc')])
                         if port is not None:
@@ -131,7 +131,7 @@ class UpdateConnect(upd_base.Update):
                     elif col == 'SNAP':  # snap-node, pam-pch, pch-node
                         # ... snap-node
                         snap = self.get_hpn_from_col('SNAP', gkey, header)
-                        node = util.gen_hpn("Node", node_num)
+                        node = upd_util.gen_hpn("Node", node_num)
                         loc = "loc{}".format(self.gsheet.data[gkey][header.index('SNAPloc')])
                         if self._status_OK('-', pol, [snap, node, loc]):
                             keyup = cm_utils.make_part_key(snap, 'A')
@@ -152,7 +152,7 @@ class UpdateConnect(upd_base.Update):
                         if self._status_OK('-', pol, [pam, pch, slot]):
                             self._ugconn(keyup, pku, [pam, 'A', 'slot'], [pch, 'A', slot])
                         # ... pch-node
-                        node = util.gen_hpn("Node", node_num)
+                        node = upd_util.gen_hpn("Node", node_num)
                         if self._status_OK('-', pol, [pch, slot, node]):
                             keyup = cm_utils.make_part_key(pch, 'A')
                             pku = 'RACK'
