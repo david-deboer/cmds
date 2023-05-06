@@ -6,17 +6,13 @@
 This class sets up to update the connections database.
 """
 import datetime
-from cmds import cm_active, cm_utils, cm_sysdef
+from cmds import cm_active, cm_utils
 from cmds import cm_partconnect as CMPC
-from . import util, cm_gsheet, upd_base
-from argparse import Namespace
-
-cm_req = Namespace(hpn=cm_sysdef.hera_zone_prefixes, pol='all',
-                   at_date='now', exact_match=False, hookup_type=None)
+from cmds import util, cm_gsheet, upd_base
 
 
 class UpdateConnect(upd_base.Update):
-    pols = ['E', 'N']
+    pols = ['x', 'y']
     NotFound = "Not Found"
 
     def __init__(self, script_type='connupd', script_path='default', verbose=True):
