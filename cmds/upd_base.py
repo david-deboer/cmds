@@ -5,7 +5,7 @@
 """This is the base class for the script generators."""
 import datetime
 import os
-from . import signal_chain, cm_gsheet
+from . import signal_chain, cm_gsheet_ata
 
 
 class Update():

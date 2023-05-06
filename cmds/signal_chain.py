@@ -1,5 +1,5 @@
 """Various signal chain modification methods."""
-from cmds import cm_utils, cm_active, cm_handling, util
+from . import cm_utils, cm_active, cm_handling, upd_util
 import os
 
 part_types = {'FDV': 'feed', 'FEM': 'front-end', 'NBP': 'node-bulkhead',

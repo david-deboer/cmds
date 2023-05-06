@@ -6,9 +6,9 @@
 This class sets up to update the connections database.
 """
 import datetime
-from cmds import cm_active, cm_utils
-from cmds import cm_partconnect as CMPC
-from cmds import util, cm_gsheet, upd_base
+from . import cm_active, cm_utils
+from . import cm_partconnect as CMPC
+from . import upd_util, cm_gsheet_ata, upd_base
 
 
 class UpdateConnect(upd_base.Update):
