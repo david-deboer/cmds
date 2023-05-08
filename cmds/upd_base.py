@@ -11,7 +11,7 @@ from . import signal_chain, cm_gsheet_ata
 class Update():
     """Base update class."""
 
-    def __init__(self, script_type, script_path='default', verbose=True):
+    def __init__(self, script_type, script_path=None, verbose=True):
         """
         Initialize.
 
@@ -24,7 +24,7 @@ class Update():
         verbose : bool
             Verbose or not.
         """
-        if script_path == 'default':
+        if script_path == 'default' or script_path is None:
             from cmds import cm
             self.script_path = cm.get_cm_csv_path()
         else:
@@ -42,7 +42,7 @@ class Update():
             self.script = '{}_{}_{}'.format(self.cdate.replace('/', '')[2:], script_type,
                                             self.ctime.replace(':', ''))
             self.script = os.path.join(self.script_path, self.script)
-        self.hera = signal_chain.Update(script_to_run=self.script,
+        self.telescope = signal_chain.Update(script_to_run=self.script,
                                         chmod=True, verbose=verbose,
                                         cdate=self.cdate, ctime=self.ctime)
         self.update_counter = 0
@@ -72,7 +72,7 @@ class Update():
         archive_to : str or None
             If str, moves the script file to that directory.  If not, deletes.
         """
-        self.hera.done()
+        self.telescope.done()
         if self.script is None or (cron_script is None and archive_to is None):
             return
         if cron_script is not None:

@@ -20,61 +20,75 @@
     {
         "station": {
             "up": {"x": [null], "y": [null]},
-            "down": {"x": ["ground"], "y": ["ground"]}
+            "down": {"x": ["ground"], "y": ["ground"]},
+            "prefix": "S"
         },
         "antenna": {
             "up": {"x": ["ground"], "y": ["ground"]},
-            "down": {"x": ["focus"], "y": ["focus"]}
+            "down": {"x": ["focus"], "y": ["focus"]},
+            "prefix": "A"
         },
         "feed": {
             "up": {"x": ["input"], "y": ["input"]},
-            "down": {"x": ["x"], "y": ["y"]}
+            "down": {"x": ["x"], "y": ["y"]},
+            "prefix": "F"
         },
         "pax": {
             "up": {"x": ["x"], "y": ["y"]},
-            "down": {"x": ["x"], "y": ["y"]}
+            "down": {"x": ["x"], "y": ["y"]},
+            "prefix": "PAX"
         },
         "pam": {
             "up": {"x": ["in"], "y": ["in"]},
-            "down": {"x": ["out"], "y": ["out"]}
+            "down": {"x": ["out"], "y": ["out"]},
+            "prefix": "PAM"
         },
         "otx": {
             "up": {"x": ["in"], "y": ["in"]},
-            "down": {"x": ["out"], "y": ["out"]}
+            "down": {"x": ["out"], "y": ["out"]},
+            "prefix": "OTX"
         },
         "rfcb": {
             "up": {"x": ["x"], "y": ["y"]},
-            "down": {"x": ["xa", "xb", "xc", "xd"], "y": ["ya", "yb", "yc", "yd"]}
+            "down": {"x": ["xa", "xb", "xc", "xd"], "y": ["ya", "yb", "yc", "yd"]},
+            "prefix": "RFCB"
         },
         "attemplifier": {
             "up": {"x": ["in1", "in2", "in3", "in4", "in5", "in6", "in7", "in8"],
                    "y": ["in9", "in10", "in11", "in12", "in13", "in14", "in15", "in16"]},
             "down":  {"x": ["out1", "out2", "out3", "out4", "out5", "out6", "out7", "out8"],
-                      "y": ["out9", "out10", "out11", "out12", "out13", "out14", "out15", "out16"]}
+                      "y": ["out9", "out10", "out11", "out12", "out13", "out14", "out15", "out16"]},
+            "prefix": "G"
         },
         "rf-switch": {
             "up": {"x": ["x"], "y": ["y"]},
-            "down": {"x": ["x"], "y": ["y"]}
+            "down": {"x": ["x"], "y": ["y"]},
+            "prefix": "RFSW"
         },
         "rfsoc": {
             "up": {"x": ["x1", "x2", "x3", "x4"], "y": ["y1", "y1", "y3", "y4"]},
-            "down": {"x": ["eth"],"y": ["eth"]}
+            "down": {"x": ["eth"],"y": ["eth"]},
+            "prefix": "SOC"
         },
         "switch": {
             "up": {"x": ["port"], "y": ["port"]},
-            "down": {"x": [null], "y": [null]}
+            "down": {"x": [null], "y": [null]},
+            "prefix": "SW"
         },
         "snap": {
             "up": {"x": ["x"], "y": ["y"]},
-            "down": {"x": [null], "y": [null]}
+            "down": {"x": [null], "y": [null]},
+            "prefix": "SNP"
         },
         "usrp": {
             "up": {"x": ["x"], "y": ["y"]},
-            "down": {"x": [null], "y": [null]}
+            "down": {"x": [null], "y": [null]},
+            "prefix": "USRP"
         },
         "paxctrl": {
             "up": {"x": ["input"], "y": ["input"]},
-            "down": {"x": [null], "y": [null]}
+            "down": {"x": [null], "y": [null]},
+            "prefix": "PXCTL"
         }
     },
     "station_types":

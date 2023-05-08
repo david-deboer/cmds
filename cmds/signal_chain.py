@@ -1,9 +1,16 @@
 """Various signal chain modification methods."""
-from . import cm_utils, cm_active, cm_handling, upd_util
+from . import cm, cm_utils, cm_active, cm_handling, upd_util
 import os
 
 part_types = {'FDV': 'feed', 'FEM': 'front-end', 'NBP': 'node-bulkhead',
               'PAM': 'post-amp', 'SNP': 'snap'}
+
+
+def get_part_type(prefix):
+    for ppre, ptyp in part_types.items():
+        if prefix.startswith(ppre):
+            return ptyp
+    raise ValueError(f"{prefix} not found in part types")
 
 
 def as_part(add_or_stop, p, cdate, ctime):
@@ -46,9 +53,14 @@ class Update:
         self.chmod = chmod
         self.log_file = log_file
         self.at_date = cm_utils.get_astropytime(cdate, ctime)
-        self.active = cm_active.ActiveData()
+        db = cm.connect_to_cm_db(None)
+        self.session = db.sessionmaker()
+        self.active = cm_active.ActiveData(session=self.session)
         self.load_active(cdate=None)
-        self.handle = cm_handling.Handling()
+        self.handle = cm_handling.Handling(session=self.session)
+        self.script_setup(script_to_run)
+
+    def script_setup(self, script_to_run):
         if script_to_run is None:
             print("No script file started.  It'll probably error out.")
             self.script_to_run = None
@@ -112,8 +124,8 @@ class Update:
         """
         added = {'station': [], 'part': [], 'connection': []}
         added['time'] = str(int(cm_utils.get_astropytime(cdate, ctime).gps))
-        s = util.gen_hpn('station', stn)
-        a = util.gen_hpn('antenna', stn)
+        s = upd_util.gen_hpn('station', stn)
+        a = upd_util.gen_hpn('antenna', stn)
         n = "H{}".format(ser_num)
         self.fp.write('add_station.py {} --sernum {} --date {} --time {}\n'
                       .format(s, ser_num, cdate, ctime))
@@ -156,9 +168,9 @@ class Update:
         check_date = cm_utils.get_astropytime(adate=cdate, atime=ctime)
         part_to_add = {}
         # hpn = 'N{:02d}'.format(node)
-        hpn = util.gen_hpn('node', node)
+        hpn = upd_util.gen_hpn('node', node)
         part_to_add['node'] = (hpn, 'A', 'node', sn)
-        hpn = util.gen_hpn('node-station', node)
+        hpn = upd_util.gen_hpn('node-station', node)
         part_to_add['node-station'] = (hpn, 'A', 'station', sn)
         # Add node as station
         p = part_to_add['node-station']
@@ -224,30 +236,30 @@ class Update:
         added['time'] = str(int(cm_utils.get_astropytime(cdate, partadd_time).gps))
         self.ser_num_dict = ser_num
         part_to_add = {}
-        hpn = util.gen_hpn('fps', fps)
+        hpn = upd_util.gen_hpn('fps', fps)
         sn = self.get_ser_num(hpn, 'fps')
         part_to_add['fem-power-supply'] = (hpn, 'A', 'fem-power-supply', sn)
-        hpn = util.gen_hpn('pch', pch)
+        hpn = upd_util.gen_hpn('pch', pch)
         sn = self.get_ser_num(hpn, 'pch')
         part_to_add['pam-chassis'] = (hpn, 'A', 'pam-chassis', sn)
-        hpn = util.gen_hpn('ncm', ncm)
+        hpn = upd_util.gen_hpn('ncm', ncm)
         sn = self.get_ser_num(hpn, 'ncm')
         part_to_add['node-control-module'] = (hpn, 'A', 'node-control-module', sn)
-        hpn = util.gen_hpn('node', node)
+        hpn = upd_util.gen_hpn('node', node)
         sn = self.get_ser_num(hpn, 'node')
         part_to_add['node'] = (hpn, 'A', 'node', sn)
-        hpn = util.gen_hpn('node-station', node)
+        hpn = upd_util.gen_hpn('node-station', node)
         sn = self.get_ser_num(hpn, 'node')
         part_to_add['node-station'] = (hpn, 'A', 'station', sn)
-        hpn = util.gen_hpn('nbp', node)
+        hpn = upd_util.gen_hpn('nbp', node)
         sn = self.get_ser_num(hpn, 'node')
         part_to_add['node-bulkhead'] = (hpn, 'A', 'node-bulkhead', sn)
         for _pam in pams:
-            hpn = util.gen_hpn('pam', _pam)
+            hpn = upd_util.gen_hpn('pam', _pam)
             sn = '{:03d}'.format(_pam)
             part_to_add[hpn] = (hpn, 'A', 'post-amp', sn)
         for _snap in snaps:
-            hpn = util.gen_hpn('snap', _snap)
+            hpn = upd_util.gen_hpn('snap', _snap)
             sn = '{}'.format(_snap)
             part_to_add[hpn] = (hpn, 'A', 'snap', sn)
         # Add node as station
@@ -284,7 +296,7 @@ class Update:
         dn = [part_to_add['node'][0], part_to_add['node'][1], 'middle']
         connection_to_add.append([up, dn, cdate, connadd_time])
         for i, _pam in enumerate(pams):
-            hpn = util.gen_hpn('pam', _pam)
+            hpn = upd_util.gen_hpn('pam', _pam)
             up = [part_to_add[hpn][0], part_to_add[hpn][1], 'slot']
             dn = [part_to_add['pam-chassis'][0], part_to_add['pam-chassis'][1],
                   'slot{}'.format(i + 1)]
@@ -295,13 +307,13 @@ class Update:
                 dn = [part_to_add[hpn][0], part_to_add[hpn][1], pol]
                 connection_to_add.append([up, dn, cdate, connadd_time])
         for i, _snap in enumerate(snaps):
-            snap_hpn = util.gen_hpn('snap', _snap)
+            snap_hpn = upd_util.gen_hpn('snap', _snap)
             up = [part_to_add[snap_hpn][0], part_to_add[snap_hpn][1], 'rack']
             dn = [part_to_add['node'][0], part_to_add['node'][1], 'loc{}'.format(i)]
             connection_to_add.append([up, dn, cdate, connadd_time])
             for pol in ['e', 'n']:
                 for j in range(3):
-                    pam_hpn = util.gen_hpn('pam', pams[i * 3 + j])
+                    pam_hpn = upd_util.gen_hpn('pam', pams[i * 3 + j])
                     up = [part_to_add[pam_hpn][0], part_to_add[pam_hpn][1], pol]
                     dn = [part_to_add[snap_hpn][0], part_to_add[snap_hpn][1],
                           self.snap_ports[j][pol]]

@@ -11,7 +11,7 @@ from astropy.time import Time
 from sqlalchemy import desc, func
 
 from . import cm_dossier
-from . import cm_partconnect as partconn
+from . import cm_tables as tables
 from . import cm_utils
 
 
@@ -94,8 +94,8 @@ class Handling:
 
         """
         part_query = (
-            self.session.query(partconn.Parts)
-            .filter((func.upper(partconn.Parts.hpn) == hpn.upper()))
+            self.session.query(tables.Parts)
+            .filter((func.upper(tables.Parts.hpn) == hpn.upper()))
             .first()
         )
         return part_query.hptype
@@ -117,10 +117,10 @@ class Handling:
 
         """
         return (
-            self.session.query(partconn.Parts)
+            self.session.query(tables.Parts)
             .filter(
-                (func.upper(partconn.Parts.hpn) == hpn.upper())
-                & (func.upper(partconn.Parts.hpn_rev) == rev.upper())
+                (func.upper(tables.Parts.hpn) == hpn.upper())
+                & (func.upper(tables.Parts.hpn_rev) == rev.upper())
             )
             .first()
         )
@@ -337,13 +337,13 @@ class Handling:
 
         """
         fnd = []
-        for conn in self.session.query(partconn.Connections).filter(
+        for conn in self.session.query(tables.Connections).filter(
             (
-                func.upper(partconn.Connections.upstream_part)
+                func.upper(tables.Connections.upstream_part)
                 == cobj.upstream_part.upper()
             )
             & (
-                func.upper(partconn.Connections.downstream_part)
+                func.upper(tables.Connections.downstream_part)
                 == cobj.downstream_part.upper()
             )
         ):

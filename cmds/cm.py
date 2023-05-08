@@ -269,3 +269,34 @@ def connect_to_cm_db(args, check_connect=True):
     print(f"Using database {db_data['url']} ({db_name})")
 
     return db
+
+def get_cm_csv_path(mc_config_file=None, testing=False):
+    """
+    Return the full path to csv files read from the mc config file.
+
+    Parameters
+    ----------
+    mc_config_file : str
+        Pass a different config file if desired.  None goes to default.
+
+    """
+    if mc_config_file is None:
+        mc_config_file = default_config_file
+
+    import json
+
+    with open(mc_config_file) as f:
+        config_data = json.load(f)
+
+    if testing:
+        return testing
+
+    try:
+        cm_csv_path = "/{}".format(
+            config_data.get("databases")["hera_mc_sqlite"]["url"]
+            .lstrip("sqlite:////")
+            .rstrip("/hera_mc.db")
+        )
+    except KeyError:
+        cm_csv_path = config_data.get("cm_csv_path")
+    return cm_csv_path
