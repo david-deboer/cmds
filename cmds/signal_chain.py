@@ -1,15 +1,26 @@
 """Various signal chain modification methods."""
 from . import cm, cm_utils, cm_active, cm_handling, upd_util
-import os
+import os, json
 
-part_types = {'FDV': 'feed', 'FEM': 'front-end', 'NBP': 'node-bulkhead',
-              'PAM': 'post-amp', 'SNP': 'snap'}
 
+with open(cm.file_finder('sysdef.json'), 'r') as fp:
+    sysdef = json.load(fp)
+PART_TYPES = {}
+tmp = {}
+for ptype, pdict in sysdef['components'].items():
+    pp = pdict['prefix']
+    PART_TYPES[pp] = ptype
+    tmp.setdefault(len(pp), [])
+    tmp[len(pp)].append(pp)
+PART_TYPE_ORDER = []
+for lpp in sorted(tmp, reverse=True):
+    for pp in tmp[lpp]:
+        PART_TYPE_ORDER.append(pp)
 
 def get_part_type(prefix):
-    for ppre, ptyp in part_types.items():
+    for ppre in PART_TYPE_ORDER:
         if prefix.startswith(ppre):
-            return ptyp
+            return PART_TYPES[ppre]
     raise ValueError(f"{prefix} not found in part types")
 
 
@@ -36,7 +47,7 @@ class Update:
 
     snap_ports = [{'e': 'e2', 'n': 'n0'}, {'e': 'e6', 'n': 'n4'}, {'e': 'e10', 'n': 'n8'}]
 
-    def __init__(self, script_to_run=None, chmod=False,
+    def __init__(self, bash_script_name=None, chmod=False,
                  cdate='now', ctime='10:00',
                  log_file='scripts.log', verbose=True):
         """
@@ -44,7 +55,7 @@ class Update:
 
         Parameters
         ----------
-        script_to_run : str
+        bash_script_name : str
             the name of the script to write (is executed outside of this)
         log_file : str
             name of log_file
@@ -58,29 +69,26 @@ class Update:
         self.active = cm_active.ActiveData(session=self.session)
         self.load_active(cdate=None)
         self.handle = cm_handling.Handling(session=self.session)
-        self.script_setup(script_to_run)
+        self.script_setup(bash_script_name)
 
-    def script_setup(self, script_to_run):
-        if script_to_run is None:
-            print("No script file started.  It'll probably error out.")
-            self.script_to_run = None
+    def script_setup(self, bash_script_name):
+        if bash_script_name is None:
+            print("No script file started -- will print to screen.")
+            self.fp = None
+            self.bash_script_name = None
         else:
-            if script_to_run.startswith('./'):
-                script_to_run = script_to_run.strip('./')
-            if script_to_run.endswith('.py'):
-                script_to_run = script_to_run.split('.')[0]
             if self.verbose:
-                print("Writing script {}".format(script_to_run))
-            self.fp = open(script_to_run, 'w')
+                print("Writing script {}".format(bash_script_name))
+            self.fp = open(bash_script_name, 'w')
             s = '#! /bin/bash\n'
             unameInfo = os.uname()
             if unameInfo.sysname == 'Linux':
                 s += 'source ~/.bashrc\n'
-            s += 'echo "{}" >> {} \n'.format(script_to_run, self.log_file)
+            s += 'echo "{}" >> {} \n'.format(bash_script_name, self.log_file)
             self.fp.write(s)
             if self.verbose:
                 print('-----------------')
-        self.script_to_run = script_to_run
+        self.bash_script_name = bash_script_name
 
     # THESE ARE NEW COMPONENTS - eventually break out with a parent class
     # General order:
@@ -92,9 +100,16 @@ class Update:
         """Set class date variable."""
         self.at_date = cm_utils.get_astropytime(adate=cdate, atime=ctime)
 
+    def printit(self, value):
+        """Write as comment only."""
+        if self.fp is None:
+            print(value)
+        else:
+            print(value, file=self.fp)
+
     def no_op_comment(self, comment):
         """Write as comment only."""
-        self.fp.write('# {}\n'.format(comment.strip()))
+        self.printit(f"# {comment.strip()}")
 
     def load_active(self, cdate='now', ctime='10:00'):
         """Load all active information."""
@@ -150,189 +165,6 @@ class Update:
             added['connection'].append(conn)
         return added
 
-    def just_add_node(self, node, sn, cdate, ctime='10:00'):
-        """
-        Add a node into database (geo_location and parts).
-
-        Parameters
-        ----------
-        node : int
-                node number
-        ser_num : str
-                node serial number
-        cdate : string
-                YYYY/MM/DD format
-        ctime : [string, string]
-                part-add time, connection-add time in HH:MM format
-        """
-        check_date = cm_utils.get_astropytime(adate=cdate, atime=ctime)
-        part_to_add = {}
-        # hpn = 'N{:02d}'.format(node)
-        hpn = upd_util.gen_hpn('node', node)
-        part_to_add['node'] = (hpn, 'A', 'node', sn)
-        hpn = upd_util.gen_hpn('node-station', node)
-        part_to_add['node-station'] = (hpn, 'A', 'station', sn)
-        # Add node as station
-        p = part_to_add['node-station']
-        self.fp.write('add_station.py {} --sernum {} --date {} --time {}\n'
-                      .format(p[0], p[3], cdate, ctime))
-
-        # Check for parts to add and add them
-        for p in part_to_add.values():
-            if not p[0].startswith('ND'):  # Because add_station already added it
-                if not self.exists('part', p[0], p[1], None, check_date=check_date):
-                    self.update_part('add', p, cdate, ctime)
-                else:
-                    print("Part {} is already added".format(p))
-
-    def add_node(self, node, fps, pch, ncm, pams, snaps, cdate, ctime=['10:00', '11:00'],
-                 ser_num={}, override=False):
-        """
-        Add a node and interior into database.
-
-        Parameters
-        ----------
-        node : int
-                node number
-        fps : int
-                fem power supply unit
-        pch : int
-                pam chassis
-        ncm : string or int
-                node control module
-        pams : list of ints
-                list of the 12 pams (less allowed if override['pam'] is True)
-        snaps : list of strings
-                list of the 4 snaps (less allowed if override['snap'] is True)
-        cdate : string
-                YYYY/MM/DD format
-        ctime : [string, string]
-                part-add time, connection-add time in HH:MM format
-        ser_num : dict
-                dictionary of the serial numbers for the different part types
-        override : bool or dict
-                allow for non-standard number of pams and/or snaps and ignore date
-        """
-        #  Setup/check overrides
-        overridable_parts = {'pam': [12, len(pams)], 'snap': [4, len(snaps)]}
-        for ox in overridable_parts.keys():
-            if isinstance(override, bool):
-                ovrd = override
-            else:
-                ovrd = False if ox not in override.keys() else override[ox]
-            if not ovrd and overridable_parts[ox][0] != overridable_parts[ox][1]:
-                print("Need {} {}s - you've supplied {}"
-                      .format(overridable_parts[ox][0], ox, overridable_parts[ox][1]))
-                print("If ok, rerun with <override['{}']=True>".format(ox))
-                return
-
-        if isinstance(ctime, list):
-            partadd_time = ctime[0]
-            connadd_time = ctime[1]
-        else:
-            partadd_time = ctime
-            connadd_time = ctime
-        added = {'part': [], 'connection': []}
-        added['time'] = str(int(cm_utils.get_astropytime(cdate, partadd_time).gps))
-        self.ser_num_dict = ser_num
-        part_to_add = {}
-        hpn = upd_util.gen_hpn('fps', fps)
-        sn = self.get_ser_num(hpn, 'fps')
-        part_to_add['fem-power-supply'] = (hpn, 'A', 'fem-power-supply', sn)
-        hpn = upd_util.gen_hpn('pch', pch)
-        sn = self.get_ser_num(hpn, 'pch')
-        part_to_add['pam-chassis'] = (hpn, 'A', 'pam-chassis', sn)
-        hpn = upd_util.gen_hpn('ncm', ncm)
-        sn = self.get_ser_num(hpn, 'ncm')
-        part_to_add['node-control-module'] = (hpn, 'A', 'node-control-module', sn)
-        hpn = upd_util.gen_hpn('node', node)
-        sn = self.get_ser_num(hpn, 'node')
-        part_to_add['node'] = (hpn, 'A', 'node', sn)
-        hpn = upd_util.gen_hpn('node-station', node)
-        sn = self.get_ser_num(hpn, 'node')
-        part_to_add['node-station'] = (hpn, 'A', 'station', sn)
-        hpn = upd_util.gen_hpn('nbp', node)
-        sn = self.get_ser_num(hpn, 'node')
-        part_to_add['node-bulkhead'] = (hpn, 'A', 'node-bulkhead', sn)
-        for _pam in pams:
-            hpn = upd_util.gen_hpn('pam', _pam)
-            sn = '{:03d}'.format(_pam)
-            part_to_add[hpn] = (hpn, 'A', 'post-amp', sn)
-        for _snap in snaps:
-            hpn = upd_util.gen_hpn('snap', _snap)
-            sn = '{}'.format(_snap)
-            part_to_add[hpn] = (hpn, 'A', 'snap', sn)
-        # Add node as station
-        p = part_to_add['node-station']
-        self.fp.write('add_station.py {} --sernum {} --date {} --time {}\n'
-                      .format(p[0], p[3], cdate, partadd_time))
-
-        # Check for parts to add and add them
-        if isinstance(override, dict) and 'date' in override.keys():
-            check_date = override['date']
-        else:
-            check_date = cm_utils.get_astropytime(adate=cdate, atime=partadd_time)
-        for p in part_to_add.values():
-            if not p[0].startswith('ND'):  # Because add_station already added it
-                if not self.exists('part', p[0], p[1], None, check_date=check_date):
-                    self.update_part('add', p, cdate, partadd_time)
-                    added['part'].append(list(p) + [added['time']])
-                else:
-                    print("Part {} is already added".format(p))
-
-        # Add connections
-        added['time'] = str(int(cm_utils.get_astropytime(cdate, connadd_time).gps))
-        connection_to_add = []
-        up = [part_to_add['node'][0], part_to_add['node'][1], 'ground']
-        dn = [part_to_add['node-station'][0], part_to_add['node-station'][1], 'ground']
-        connection_to_add.append([up, dn, cdate, connadd_time])
-        up = [part_to_add['fem-power-supply'][0], part_to_add['fem-power-supply'][1], 'rack']
-        dn = [part_to_add['node'][0], part_to_add['node'][1], 'top']
-        connection_to_add.append([up, dn, cdate, connadd_time])
-        up = [part_to_add['pam-chassis'][0], part_to_add['pam-chassis'][1], 'rack']
-        dn = [part_to_add['node'][0], part_to_add['node'][1], 'bottom']
-        connection_to_add.append([up, dn, cdate, connadd_time])
-        up = [part_to_add['node-control-module'][0], part_to_add['node-control-module'][1], 'rack']
-        dn = [part_to_add['node'][0], part_to_add['node'][1], 'middle']
-        connection_to_add.append([up, dn, cdate, connadd_time])
-        for i, _pam in enumerate(pams):
-            hpn = upd_util.gen_hpn('pam', _pam)
-            up = [part_to_add[hpn][0], part_to_add[hpn][1], 'slot']
-            dn = [part_to_add['pam-chassis'][0], part_to_add['pam-chassis'][1],
-                  'slot{}'.format(i + 1)]
-            connection_to_add.append([up, dn, cdate, connadd_time])
-            for pol in ['e', 'n']:
-                nbport = '{}{}'.format(pol, i + 1)
-                up = [part_to_add['node-bulkhead'][0], part_to_add['node-bulkhead'][1], nbport]
-                dn = [part_to_add[hpn][0], part_to_add[hpn][1], pol]
-                connection_to_add.append([up, dn, cdate, connadd_time])
-        for i, _snap in enumerate(snaps):
-            snap_hpn = upd_util.gen_hpn('snap', _snap)
-            up = [part_to_add[snap_hpn][0], part_to_add[snap_hpn][1], 'rack']
-            dn = [part_to_add['node'][0], part_to_add['node'][1], 'loc{}'.format(i)]
-            connection_to_add.append([up, dn, cdate, connadd_time])
-            for pol in ['e', 'n']:
-                for j in range(3):
-                    pam_hpn = upd_util.gen_hpn('pam', pams[i * 3 + j])
-                    up = [part_to_add[pam_hpn][0], part_to_add[pam_hpn][1], pol]
-                    dn = [part_to_add[snap_hpn][0], part_to_add[snap_hpn][1],
-                          self.snap_ports[j][pol]]
-                    connection_to_add.append([up, dn, cdate, connadd_time])
-        for up, down, codate, cotime in connection_to_add:
-            if isinstance(override, dict) and 'date' in override.keys():
-                check_date = override['date']
-            else:
-                check_date = cm_utils.get_astropytime(adate=codate, atime=cotime)
-            if not self.exists('connection', hpn=up[0], rev=up[1], port=up[2], side='up',
-                               check_date=check_date):
-                self.update_connection('add', up, down, codate, cotime)
-                added['connection'].append([up[0], up[1], down[0], down[1],
-                                            up[2], down[2], added['time']])
-            else:
-                print("{} - {} are already connected".format(up, dn))
-        return added
-
-    # ##########################################################################################
     def stop_active_connections(self, hpn, rev='A', cdate='now', ctime='10:00', add_template=True):
         """
         Write script to stop all active connections of a part.
@@ -409,8 +241,7 @@ class Update:
         """Write generic 'to_implement' line."""
         stmt = "{} not implemented! {} {} {} {} {}\n".format(command, ant, rev,
                                                              statement, pdate, ptime)
-        self.fp.write(stmt)
-        print("{}".format(stmt.strip()))
+        self.printit(stmt)
 
     def update_part(self, add_or_stop, part, cdate, ctime):
         """
@@ -423,7 +254,7 @@ class Update:
         cdate:  date of update YYYY/MM/DD
         ctime:  time of update HH:MM
         """
-        self.fp.write(as_part(add_or_stop, part, cdate, ctime))
+        self.printit(as_part(add_or_stop, part, cdate, ctime))
 
     def update_connection(self, add_or_stop, up, down, cdate, ctime):
         """
@@ -437,7 +268,7 @@ class Update:
         cdate:  date of update YYYY/MM/DD
         ctime:  time of update HH:MM
         """
-        self.fp.write(as_connect(add_or_stop, up, down, cdate, ctime))
+        self.printit(as_connect(add_or_stop, up, down, cdate, ctime))
 
     def exists(self, atype, hpn, rev, port=None, side='up,down', check_date=None):
         """
@@ -512,7 +343,7 @@ class Update:
         ctime : str, optional
             HH:MM, default is 12:00
         """
-        self.fp.write('update_apriori.py -p {} -s {} --date {} --time {}\n'
+        self.printit('update_apriori.py -p {} -s {} --date {} --time {}\n'
                       .format(antenna, status, cdate, ctime))
 
     def add_part_info(self, hpn, rev, note, cdate, ctime, ref=None):
@@ -540,7 +371,7 @@ class Update:
             ref = ''
         else:
             ref = '-l "{}" '.format(ref)
-        self.fp.write("add_part_info.py -p {} -r {} -c '{}' {}--date {} --time {}\n"
+        self.printit("add_part_info.py -p {} -r {} -c '{}' {}--date {} --time {}\n"
                       .format(hpn, rev, note, ref, cdate, ctime))
 
     def replace(self, old, new, cdate, ctime='13:00'):
@@ -609,7 +440,7 @@ class Update:
 
     def done(self):
         """Finish."""
-        if self.script_to_run is None:
+        if self.bash_script_name is None:
             return
         self.fp.close()
         if self.verbose:
@@ -617,8 +448,8 @@ class Update:
         if not self.chmod:
             if self.verbose:
                 print("If changes OK, 'chmod u+x {}' and run that script."
-                      .format(self.script_to_run))
+                      .format(self.bash_script_name))
         else:
-            os.chmod(self.script_to_run, 0o755)
+            os.chmod(self.bash_script_name, 0o755)
             if self.verbose:
-                print("Run {}".format(self.script_to_run))
+                print("Run {}".format(self.bash_script_name))
