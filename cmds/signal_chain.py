@@ -1,126 +1,11 @@
 """Various signal chain modification methods."""
 from . import cm, cm_utils, cm_active, cm_handling, upd_util
-import os, json
-
-
-with open(cm.file_finder('sysdef.json'), 'r') as fp:
-    sysdef = json.load(fp)
-PART_TYPES = {}
-tmp = {}
-for ptype, pdict in sysdef['components'].items():
-    pp = pdict['prefix']
-    PART_TYPES[pp] = ptype
-    tmp.setdefault(len(pp), [])
-    tmp[len(pp)].append(pp)
-PART_TYPE_ORDER = []
-for lpp in sorted(tmp, reverse=True):
-    for pp in tmp[lpp]:
-        PART_TYPE_ORDER.append(pp)
-
-def get_part_type(prefix):
-    for ppre in PART_TYPE_ORDER:
-        if prefix.startswith(ppre):
-            return PART_TYPES[ppre]
-    raise ValueError(f"{prefix} not found in part types")
-
-
-def as_part(add_or_stop, p, cdate, ctime):
-    """Return a string to use cmds script to add or stop a part."""
-    s = '{}_part.py -p {} '.format(add_or_stop, p[0])
-    if add_or_stop == 'add':
-        s += '-t {} -m {} '.format(p[1], p[2])
-    s += '--date {} --time {}'.format(cdate, ctime)
-    s += '\n'
-    return s
-
-
-def as_connect(add_or_stop, up, dn, cdate, ctime):
-    """Return a string to use cmds script to add or stop a connection."""
-    s = '{}_connection.py -u {} --upport {} -d {} --dnport {}'\
-        ' --date {} --time {}\n'.format(add_or_stop, up[0], up[1],
-                                        dn[0], dn[1], cdate, ctime)
-    return s
-
+import os
 
 class Update:
     """Holds the various update methods."""
 
     snap_ports = [{'e': 'e2', 'n': 'n0'}, {'e': 'e6', 'n': 'n4'}, {'e': 'e10', 'n': 'n8'}]
-
-    def __init__(self, bash_script_name=None, chmod=False,
-                 cdate='now', ctime='10:00',
-                 log_file='scripts.log', verbose=True):
-        """
-        Initialize.
-
-        Parameters
-        ----------
-        bash_script_name : str
-            the name of the script to write (is executed outside of this)
-        log_file : str
-            name of log_file
-        """
-        self.verbose = verbose
-        self.chmod = chmod
-        self.log_file = log_file
-        self.at_date = cm_utils.get_astropytime(cdate, ctime)
-        db = cm.connect_to_cm_db(None)
-        self.session = db.sessionmaker()
-        self.active = cm_active.ActiveData(session=self.session)
-        self.load_active(cdate=None)
-        self.handle = cm_handling.Handling(session=self.session)
-        self.script_setup(bash_script_name)
-
-    def script_setup(self, bash_script_name):
-        if bash_script_name is None:
-            print("No script file started -- will print to screen.")
-            self.fp = None
-            self.bash_script_name = None
-        else:
-            if self.verbose:
-                print("Writing script {}".format(bash_script_name))
-            self.fp = open(bash_script_name, 'w')
-            s = '#! /bin/bash\n'
-            unameInfo = os.uname()
-            if unameInfo.sysname == 'Linux':
-                s += 'source ~/.bashrc\n'
-            s += 'echo "{}" >> {} \n'.format(bash_script_name, self.log_file)
-            self.fp.write(s)
-            if self.verbose:
-                print('-----------------')
-        self.bash_script_name = bash_script_name
-
-    # THESE ARE NEW COMPONENTS - eventually break out with a parent class
-    # General order:
-    #   add_antenna_station : when it is built
-    #   add_node            : when all equipment installed in node
-    #   add_antenna_to_node : when a feed/fem etc is installed and hooked into node
-
-    def update__at_date(self, cdate='now', ctime='10:00'):
-        """Set class date variable."""
-        self.at_date = cm_utils.get_astropytime(adate=cdate, atime=ctime)
-
-    def printit(self, value):
-        """Write as comment only."""
-        if self.fp is None:
-            print(value)
-        else:
-            print(value, file=self.fp)
-
-    def no_op_comment(self, comment):
-        """Write as comment only."""
-        self.printit(f"# {comment.strip()}")
-
-    def load_active(self, cdate='now', ctime='10:00'):
-        """Load all active information."""
-        if cdate is None:
-            at_date = self.at_date
-        else:
-            at_date = cm_utils.get_astropytime(cdate, ctime)
-        self.active.load_parts(at_date=at_date)
-        self.active.load_connections(at_date=None)
-        self.active.info = []
-        self.active.geo = []
 
     def add_antenna_station(self, stn, ser_num, cdate, ctime='10:00'):
         """
@@ -216,7 +101,7 @@ class Update:
         Will return None if it does (or rev/type can't be found)
         """
         ptype = None
-        for key, val in part_types.items():
+        for key, val in self.part_types.items():
             if pn.startswith(key):
                 ptype = val
                 break
@@ -243,32 +128,7 @@ class Update:
                                                              statement, pdate, ptime)
         self.printit(stmt)
 
-    def update_part(self, add_or_stop, part, cdate, ctime):
-        """
-        Write appropriate entry for cmds script.
 
-        Parameters
-        ----------
-        add_or_stop:  'add' or 'stop'
-        part:  [hpn, rev, <type>, <mfg num>] (last two only for 'add')
-        cdate:  date of update YYYY/MM/DD
-        ctime:  time of update HH:MM
-        """
-        self.printit(as_part(add_or_stop, part, cdate, ctime))
-
-    def update_connection(self, add_or_stop, up, down, cdate, ctime):
-        """
-        Write appropriate entry for cmds script.
-
-        Parameters
-        ----------
-        add_or_stop:  'add' or 'stop'
-        up:  upstream connection [part, rev, port]
-        down:  downstream connection [part, rev, port]
-        cdate:  date of update YYYY/MM/DD
-        ctime:  time of update HH:MM
-        """
-        self.printit(as_connect(add_or_stop, up, down, cdate, ctime))
 
     def exists(self, atype, hpn, rev, port=None, side='up,down', check_date=None):
         """
@@ -328,51 +188,6 @@ class Update:
                                 return True
             return False
 
-    def update_apriori(self, antenna, status, cdate, ctime='12:00'):
-        """
-        Update the antenna a priori status.
-
-        Parameters
-        ----------
-        antenna : str
-            Antenna part number, e.g. HH24
-        status : str
-            Antenna apriori enum string.
-        cdate : str
-            YYYY/MM/DD
-        ctime : str, optional
-            HH:MM, default is 12:00
-        """
-        self.printit('update_apriori.py -p {} -s {} --date {} --time {}\n'
-                      .format(antenna, status, cdate, ctime))
-
-    def add_part_info(self, hpn, rev, note, cdate, ctime, ref=None):
-        """
-        Add a note/comment for a part to the database.
-
-        Parameters
-        ----------
-        hpn : str
-              HERA part number for comment
-        rev : str
-              Revision for comment.
-        note : str
-               The desired note.
-        cdate : str
-                YYYY/MM/DD format
-        ctime : str
-                HH:MM format
-        ref : str
-              Reference note.
-        """
-        if not len(note.strip()):
-            return
-        if ref is None:
-            ref = ''
-        else:
-            ref = '-l "{}" '.format(ref)
-        self.printit("add_part_info.py -p {} -r {} -c '{}' {}--date {} --time {}\n"
-                      .format(hpn, rev, note, ref, cdate, ctime))
 
     def replace(self, old, new, cdate, ctime='13:00'):
         """
@@ -438,18 +253,4 @@ class Update:
             dnpart = [val.downstream_part, val.down_part_rev, val.downstream_input_port]
             self.update_connection('add', uppart, dnpart, cdate, ctime)
 
-    def done(self):
-        """Finish."""
-        if self.bash_script_name is None:
-            return
-        self.fp.close()
-        if self.verbose:
-            print("----------------------DONE-----------------------")
-        if not self.chmod:
-            if self.verbose:
-                print("If changes OK, 'chmod u+x {}' and run that script."
-                      .format(self.bash_script_name))
-        else:
-            os.chmod(self.bash_script_name, 0o755)
-            if self.verbose:
-                print("Run {}".format(self.bash_script_name))
+

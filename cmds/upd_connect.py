@@ -37,6 +37,34 @@ class UpdateConnect(upd_base.Update):
     def get_hpn_from_col(self, col, key, header):
         return upd_util.gen_hpn(col, self.gsheet.data[key][header.index(col)])
 
+    def update_part(self, add_or_stop, part, cdate, ctime):
+        """
+        Write appropriate entry for cmds script.
+
+        Parameters
+        ----------
+        add_or_stop:  'add' or 'stop'
+        part:  [hpn, rev, <type>, <mfg num>] (last two only for 'add')
+        cdate:  date of update YYYY/MM/DD
+        ctime:  time of update HH:MM
+        """
+        self.printit(as_part(add_or_stop, part, cdate, ctime))
+
+    def update_connection(self, add_or_stop, up, down, cdate, ctime):
+        """
+        Write appropriate entry for cmds script.
+
+        Parameters
+        ----------
+        add_or_stop:  'add' or 'stop'
+        up:  upstream connection [part, rev, port]
+        down:  downstream connection [part, rev, port]
+        cdate:  date of update YYYY/MM/DD
+        ctime:  time of update HH:MM
+        """
+        self.printit(as_connect(add_or_stop, up, down, cdate, ctime))
+
+
     def load_active(self):
         """
         Gets the hookup data from the cm database.

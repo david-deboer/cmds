@@ -38,6 +38,34 @@ class UpdateInfo(upd_base.Update):
         self.active.load_info()
         self.active.load_apriori()
 
+    def add_part_info(self, hpn, rev, note, cdate, ctime, ref=None):
+        """
+        Add a note/comment for a part to the database.
+
+        Parameters
+        ----------
+        hpn : str
+              HERA part number for comment
+        rev : str
+              Revision for comment.
+        note : str
+               The desired note.
+        cdate : str
+                YYYY/MM/DD format
+        ctime : str
+                HH:MM format
+        ref : str
+              Reference note.
+        """
+        if not len(note.strip()):
+            return
+        if ref is None:
+            ref = ''
+        else:
+            ref = '-l "{}" '.format(ref)
+        self.printit("add_part_info.py -p {} -r {} -c '{}' {}--date {} --time {}\n"
+                      .format(hpn, rev, note, ref, cdate, ctime))
+
     def load_gnodes(self):
         """Load node notes tab of googlesheet."""
         if self.gsheet is None:
@@ -57,6 +85,24 @@ class UpdateInfo(upd_base.Update):
         for key, val in lnn.items():
             if len(val):
                 self.node_notes[key] = val
+
+    def update_apriori(self, antenna, status, cdate, ctime='12:00'):
+        """
+        Update the antenna a priori status.
+
+        Parameters
+        ----------
+        antenna : str
+            Antenna part number, e.g. HH24
+        status : str
+            Antenna apriori enum string.
+        cdate : str
+            YYYY/MM/DD
+        ctime : str, optional
+            HH:MM, default is 12:00
+        """
+        self.printit('update_apriori.py -p {} -s {} --date {} --time {}\n'
+                      .format(antenna, status, cdate, ctime))
 
     def process_apriori_notification(self, notify_type='new'):
         """

@@ -4,13 +4,38 @@
 
 """Some low-level configuration management utility functions."""
 
+from . import cm
 from astropy.time import Time
 from astropy.time import TimeDelta
-import datetime
+import datetime, json
 
 
 PAST_DATE = "2000-01-01"
 VALID_FLOAT_FORMAT_FOR_TIME = ["unix", "gps", "jd"]
+
+
+class PartPrefixMap:
+    def __init__(self, systemfile='sysdef.json'):
+        self.systemfile = systemfile
+        with open(cm.file_finder(systemfile), 'r') as fp:
+            sysdef = json.load(fp)
+        self.part_types = {}
+        tmp = {}
+        for ptype, pdict in sysdef['components'].items():
+            pp = pdict['prefix']
+            self.part_types[pp] = ptype
+            tmp.setdefault(len(pp), [])
+            tmp[len(pp)].append(pp)
+        self.part_type_order = []
+        for lpp in sorted(tmp, reverse=True):
+            for pp in tmp[lpp]:
+                self.part_type_order.append(pp)
+
+    def get_part_type(self, prefix):
+        for ppre in self.part_type_order:
+            if prefix.startswith(ppre):
+                return self.part_types[ppre]
+        raise ValueError(f"{prefix} not found in part types")
 
 
 def get_pn_list(pnreq, pnlist, exact_match):

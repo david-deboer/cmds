@@ -5,13 +5,13 @@
 """This is the base class for the script generators."""
 import datetime
 import os
-from . import signal_chain, cm_gsheet_ata
+from . import cm_utils, cm_gsheet_ata, cm_active, cm_handling
 
 
 class Update():
     """Base update class."""
 
-    def __init__(self, script_type, script_path=None, verbose=True):
+    def __init__(self, script_type, script_path=None, chmod=False, verbose=True):
         """
         Initialize.
 
@@ -36,17 +36,61 @@ class Update():
         time_offset = self.now + datetime.timedelta(seconds=100)
         self.cdate2 = time_offset.strftime('%Y/%m/%d')
         self.ctime2 = time_offset.strftime('%H:%M')
+        self.part_prefix = cm_utils.PartPrefixMap()
         if script_type is None:
             self.script = None
         else:
             self.script = '{}_{}_{}'.format(self.cdate.replace('/', '')[2:], script_type,
                                             self.ctime.replace(':', ''))
             self.script = os.path.join(self.script_path, self.script)
-        self.telescope = signal_chain.Update(script_to_run=self.script,
-                                        chmod=True, verbose=verbose,
-                                        cdate=self.cdate, ctime=self.ctime)
         self.update_counter = 0
         self.gsheet = None
+        self.chmod = chmod
+        self.at_date = cm_utils.get_astropytime(self.now())
+        db = cm.connect_to_cm_db(None)
+        self.session = db.sessionmaker()
+        self.active = cm_active.ActiveData(session=self.session)
+        self.load_active(cdate=None)
+        self.handle = cm_handling.Handling(session=self.session)
+        self.script_setup()
+
+    def load_active(self, cdate='now', ctime='10:00'):
+        """Load all active information."""
+        if cdate is None:
+            at_date = self.at_date
+        else:
+            at_date = cm_utils.get_astropytime(cdate, ctime)
+        self.active.load_parts(at_date=at_date)
+        self.active.load_connections(at_date=None)
+        self.active.info = []
+        self.active.geo = []
+
+    def printit(self, value):
+        """Write as comment only."""
+        if self.fp is None:
+            print(value)
+        else:
+            print(value, file=self.fp)
+
+    def no_op_comment(self, comment):
+        """Write as comment only."""
+        self.printit(f"# {comment.strip()}")
+
+    def script_setup(self):
+        if self.verbose:
+            print(f"Writing script {self.script}")
+        self.fp = open(self.script, 'w')
+        s = '#! /bin/bash\n'
+        unameInfo = os.uname()
+        if unameInfo.sysname == 'Linux':
+            s += 'source ~/.bashrc\n'
+        self.fp.write(s)
+        if self.verbose:
+            print('-----------------')
+
+    def update__at_date(self, cdate='now', ctime='10:00'):
+        """Set class date variable."""
+        self.at_date = cm_utils.get_astropytime(adate=cdate, atime=ctime)
 
     def load_gsheet(self, node_csv='none', tabs=None, path='', time_tag='_%y%m%d'):
         """Get the googlesheet information from the internet."""
