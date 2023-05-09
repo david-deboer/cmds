@@ -3,11 +3,6 @@ import csv
 import requests
 import os.path
 
-apriori_enum_header = 'Current apriori enum'
-hu_col = {'Ant': 0, 'Pol': 4, 'Feed': 1, 'FEM': 2, 'PAM': 4, 'NBP/PAMloc': 3,
-          'SNAP': 5, 'Port': 5, 'SNAPloc': 6, 'Node': 6}
-sheet_headers = ['Ant', 'Pol', 'Feed', 'FEM', 'NBP/PAMloc', 'PAM', 'SNAP', 'Port',
-                 'SNAPloc', 'APriori', 'History', 'Comments']
 
 gsheet_prefix = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR40OGLUdmYOnIWogF1SxeP2FgSmmsNOuYR3vGR2n0XmjJq_Tv0MBViGt6fPTQkhtaXVmAyG2FuzzA5/pub?'
 gsheet = {}
