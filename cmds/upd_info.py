@@ -30,20 +30,25 @@ class UpdateInfo(upd_base.Update):
                                          script_path=script_path,
                                          verbose=verbose)
         self.new_apriori = {}
-        self.apriori_notify_file = os.path.join(os.path.dirname(self.script), 'apriori_notify.txt')
-        self.active.load_info(at_date=self.at_date)
-        self.active.load_apriori(at_date=self.at_date)
+        self.apriori_notify_file = None if self.script is None else os.path.join(os.path.dirname(self.script), 'apriori_notify.txt')
+    
+    def update_workflow(self):
+        self.active.load_info()
+        self.active.load_apriori()
+        self.load_gsheet()
+        self.gsheet.split_apriori()
+        self.add_apriori()
+        self.gsheet.split_comments()
+        self.add_sheet_notes()
 
-    def add_part_info(self, hpn, rev, note, cdate, ctime, ref=None):
+    def add_part_info(self, pn, note, cdate, ctime, ref=None):
         """
         Add a note/comment for a part to the database.
 
         Parameters
         ----------
-        hpn : str
+        pn : str
               HERA part number for comment
-        rev : str
-              Revision for comment.
         note : str
                The desired note.
         cdate : str
@@ -59,28 +64,9 @@ class UpdateInfo(upd_base.Update):
             ref = ''
         else:
             ref = '-l "{}" '.format(ref)
-        self.printit("add_part_info.py -p {} -r {} -c '{}' {}--date {} --time {}\n"
-                      .format(hpn, rev, note, ref, cdate, ctime))
+        self.printit("cmds_update_info.py {} -c '{}' {}--date {} --time {}\n"
+                      .format(pn, note, ref, cdate, ctime))
 
-    def load_gnodes(self):
-        """Load node notes tab of googlesheet."""
-        if self.gsheet is None:
-            self.gsheet = cm_gsheet_ata.SheetData()
-        lnn = {}
-        self.gsheet.load_node_notes()
-        for line in self.gsheet.node_notes:
-            try:
-                node_n = f"N{int(line[0]):02d}"
-            except ValueError:
-                continue
-            lnn.setdefault(node_n, [])
-            for entry in line[1:]:
-                if len(entry):
-                    lnn[node_n].append(entry)
-        self.node_notes = {}
-        for key, val in lnn.items():
-            if len(val):
-                self.node_notes[key] = val
 
     def update_apriori(self, antenna, status, cdate, ctime='12:00'):
         """
@@ -97,7 +83,7 @@ class UpdateInfo(upd_base.Update):
         ctime : str, optional
             HH:MM, default is 12:00
         """
-        self.printit('update_apriori.py -p {} -s {} --date {} --time {}\n'
+        self.printit('cmds_update_apriori.py {} -s {} --date {} --time {}\n'
                       .format(antenna, status, cdate, ctime))
 
     def process_apriori_notification(self, notify_type='new'):
@@ -165,59 +151,26 @@ class UpdateInfo(upd_base.Update):
     def add_apriori(self):
         """Write out for apriori differences."""
         self.new_apriori = {}
-        rev = 'A'
         stmt_hdr = "apriori_antenna status change:"
         refout = 'apa-infoupd'
-        for key in self.gsheet.ants:
-            ap_col = self.gsheet.header[self.gsheet.ant_to_node[key]].index('APriori')
-            E = self.gsheet.data[key + '-E'][ap_col]
-            N = self.gsheet.data[key + '-N'][ap_col]
-            ant, rev = cm_utils.split_part_key(key)
-            if E != N:
-                print("{}:  {} and {} should be the same.".format(key, E, N))
+        for key, value in self.gsheet.apriori.items():
+            print(key, value)
+            print("old  ", self.active.apriori[key].status)
+            if value != self.active.apriori[key].status:
                 self.new_apriori[key] = {'info': []}
-                self.new_apriori[key]['ant'] = ant
+                self.new_apriori[key]['ant'] = key
                 self.new_apriori[key]['old_status'] = self.active.apriori[key].status
-                self.new_apriori[key]['new_status'] = f"!Warning! Pols don't match: {E} vs {N}"
-                self.new_apriori[key]['cdate'] = self.cdate2
-                self.new_apriori[key]['ctime'] = self.ctime2
-                continue
-            if len(E) == 0:
-                continue
-            if E != self.active.apriori[key].status:
-                self.new_apriori[key] = {'info': []}
-                self.new_apriori[key]['ant'] = ant
-                self.new_apriori[key]['old_status'] = self.active.apriori[key].status
-                self.new_apriori[key]['new_status'] = E
+                self.new_apriori[key]['new_status'] = value
                 self.new_apriori[key]['cdate'] = self.cdate2
                 self.new_apriori[key]['ctime'] = self.ctime2
                 s = f"{self.new_apriori[key]['old_status']} > {self.new_apriori[key]['new_status']}"
                 if self.verbose:
-                    print(f"Updating {ant}:  {s}")
-                self.hera.update_apriori(ant, E, self.new_apriori[key]['cdate'],
-                                         self.new_apriori[key]['ctime'])
-                self.hera.add_part_info(ant, rev, f"{stmt_hdr} {s}",
-                                        self.new_apriori[key]['cdate'],
-                                        self.new_apriori[key]['ctime'], ref=refout)
+                    print(f"Updating {key}:  {s}")
+                self.update_apriori(key, value, self.new_apriori[key]['cdate'], self.new_apriori[key]['ctime'])
+                self.add_part_info(key, f"{stmt_hdr} {s}",
+                                   self.new_apriori[key]['cdate'],
+                                   self.new_apriori[key]['ctime'], ref=refout)
                 self.update_counter += 1
-
-    def add_gnodes(self, rev='A', duplication_window=90.0, view_duplicate=0.0):
-        primary_keys = []
-        for node, notes in self.node_notes.items():
-            ndkey = cm_utils.make_part_key(node, rev)
-            pdate = self.cdate + ''
-            ptime = self.ctime + ''
-            for this_note in notes:
-                if not self.is_duplicate(ndkey, this_note, duplication_window, view_duplicate):
-                    pkey, pdate, ptime = upd_util.get_unique_pkey(node, rev, pdate, ptime, primary_keys)
-                    refout = 'infoupd'
-                    self.new_notes.setdefault(ndkey, [])
-                    self.new_notes[ndkey].append(this_note)
-                    if self.verbose:
-                        print("Adding comment: {}:{} - {}".format(node, rev, this_note))
-                    self.hera.add_part_info(node, rev, this_note, pdate, ptime, ref=refout)
-                    self.update_counter += 1
-                    primary_keys.append(pkey)
 
     def add_sheet_notes(self, duplication_window=90.0, view_duplicate=0.0):
         """
@@ -228,49 +181,21 @@ class UpdateInfo(upd_base.Update):
         duplication_window : float
             time-frame in days over which to check for duplicate comments.
         """
-        primary_keys = []
         self.new_notes = {}
-        for sheet_key in self.gsheet.data.keys():
-            antrev_key, pol = sheet_key.split('-')
-            ant, rev = cm_utils.split_part_key(antrev_key)
-            tab = self.gsheet.ant_to_node[antrev_key]
+        for key, entries in self.gsheet.comments.items():
             # Process sheet data
             pdate = self.cdate + ''
             ptime = self.ctime + ''
-            for i, col in enumerate(self.gsheet.header[tab]):
-                if col in cm_gsheet_ata.hu_col.keys() or not len(col) or col == 'APriori':
-                    continue
-                try:
-                    col_data = self.gsheet.data[sheet_key][i]
-                except IndexError:
-                    continue
-                if len(col_data) == 0:
-                    continue
-                pkey, pdate, ptime = upd_util.get_unique_pkey(ant, rev, pdate, ptime, primary_keys)
-                # ##Get prefix for entry
-                if col in cm_gsheet_ata.no_prefix:
-                    prefix = ''
-                else:
-                    prefix = '{}: '.format(col)
-                statement = '{}{}'.format(prefix, col_data)
-                if "'" in statement:
-                    statement = statement.replace("'", "")
-                statement = statement.strip()
-                if len(statement) == 0:
-                    continue
-                if not self.is_duplicate(antrev_key, statement, duplication_window, view_duplicate):
+            for comment in entries:
+                if not self.is_duplicate(key, comment, duplication_window, view_duplicate):
                     refout = 'infoupd'
-                    if antrev_key in self.new_apriori.keys():
-                        refout = 'apa-infoupd'
-                        if statement not in self.new_apriori[antrev_key]['info']:
-                            self.new_apriori[antrev_key]['info'].append(statement)
-                    self.new_notes.setdefault(antrev_key, [])
-                    self.new_notes[antrev_key].append(statement)
+                    self.new_notes.setdefault(key, [])
+                    self.new_notes[key].append(comment)
                     if self.verbose:
-                        print("Adding comment: {}:{} - {}".format(ant, rev, statement))
-                    self.hera.add_part_info(ant, rev, statement, pdate, ptime, ref=refout)
+                        print(f"Adding comment: {key} - {comment}")
+                    self.add_part_info(key, comment, pdate, ptime, ref=refout)
                     self.update_counter += 1
-                    primary_keys.append(pkey)
+
 
     def is_duplicate(self, key, statement, duplication_window, view_duplicate=0.0):
         """Check if duplicate."""

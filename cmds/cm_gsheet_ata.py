@@ -110,4 +110,22 @@ class SheetData:
                             raise ValueError(f"{this_rfsoc} port {this_port} is already present.")
                         self.rfsocs[this_rfsoc][this_port] = [_x.strip() for _x in data]
 
+    def split_apriori(self, tab='Antenna', hdr='A Priori Status', prepend='A'):
+        self.apriori = {}
+        apind = self.header[tab].index(hdr)
+        for ant, entry in self.ants.items():
+            aant = prepend + ant
+            apval = entry[apind]
+            if len(apval):
+                self.apriori[aant] = apval
 
+    def split_comments(self, tab='Antenna', hdr='Comments', prepend='A'):
+        self.comments = {}
+        cmind = self.header[tab].index(hdr)
+        for ant, entry in self.ants.items():
+            aant = prepend + ant
+            for i in range(cmind, len(self.header[tab])):
+                if len(entry[i]):
+                    self.comments.setdefault(aant, [])
+                    prep = '' if self.header[tab][i] == hdr else self.header[tab][i] + ': '
+                    self.comments[aant].append(prep + entry[i])

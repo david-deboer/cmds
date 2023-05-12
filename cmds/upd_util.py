@@ -8,21 +8,22 @@ import datetime
 import argparse
 import csv
 
-new_lines_replace = ['Feed Height Before',
-                     'Sticker Targets',
-                     'Stiffener Braces',
-                     'Carey Caps',
-                     'Protected Fiber',
-                     'Cable Conduit',
-                     'Spiral Wrap',
-                     'D Shackle Cable',
-                     'Cables Labelled']
+
+def as_part(add_or_stop, p, cdate, ctime):
+    """Return a string to use cmds script to add or stop a part."""
+    s = f'cmds_update_part.py {add_or_stop} -p {p[0]} '
+    if add_or_stop == 'add':
+        s += f'-t {p[1]} -m {p[2]} '
+    s += f'--date {cdate} --time {ctime}\n'
+    return s
 
 
-def preproc_h6c(line, newlines=new_lines_replace):
-    for rnl in newlines:
-        line = line.replace(rnl, '\n' + rnl)
-    return line
+def as_connect(add_or_stop, up, dn, cdate, ctime):
+    """Return a string to use cmds script to add or stop a connection."""
+    s = 'cmds_update_connection.py {} -u {} --upport {} -d {} --dnport {}'\
+        ' --date {} --time {}\n'.format(add_or_stop, up[0], up[1],
+                                        dn[0], dn[1], cdate, ctime)
+    return s
 
 
 def include_this_line_in_log(line, included):
@@ -33,77 +34,6 @@ def include_this_line_in_log(line, included):
         if included_line.startswith(trunc_line):
             return False
     return True
-
-
-def parse_log_line(line,
-                   arglist=['hpn', 'hptype', 'comment',
-                            'uppart', 'upport',
-                            'dnpart', 'dnport', 'status'],
-                   prefix=None,
-                   return_cmd_args = False,
-                   **kwargs):
-    """
-    Parse an input line to produce a log output.  To add, include the argparse
-    in the script_info.py file and include desired options to arglist above.
-    """
-    from . import script_info
-    from hera_mc import cm_utils
-
-    entry_type = {'add_connection': 'short',
-                  'stop_connection': 'short',
-                  'add_part': 'short',
-                  'stop_part': 'short',
-                  'add_part_info': 'short',
-                  'other': 'short'}
-    entry_type.update(kwargs)
-
-    argv = list(csv.reader([line], delimiter=' '))[0]
-    command = argv[0].split('.')[0]
-
-    try:
-        parser = getattr(script_info, command)()
-    except AttributeError:
-        return line + '\n'
-
-    args = parser.parse_args(argv[1:])
-    if return_cmd_args:
-        return command, args
-    helpdict = {}
-    for action in parser._actions:
-        helpdict[action.dest] = action.help
-    dt = cm_utils.get_astropytime(args.date, args.time)
-
-    if prefix is None:
-        prefix = ' '.join(command.split('_'))
-
-    if command in entry_type:
-        use_etype = command
-        # Temporary "H6C" processing:
-        if command == 'add_part_info' and args.comment.lower().startswith('h6c'):
-            entry_type[use_etype] = 'long'
-            args.comment = preproc_h6c(args.comment)
-    else:
-        use_etype = 'other'
-    if entry_type[use_etype] == 'short':
-        ret = f'{prefix}: '
-        for atr, hlp in helpdict.items():
-            if atr in arglist:
-                if atr in ['comment', 'status']:
-                    delim = '"'
-                else:
-                    delim = ''
-                param = getattr(args, atr)
-                ret += f"  {helpdict[atr]}={delim}{param}{delim}"
-        ret += f"  {dt.datetime.isoformat(timespec='seconds')}\n"
-    elif entry_type[use_etype] == 'long':
-        ret = f"-- {prefix} -- {dt.datetime.isoformat(timespec='seconds')}\n"
-        for atr, hlp in helpdict.items():
-            if atr in arglist:
-                param = getattr(args, atr)
-                ret += f"\t{helpdict[atr]}:  {param}\n"
-    else:
-        ret = line
-    return ret
 
 
 def YMD_HM(dt, offset=0.0, add_second=False):

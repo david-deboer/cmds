@@ -122,14 +122,6 @@ class Update:
             sn = self.ser_num_dict[part_type]
         return sn
 
-    def to_implement(self, command, ant, rev, statement, pdate, ptime):
-        """Write generic 'to_implement' line."""
-        stmt = "{} not implemented! {} {} {} {} {}\n".format(command, ant, rev,
-                                                             statement, pdate, ptime)
-        self.printit(stmt)
-
-
-
     def exists(self, atype, hpn, rev, port=None, side='up,down', check_date=None):
         """
         Check if a part or connection exists for hpn.

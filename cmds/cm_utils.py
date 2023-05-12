@@ -14,11 +14,16 @@ PAST_DATE = "2000-01-01"
 VALID_FLOAT_FORMAT_FOR_TIME = ["unix", "gps", "jd"]
 
 
+def get_sysdef(systemfile='sysdef.json'):
+    with open(cm.file_finder(systemfile), 'r') as fp:
+        sysdef = json.load(fp)
+    return sysdef
+
+
 class PartPrefixMap:
     def __init__(self, systemfile='sysdef.json'):
         self.systemfile = systemfile
-        with open(cm.file_finder(systemfile), 'r') as fp:
-            sysdef = json.load(fp)
+        sysdef = get_sysdef(systemfile=systemfile)
         self.part_types = {}
         tmp = {}
         for ptype, pdict in sysdef['components'].items():

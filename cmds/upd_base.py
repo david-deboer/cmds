@@ -34,8 +34,8 @@ class Update():
         time_offset = self.now + datetime.timedelta(seconds=100)
         self.cdate2 = time_offset.strftime('%Y/%m/%d')
         self.ctime2 = time_offset.strftime('%H:%M')
-        self.at_date = cm_utils.get_astropytime(self.now())
-        # Other glob
+        self.at_date = cm_utils.get_astropytime(self.now)
+        # Miscellaneous glob
         self.update_counter = 0
         self.gsheet = None
         self.part_prefix = cm_utils.PartPrefixMap()
@@ -64,7 +64,7 @@ class Update():
             return
 
         if script_path == 'default' or script_path is None:
-            script_path = cm.get_cm_csv_path()
+            script_path = cm.get_script_path()
         self.script = '{}_{}_{}'.format(self.cdate.replace('/', '')[2:], script_type,
                                         self.ctime.replace(':', ''))
         self.script = os.path.join(script_path, self.script)
@@ -82,9 +82,10 @@ class Update():
 
     def load_active(self):
         """Load all active information."""
-        self.active = cm_active.ActiveData(session=self.session)
-        self.active.load_parts(at_date=self.at_date)
-        self.active.load_connections(at_date=self.at_date)
+        self.active = cm_active.ActiveData(session=self.session, at_date=self.at_date)
+        self.active.load_parts()
+        self.active.load_connections()
+        self.active.load_stations()
         self.active.info = []
         self.active.geo = []
 

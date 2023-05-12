@@ -13,8 +13,8 @@ stat_choices = cm_tables.get_allowed_apriori_statuses() + [None]
 
 if __name__ == "__main__":
     parser = cm.get_cm_argument_parser()
-    parser.add_argument("action", help="add or stop part.", choices=['add', 'stop'])
-    parser.add_argument("pn", help="part number")
+    parser.add_argument("action", help="start or stop", choices=['start', 'stop'])
+    parser.add_argument("-p", "pn", help="part number")
     parser.add_argument("-s", "--status", help="apriori status", choices=stat_choices, default=None)
     parser.add_argument("-c", "--comment", help="Comment", default=None)
     cm_utils.add_date_time_args(parser)

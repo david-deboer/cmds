@@ -270,7 +270,7 @@ def connect_to_cm_db(args, check_connect=True):
 
     return db
 
-def get_cm_csv_path(mc_config_file=None, testing=False):
+def get_script_path(mc_config_file=None, testing=False):
     """
     Return the full path to csv files read from the mc config file.
 
@@ -278,25 +278,24 @@ def get_cm_csv_path(mc_config_file=None, testing=False):
     ----------
     mc_config_file : str
         Pass a different config file if desired.  None goes to default.
+    testing : str or False
+        If not False, path to return
 
     """
+    if testing:
+        return testing
+
     if mc_config_file is None:
         mc_config_file = default_config_file
-
-    import json
 
     with open(mc_config_file) as f:
         config_data = json.load(f)
 
-    if testing:
-        return testing
-
-    try:
-        cm_csv_path = "/{}".format(
-            config_data.get("databases")["hera_mc_sqlite"]["url"]
-            .lstrip("sqlite:////")
-            .rstrip("/hera_mc.db")
-        )
-    except KeyError:
-        cm_csv_path = config_data.get("cm_csv_path")
-    return cm_csv_path
+    if 'script_path' in config_data:
+        script_path = config_data['script_path']
+    elif 'sqlite' in config_data['default_db_name']:
+        script_path = op.dirname(config_data['databases'][config_data['default_db_name']]['url'].replace('sqlite:///', ''))
+    else:
+        print("No default script path found - using working path.")
+        script_path = ''
+    return script_path

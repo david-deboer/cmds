@@ -226,7 +226,7 @@ class ActiveData:
             self.info.setdefault(key, [])
             self.info[key].append(copy(info))
 
-    def load_apriori(self, at_date=None, at_time=None, float_format=None, rev="A"):
+    def load_apriori(self, at_date=None, at_time=None, float_format=None):
         """
         Retrieve all active apriori status for a given at_date.
 
@@ -258,9 +258,9 @@ class ActiveData:
                 | (cm_tables.AprioriStatus.stop_gpstime == None)  # noqa
             )
         ):
-            key = astat.antenna
+            key = astat.pn
             if key in apriori_keys:
-                raise ValueError("{} already has an active apriori state.".format(key))
+                raise ValueError(f"{key} already has an active apriori state.")
             apriori_keys.append(key)
             self.apriori[key] = copy(astat)
 
