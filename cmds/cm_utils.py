@@ -20,7 +20,7 @@ def get_sysdef(systemfile='sysdef.json'):
     return sysdef
 
 
-class PartPrefixMap:
+class PartTypeTools:
     def __init__(self, systemfile='sysdef.json'):
         self.systemfile = systemfile
         sysdef = get_sysdef(systemfile=systemfile)
@@ -41,6 +41,23 @@ class PartPrefixMap:
             if prefix.startswith(ppre):
                 return self.part_types[ppre]
         raise ValueError(f"{prefix} not found in part types")
+
+    def make_part_number(self, val, part_type):
+        """
+        Convert entry in google-sheet to part number
+        """
+        if val is None or not len(str(val).strip()):
+            return ''
+        part_type = part_type.lower()
+        for pprefix, ptype in self.part_types.items():
+            if part_type == pprefix.lower() or part_type == ptype.lower():
+                if pprefix in ['S', 'A', 'F']:
+                    return f"{pprefix}{val.strip()}"
+                try:
+                    val = int(val)
+                except ValueError:
+                    return ''
+                return f"{pprefix}{val:03d}"
 
 
 def get_pn_list(pnreq, pnlist, exact_match):

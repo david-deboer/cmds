@@ -26,6 +26,7 @@ class SheetData:
         self.ants = {}
         self.tunings = {}
         self.rfsocs = {}
+        self.rfcbs = {}
 
 
     def load_sheet(self, node_csv='none', tabs=None, path='.', time_tag='%y%m%d'):
@@ -56,6 +57,8 @@ class SheetData:
             ttag = datetime.strftime(datetime.now(), time_tag)
         else:
             ttag = ""
+        check_rfcb_part_port = []
+        check_rfsoc_part_port = []
         for tab in tabs:
             ofnc = os.path.join(path, f"{tab}_{ttag}.csv")
             if node_csv == 'r':
@@ -92,23 +95,29 @@ class SheetData:
                     self.ants[this_ant] = [_x.strip() for _x in data]
                 elif tab == 'Tuning':
                     # Tunings
-                    tmp = data[0].split(':')
-                    this_rfcb = int(tmp[0])
-                    this_pol = tmp[1][0]
-                    this_tuning = tmp[1][1]
+                    rpoltune = data[0].split(':')
+                    this_rfcb = int(rpoltune[0])
+                    this_pol = rpoltune[1][0]
+                    this_tuning = rpoltune[1][1]
                     self.tunings.setdefault(this_pol, {})
                     self.tunings[this_pol].setdefault(this_tuning, {})
                     self.tunings[this_pol][this_tuning].setdefault(this_rfcb, [])
                     self.tunings[this_pol][this_tuning][this_rfcb].append([_x.strip() for _x in data])
+                    self.rfcbs.setdefault(this_rfcb, [])
+                    this_part_port = f"{this_rfcb}:{rpoltune[1].strip()}"
+                    if this_part_port in check_rfcb_part_port:
+                        raise ValueError(f"{this_part_port} already present.")
+                    self.rfcbs[this_rfcb].append(data)
                     # RFSoCs
                     tmp = data[2].split(':')
                     if len(tmp) == 2:
-                        this_rfsoc = tmp[0].upper()
-                        self.rfsocs.setdefault(this_rfsoc, {})
+                        this_rfsoc = int(tmp[0])
+                        self.rfsocs.setdefault(this_rfsoc, [])
                         this_port = int(tmp[1])
-                        if this_port in self.rfsocs[this_rfsoc]:
-                            raise ValueError(f"{this_rfsoc} port {this_port} is already present.")
-                        self.rfsocs[this_rfsoc][this_port] = [_x.strip() for _x in data]
+                        this_part_port = f"{this_rfsoc}:{this_port}"
+                        if this_part_port in check_rfsoc_part_port:
+                            raise ValueError(f"{this_part_port} is already present.")
+                        self.rfsocs[this_rfsoc].append(data)
 
     def split_apriori(self, tab='Antenna', hdr='A Priori Status', prepend='A'):
         self.apriori = {}

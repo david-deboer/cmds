@@ -7,6 +7,7 @@ This class sets up to update the connections database.
 """
 from . import cm_tables, cm_utils
 from . import upd_util, upd_base
+import datetime
 
 
 class UpdateConnect(upd_base.Update):
@@ -16,37 +17,19 @@ class UpdateConnect(upd_base.Update):
         super(UpdateConnect, self).__init__(script_type=script_type,
                                             script_path=script_path,
                                             verbose=verbose)
-        self.active = None
         self.skipping = []
         self.pols = cm_utils.get_sysdef()['polarization_defs']['ata-rfsoc']
 
     def update_workflow(self, node_csv='n'):
         self.load_gsheet(node_csv)
-        self.load_active()
         self.make_sheet_connections()
         self.compare_connections()
         self.add_missing_parts()
-        self.add_missing_connections()
-        self.add_partial_connections()
-        self.add_different_connections()
+        # self.add_missing_connections()
+        # self.add_partial_connections()
+        # self.add_different_connections()
         self.finish()
-        self.show_summary_of_compare()
-
-    def get_hpn_from_col(self, col, key, header):
-        return upd_util.gen_hpn(col, self.gsheet.data[key][header.index(col)])
-
-    def update_part(self, add_or_stop, part, cdate, ctime):
-        """
-        Write appropriate entry for cmds script.
-
-        Parameters
-        ----------
-        add_or_stop:  'add' or 'stop'
-        part:  [hpn, rev, <type>, <mfg num>] (last two only for 'add')
-        cdate:  date of update YYYY/MM/DD
-        ctime:  time of update HH:MM
-        """
-        self.printit(upd_util.as_part(add_or_stop, part, cdate, ctime))
+        # self.show_summary_of_compare()
 
     def update_connection(self, add_or_stop, up, down, cdate, ctime):
         """
@@ -69,134 +52,56 @@ class UpdateConnect(upd_base.Update):
         self.gsheet.connections is set up identically to self.active.connections
         """
         self.gsheet.connections = {'up': {}, 'down': {}}  # To mirror cm_active
-        nparts = {}
+        # Antenna Tab
         for ant in self.gsheet.ants:
+            sheet_parts = {}
+            # Set up part numbers
+            for ptype in ['Station', 'Antenna']:
+                sheet_parts[ptype] = self.part_type.make_part_number(ant, ptype[0])
+            sheet_parts['Feed'] = self.part_type.make_part_number(self.gsheet.ants[ant][1], 'F')
+            for this_part_prefix in ['PAX', 'RFCB', 'CBX', 'DBX', 'RBX']:
+                val = self.gsheet.ants[ant][self.gsheet.header['Antenna'].index(this_part_prefix) + 2]
+                sheet_parts[this_part_prefix] = self.part_type.make_part_number(val, this_part_prefix)
+            # Set up connections
             for i, this_box in enumerate(['CBX', 'DBX', 'RBX']):
-                if len(nparts[this_box]):
-                    up, dn = [ant, f"port{i}"], [nparts[this_box], f"port{i}"]
+                if len(sheet_parts[this_box]):
+                    up, dn = [ant, f"port{i}"], [sheet_parts[this_box], f"port"]
                     self._uconn(up, dn)
-            station, antenna = f"S{ant}", f"A{ant}"
-            feed = f"F{self.gsheet.ants[ant][1]}" if len(self.gsheet.ants[ant][1]) else ''
-            for this_part_type in ['PAX', 'RFCB', 'CBX', 'DBX', 'RBX']:
-                i = self.gsheet.header['Antenna'].index(this_part_type) + 2
-                try:
-                    nparts[this_part_type] = f"PAX{int(self.gsheet.ants[ant][i]):04d}"
-                except ValueError:
-                    nparts[this_part_type] = ''
-
-            up, dn = [station, 'ground'], [antenna, 'ground']
+            up, dn = [sheet_parts["Station"], 'ground'], [sheet_parts["Antenna"], 'ground']
             self._uconn(up, dn)
-            if len(feed):
-                up, dn = [antenna, 'focus'], [feed, 'input']
+            if len(sheet_parts["Feed"]):
+                up, dn = [sheet_parts["Antenna"], 'focus'], [sheet_parts["Feed"], 'input']
             self._uconn(up, dn)
             for pol in self.pols:
-                if len(feed) and len(nparts['PAX']):
-                    up, dn = [feed, pol], [nparts['PAX'], pol]
+                if len(sheet_parts["Feed"]) and len(sheet_parts['PAX']):
+                    up, dn = [sheet_parts["Feed"], pol], [sheet_parts['PAX'], pol]
                     self._uconn(up, dn)
-                if len(nparts['PAX']) and len(nparts['RFCB']):
-                    up, dn = [nparts['PAX'], pol], [nparts['RFCB'], pol]
+                if len(sheet_parts['PAX']) and len(sheet_parts['RFCB']):
+                    up, dn = [sheet_parts['PAX'], pol], [sheet_parts['RFCB'], pol]
+                    self._uconn(up, dn)
+        # Tuning Tab - RFCB
+        for rfcb, conns in self.gsheet.rfcbs.items():
+            this_rfcb = self.part_type.make_part_number(rfcb, 'RFCB')
+            for conn in conns:
+                this_attem = self.part_type.make_part_number(int(conn[1].split(':')[0]), 'G')
+                if len(this_attem):
+                    rfcb_port = conn[0].split(':')[1]
+                    attem_port = conn[1].split(':')[1]
+                    up, dn = [this_rfcb, rfcb_port], [this_attem, attem_port]
+                    self._uconn(up, dn)
+        # Tuning Tab - RFSOC
+        for rfsoc, conns in self.gsheet.rfsocs.items():
+            this_rfsoc = self.part_type.make_part_number(rfsoc, 'SOC')
+            for conn in conns:
+                this_attem = self.part_type.make_part_number(int(conn[1].split(':')[0]), 'G')
+                if len(this_attem):
+                    rfsoc_port = conn[2].split(':')[1]
+                    attem_port = conn[1].split(':')[1]
+                    up, dn = [this_attem, attem_port], [this_rfsoc, rfsoc_port]
                     self._uconn(up, dn)
 
-    #             header = self.gsheet.header[tab]
-    #             for i, col in enumerate(header):
-    #                 if col not in cm_gsheet_ata.hu_col.keys():
-    #                     continue
-    #                 if self.gsheet.data[gkey][i] is None:
-    #                     continue
-    #                 if col in ['Ant', 'Feed', 'SNAP'] and pol == self.pols[1]:
-    #                     this = self.get_hpn_from_col(col, gkey, header)
-    #                     if this != previous[col]:
-    #                         raise ValueError("{} != {}".format(this, previous[col]))
-    #                     continue
-    #                 if col == 'Ant':  # Make station-antenna, antenna-feed
-    #                     ant = self.get_hpn_from_col('Ant', gkey, header)
-    #                     previous['Ant'] = ant
-    #                     sta = self._sta_from_ant(ant)
-    #                     feed = self.get_hpn_from_col('Feed', gkey, header)
-    #                     previous['Feed'] = feed
-    #                     # ... station-antenna
-    #                     keyup = cm_utils.make_part_key(sta, 'A')
-    #                     pku = 'GROUND'
-    #                     if self._status_OK(keyup, pol, [ant]):
-    #                         self._ugconn(keyup, pku, [sta, 'A', 'ground'], [ant, 'H', 'ground'])
-    #                     # ... antenna-feed
-    #                     keyup = cm_utils.make_part_key(ant, 'H')
-    #                     pku = 'FOCUS'
-    #                     if self._status_OK(keyup, pol, [ant, feed]):
-    #                         self._ugconn(keyup, pku, [ant, 'H', 'focus'], [feed, 'A', 'input'])
-    #                 elif col == 'Feed':  # Make feed-fem
-    #                     feed = self.get_hpn_from_col('Feed', gkey, header)
-    #                     fem = self.get_hpn_from_col('FEM', gkey, header)
-    #                     keyup = cm_utils.make_part_key(feed, 'A')
-    #                     pku = 'TERMINALS'
-    #                     if self._status_OK(keyup, pol, [feed, fem]):
-    #                         self._ugconn(keyup, pku, [feed, 'A', 'terminals'], [fem, 'A', 'input'])
-    #                 elif col == 'FEM':  # Make fem-nbp
-    #                     fem = self.get_hpn_from_col('FEM', gkey, header)
-    #                     nbp = upd_util.gen_hpn('NBP', node_num)
-    #                     port = '{}{}'.format(pol,
-    #                                          self.gsheet.data[gkey][header.index('NBP/PAMloc')])
-    #                     if port is not None:
-    #                         port = port.lower()
-    #                     keyup = cm_utils.make_part_key(fem, 'A')
-    #                     if self._status_OK(keyup, pol, [fem, port]):
-    #                         self._ugconn(keyup, pol, [fem, 'A', pol.lower()], [nbp, 'A', port])
-    #                 elif col == 'NBP/PAMloc':  # nbp-pam
-    #                     nbp = upd_util.gen_hpn('NBP', node_num)
-    #                     port = '{}{}'.format(pol,
-    #                                          self.gsheet.data[gkey][header.index('NBP/PAMloc')])
-    #                     if port is not None:
-    #                         port = port.lower()
-    #                         pku = port.upper()
-    #                     pam = self.get_hpn_from_col('PAM', gkey, header)
-    #                     if self._status_OK('-', pol, [port, pam]):
-    #                         keyup = cm_utils.make_part_key(nbp, 'A')
-    #                         self._ugconn(keyup, pku, [nbp, 'A', port], [pam, 'A', pol.lower()])
-    #                 elif col == 'PAM':  # pam-snap
-    #                     pam = self.get_hpn_from_col('PAM', gkey, header)
-    #                     snap = self.get_hpn_from_col('SNAP', gkey, header)
-    #                     previous['SNAP'] = snap
-    #                     port = self.gsheet.data[gkey][header.index('Port')]
-    #                     if len(port) == 0:
-    #                         port = None
-    #                     if port is not None:
-    #                         port = port.lower()
-    #                         if port[0] != pol[0].lower():
-    #                             msg = "{} port ({}) and pol ({}) don't match".format(snap,
-    #                                                                                  port, pol)
-    #                             raise ValueError(msg)
-    #                     keyup = cm_utils.make_part_key(pam, 'A')
-    #                     if self._status_OK(keyup, pol, [pam, snap, port]):
-    #                         self._ugconn(keyup, pol, [pam, 'A', pol.lower()], [snap, 'A', port])
-    #                 elif col == 'SNAP':  # snap-node, pam-pch, pch-node
-    #                     # ... snap-node
-    #                     snap = self.get_hpn_from_col('SNAP', gkey, header)
-    #                     node = upd_util.gen_hpn("Node", node_num)
-    #                     loc = "loc{}".format(self.gsheet.data[gkey][header.index('SNAPloc')])
-    #                     if self._status_OK('-', pol, [snap, node, loc]):
-    #                         keyup = cm_utils.make_part_key(snap, 'A')
-    #                         pku = 'RACK'
-    #                         self._ugconn(keyup, pku, [snap, 'A', 'rack'], [node, 'A', loc])
-    #                     if self.active is None:
-    #                         continue
-    #                     # ... pam-pch
-    #                     pam = self.get_hpn_from_col('PAM', gkey, header)
-    #                     pku = 'SLOT'
-    #                     try:
-    #                         keyup = cm_utils.make_part_key(pam, 'A')
-    #                         pch = self.active.connections['up'][keyup][pku].downstream_part
-    #                     except KeyError:
-    #                         continue
-    #                     slot = '{}{}'.format('slot',
-    #                                          self.gsheet.data[gkey][header.index('NBP/PAMloc')])
-    #                     if self._status_OK('-', pol, [pam, pch, slot]):
-    #                         self._ugconn(keyup, pku, [pam, 'A', 'slot'], [pch, 'A', slot])
-    #                     # ... pch-node
-    #                     node = upd_util.gen_hpn("Node", node_num)
-    #                     if self._status_OK('-', pol, [pch, slot, node]):
-    #                         keyup = cm_utils.make_part_key(pch, 'A')
-    #                         pku = 'RACK'
-    #                         self._ugconn(keyup, pku, [pch, 'A', 'rack'], [node, 'A', 'bottom'])
+
+
 
     def _uconn(self, up, dn):
         self.gsheet.connections['up'].setdefault(up[0], {})
@@ -210,86 +115,64 @@ class UpdateConnect(upd_base.Update):
             upstream_part=up[0], upstream_output_port=up[1],
             downstream_part=dn[0], downstream_input_port=dn[1])
 
-    # def _status_OK(self, keyup, pol, list_to_check):
-    #     if None in list_to_check:
-    #         if self.verbose:
-    #             print(f'skipping {keyup} {pol}', list_to_check)
-    #             self.skipping.append(keyup)
-    #         return False
-    #     if keyup != '-':
-    #         if pol == self.pols[1]:  # Make sure key already there
-    #             if keyup not in self.gsheet.connections['up']:
-    #                 print(self.gsheet.connections['up'][keyup])
-    #                 raise ValueError("{} not present ({}).".format(keyup, pol))
-    #         else:  # Make sure it is not there, then process
-    #             if keyup in self.gsheet.connections['up']:
-    #                 print(self.gsheet.connections['up'][keyup])
-    #                 raise ValueError("{} already present ({}).".format(keyup, pol))
-    #     return True
+    def compare_connections(self, direction='gsheet-active'):
+        """
+        Step through all of the sheet Connections and make sure they are all there and the same.
+        """
+        pside = 'up'
+        self.compare_direction = direction
+        self.missing = {}
+        self.partial = {}
+        self.different = {}
+        self.different_stop = {}
+        self.same = {}
+        for pside in ['up', 'down']:
+            self.missing[pside] = {}
+            self.partial[pside] = {}
+            self.different[pside] = {}
+            self.different_stop[pside] = {}
+            self.same = {pside : {}}
+            if direction.startswith('g'):
+                A = self.gsheet.connections[pside]
+                B = self.active.connections[pside]
+            else:
+                A = self.active.connections[pside]
+                B = self.gsheet.connections[pside]
+            for gkey, gpts in A.items():
+                if gkey not in B.keys():
+                    self.missing[pside][gkey] = gpts
+                    continue
+                for p, c in gpts.items():
+                    if p not in B[gkey].keys():
+                        self.partial[pside].setdefault(gkey, {})
+                        self.partial[pside][gkey][p] = c
+                    elif B[gkey][p] == c:
+                        self.same[pside].setdefault(gkey, {})
+                        self.same[pside][gkey][p] = c
+                    else:
+                        self.different[pside].setdefault(gkey, {})
+                        self.different[pside][gkey][p] = c
+                        self.different_stop[pside].setdefault(gkey, {})
+                        self.different_stop[pside][gkey][p] = B[gkey][p]
 
-    # def _sta_from_ant(self, ant):
-    #     antnum = int(ant[1:])
-    #     if antnum < 320:
-    #         return 'HH{}'.format(antnum)
-    #     else:
-    #         raise ValueError("NEED TO ADD OUTRIGGERS")
+    def add_missing_parts(self):
+        missing_parts = set()
+        for pside in ['up', 'down']:
+            for pc in self.missing[pside].values():
+                for this_partconn in pc.values():
+                    if this_partconn.upstream_part not in self.active.parts.keys():
+                        missing_parts.add(this_partconn.upstream_part)
 
-    # def compare_connections(self, direction='gsheet-active'):
-    #     """
-    #     Step through all of the sheet Connections and make sure they are all there and the same.
-    #     """
-    #     pside = 'up'
-    #     self.compare_direction = direction
-    #     self.missing = {}
-    #     self.partial = {}
-    #     self.different = {}
-    #     self.different_stop = {}
-    #     self.same = {}
-    #     if direction.startswith('g'):
-    #         A = self.gsheet.connections[pside]
-    #         B = self.active.connections[pside]
-    #     else:
-    #         A = self.active.connections[pside]
-    #         B = self.gsheet.connections[pside]
-    #     for gkey, gpts in A.items():
-    #         if gkey not in B.keys():
-    #             self.missing[gkey] = gpts
-    #             continue
-    #         for p, c in gpts.items():
-    #             if p not in B[gkey].keys():
-    #                 self.partial.setdefault(gkey, {})
-    #                 self.partial[gkey][p] = c
-    #             elif B[gkey][p] == c:
-    #                 self.same.setdefault(gkey, {})
-    #                 self.same[gkey][p] = c
-    #             else:
-    #                 self.different.setdefault(gkey, {})
-    #                 self.different[gkey][p] = c
-    #                 self.different_stop.setdefault(gkey, {})
-    #                 self.different_stop[gkey][p] = B[gkey][p]
-
-    # def add_missing_parts(self):
-    #     self.active.load_parts()
-    #     missing_parts = set()
-    #     for pc in self.missing.values():
-    #         for conn in pc.values():
-    #             key = cm_utils.make_part_key(conn.upstream_part, conn.up_part_rev)
-    #             if key not in self.active.parts.keys():
-    #                 missing_parts.add(key)
-    #             key = cm_utils.make_part_key(conn.downstream_part, conn.down_part_rev)
-    #             if key not in self.active.parts.keys():
-    #                 missing_parts.add(key)
-    #     self.missing_parts = list(missing_parts)
-    #     if len(self.missing_parts):
-    #         self.hera.no_op_comment('Adding missing parts')
-    #         add_part_time_offset = self.now - datetime.timedelta(seconds=300)
-    #         cdate = add_part_time_offset.strftime('%Y/%m/%d')
-    #         ctime = add_part_time_offset.strftime('%H:%M')
-    #     for part in self.missing_parts:
-    #         self.update_counter += 1
-    #         p = list(cm_utils.split_part_key(part))
-    #         this_part = p + [upd_base.signal_chain.part_types[part[:3]], p[0]]
-    #         self.hera.update_part('add', this_part, cdate=cdate, ctime=ctime)
+        self.missing_parts = list(missing_parts)
+        if len(self.missing_parts):
+            self.no_op_comment('Adding missing parts')
+            add_part_time_offset = self.now - datetime.timedelta(seconds=300)
+            cdate = add_part_time_offset.strftime('%Y/%m/%d')
+            ctime = add_part_time_offset.strftime('%H:%M')
+        for part in self.missing_parts:
+            self.update_counter += 1
+            this_part = [part, self.part_type.get_part_type(part), part]
+            self.printit(upd_util.as_part('add', this_part, cdate, ctime))
 
     # def add_missing_connections(self):
     #     if len(self.missing):

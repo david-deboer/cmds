@@ -6,7 +6,6 @@
 """
 import datetime
 import argparse
-import csv
 
 
 def as_part(add_or_stop, p, cdate, ctime):
@@ -14,14 +13,14 @@ def as_part(add_or_stop, p, cdate, ctime):
     s = f'cmds_update_part.py {add_or_stop} -p {p[0]} '
     if add_or_stop == 'add':
         s += f'-t {p[1]} -m {p[2]} '
-    s += f'--date {cdate} --time {ctime}\n'
+    s += f'--date {cdate} --time {ctime}'
     return s
 
 
 def as_connect(add_or_stop, up, dn, cdate, ctime):
     """Return a string to use cmds script to add or stop a connection."""
     s = 'cmds_update_connection.py {} -u {} --upport {} -d {} --dnport {}'\
-        ' --date {} --time {}\n'.format(add_or_stop, up[0], up[1],
+        ' --date {} --time {}'.format(add_or_stop, up[0], up[1],
                                         dn[0], dn[1], cdate, ctime)
     return s
 
@@ -128,56 +127,3 @@ def get_row_dict(hdr, data):
         row[h] = data[i]
         row[i] = data[i]
     return row
-
-
-def gen_hpn(ptype, pnum, verbose=False):
-    """
-    From the sheet data (via ptype, pnum) etc it will generate a HERA Part Number
-    """
-    if pnum is None:
-        return None
-    ptype = ptype.upper()
-    if isinstance(pnum, str):
-        pnum = pnum.upper()
-    try:
-        number_part = int(get_num(pnum))
-    except ValueError:
-        return None
-    if ptype in ['NBP/PAMloc', 'SNAPloc']:
-        return number_part
-    if ptype in ['SNP', 'SNAP']:
-        snpletter = 'C'
-        try:
-            _ = int(pnum)
-        except ValueError:
-            snpletter = pnum[0]
-        return f'SNP{snpletter}{number_part:06d}'
-    if ptype in ['PAM', 'FEM']:
-        return f'{ptype}{number_part:03d}'
-    if ptype in ['NODESTATION']:
-        return f'ND{number_part:02d}'
-    if ptype in ['NODE', 'ND']:
-        return f'N{number_part:02d}'
-    if ptype in ['NBP']:
-        return f'NBP{number_part:02d}'
-    if ptype in ['FEED', 'FDV']:
-        return f'FDV{number_part}'
-    if ptype in ['ANT', 'ANTENNA']:
-        return f'A{number_part}'
-    if ptype in ['STATION']:
-        from hera_mc.geo_sysdef import region
-        if number_part in region['heraringa']:
-            pre = 'HA'
-        elif number_part in region['heraringb']:
-            pre = 'HB'
-        elif number_part > 9999:
-            pre = 'EE'
-        else:
-            pre = 'HH'
-        return f'{pre}{number_part}'
-    if ptype in ['FPS']:
-        return f'FPS{number_part:02d}'
-    if ptype in ['PCH']:
-        return f'PCH{number_part:02d}'
-    if ptype in ['NCM']:
-        return f'NCM{number_part:02d}'

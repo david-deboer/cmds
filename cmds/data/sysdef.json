@@ -6,7 +6,8 @@
         "ata-snap": ["x", "y"],
         "ata-usrp": ["x", "y"],
         "ata-pax": ["x", "y"],
-        "nrdz-rf": ["x", "y"]
+        "nrdz-rf": ["x", "y"],
+        "ctrl": ["ctrl"]
     },
     "hookup_defs":
     {
@@ -89,6 +90,21 @@
             "up": {"x": ["input"], "y": ["input"]},
             "down": {"x": [null], "y": [null]},
             "prefix": "PXCTL"
+        },
+        "control-box": {
+            "up": {"ctrl": [null]},
+            "down": {"ctrl": ["port"]},
+            "prefix": "CBX"
+        },
+        "drive-box": {
+            "up": {"ctrl": [null]},
+            "down": {"ctrl": ["port"]},
+            "prefix": "DBX"
+        },
+        "rim-box": {
+            "up": {"ctrl": [null]},
+            "down": {"ctrl": ["port"]},
+            "prefix": "RBX"
         }
     },
     "station_types":

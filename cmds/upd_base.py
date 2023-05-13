@@ -36,9 +36,9 @@ class Update():
         self.ctime2 = time_offset.strftime('%H:%M')
         self.at_date = cm_utils.get_astropytime(self.now)
         # Miscellaneous glob
+        self.part_type = cm_utils.PartTypeTools()
         self.update_counter = 0
         self.gsheet = None
-        self.part_prefix = cm_utils.PartPrefixMap()
         db = cm.connect_to_cm_db(None)
         self.session = db.sessionmaker()
         self.load_active()
