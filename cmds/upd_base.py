@@ -141,6 +141,7 @@ class Update():
             os.chmod(self.script, 0o755)
             if self.verbose:
                 print(f"Run {self.script}")
+
         script_path = os.path.dirname(self.script)
         if cron_script is not None:
             cron_script = os.path.join(script_path, cron_script)
@@ -166,7 +167,8 @@ class Update():
                 if self.verbose:
                     print("Moving {}  -->  {}".format(self.script, cron_script))
             else:
-                os.remove(self.script)
+                print("L170 DONE hack comment out script handle.")
+                # os.remove(self.script)
 
-        if os.path.exists(cron_script):
+        if isinstance(cron_script, str) and os.path.exists(cron_script):
             os.chmod(cron_script, 0o755)

@@ -10,7 +10,7 @@ import argparse
 
 def as_part(add_or_stop, p, cdate, ctime):
     """Return a string to use cmds script to add or stop a part."""
-    s = f'cmds_update_part.py {add_or_stop} -p {p[0]} '
+    s = f'cmds_update_part.py {add_or_stop} {p[0]} '
     if add_or_stop == 'add':
         s += f'-t {p[1]} -m {p[2]} '
     s += f'--date {cdate} --time {ctime}'

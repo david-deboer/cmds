@@ -179,7 +179,7 @@ def get_cm_argument_parser():
     return p
 
 
-def connect_to_cm_db(args, check_connect=True):
+def connect_to_cm_db(args, check_connect=True, verbose=False):
     """
     Get a DB object that is connected to the CM database.
 
@@ -265,8 +265,8 @@ def connect_to_cm_db(args, check_connect=True):
                 raise RuntimeError(
                     "Could not establish valid connection to " "database."
                 )
-
-    print(f"Using database {db_data['url']} ({db_name})")
+    if verbose:
+        print(f"Using database {db_data['url']} ({db_name})")
 
     return db
 

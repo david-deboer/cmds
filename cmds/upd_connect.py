@@ -8,6 +8,7 @@ This class sets up to update the connections database.
 from . import cm_tables, cm_utils
 from . import upd_util, upd_base
 import datetime
+from copy import copy
 
 
 class UpdateConnect(upd_base.Update):
@@ -17,7 +18,7 @@ class UpdateConnect(upd_base.Update):
         super(UpdateConnect, self).__init__(script_type=script_type,
                                             script_path=script_path,
                                             verbose=verbose)
-        self.skipping = []
+        self.conn_track = {'add': [], 'stop': []}
         self.pols = cm_utils.get_sysdef()['polarization_defs']['ata-rfsoc']
 
     def update_workflow(self, node_csv='n'):
@@ -25,25 +26,11 @@ class UpdateConnect(upd_base.Update):
         self.make_sheet_connections()
         self.compare_connections()
         self.add_missing_parts()
-        # self.add_missing_connections()
-        # self.add_partial_connections()
-        # self.add_different_connections()
+        self.add_missing_connections()
+        self.add_partial_connections()
+        self.add_different_connections()
         self.finish()
-        # self.show_summary_of_compare()
-
-    def update_connection(self, add_or_stop, up, down, cdate, ctime):
-        """
-        Write appropriate entry for cmds script.
-
-        Parameters
-        ----------
-        add_or_stop:  'add' or 'stop'
-        up:  upstream connection [part, rev, port]
-        down:  downstream connection [part, rev, port]
-        cdate:  date of update YYYY/MM/DD
-        ctime:  time of update HH:MM
-        """
-        self.printit(upd_util.as_connect(add_or_stop, up, down, cdate, ctime))
+        self.show_summary_of_compare()
 
     def make_sheet_connections(self):
         """
@@ -100,9 +87,6 @@ class UpdateConnect(upd_base.Update):
                     up, dn = [this_attem, attem_port], [this_rfsoc, rfsoc_port]
                     self._uconn(up, dn)
 
-
-
-
     def _uconn(self, up, dn):
         self.gsheet.connections['up'].setdefault(up[0], {})
         self.gsheet.connections['up'][up[0]][up[1]] = cm_tables.Connections()
@@ -123,15 +107,15 @@ class UpdateConnect(upd_base.Update):
         self.compare_direction = direction
         self.missing = {}
         self.partial = {}
-        self.different = {}
-        self.different_stop = {}
+        self.diff_add = {}
+        self.diff_stop = {}
         self.same = {}
         for pside in ['up', 'down']:
             self.missing[pside] = {}
             self.partial[pside] = {}
-            self.different[pside] = {}
-            self.different_stop[pside] = {}
-            self.same = {pside : {}}
+            self.diff_add[pside] = {}
+            self.diff_stop[pside] = {}
+            self.same[pside] = {}
             if direction.startswith('g'):
                 A = self.gsheet.connections[pside]
                 B = self.active.connections[pside]
@@ -140,20 +124,20 @@ class UpdateConnect(upd_base.Update):
                 B = self.gsheet.connections[pside]
             for gkey, gpts in A.items():
                 if gkey not in B.keys():
-                    self.missing[pside][gkey] = gpts
+                    self.missing[pside][gkey] = copy(gpts)
                     continue
                 for p, c in gpts.items():
                     if p not in B[gkey].keys():
                         self.partial[pside].setdefault(gkey, {})
-                        self.partial[pside][gkey][p] = c
+                        self.partial[pside][gkey][p] = copy(c)
                     elif B[gkey][p] == c:
                         self.same[pside].setdefault(gkey, {})
-                        self.same[pside][gkey][p] = c
+                        self.same[pside][gkey][p] = copy(c)
                     else:
-                        self.different[pside].setdefault(gkey, {})
-                        self.different[pside][gkey][p] = c
-                        self.different_stop[pside].setdefault(gkey, {})
-                        self.different_stop[pside][gkey][p] = B[gkey][p]
+                        self.diff_add[pside].setdefault(gkey, {})
+                        self.diff_add[pside][gkey][p] = copy(c)
+                        self.diff_stop[pside].setdefault(gkey, {})
+                        self.diff_stop[pside][gkey][p] = copy(B[gkey][p])
 
     def add_missing_parts(self):
         missing_parts = set()
@@ -162,68 +146,87 @@ class UpdateConnect(upd_base.Update):
                 for this_partconn in pc.values():
                     if this_partconn.upstream_part not in self.active.parts.keys():
                         missing_parts.add(this_partconn.upstream_part)
-
+                    if this_partconn.downstream_part not in self.active.parts.keys():
+                        missing_parts.add(this_partconn.downstream_part)
         self.missing_parts = list(missing_parts)
         if len(self.missing_parts):
             self.no_op_comment('Adding missing parts')
             add_part_time_offset = self.now - datetime.timedelta(seconds=300)
             cdate = add_part_time_offset.strftime('%Y/%m/%d')
             ctime = add_part_time_offset.strftime('%H:%M')
-        for part in self.missing_parts:
-            self.update_counter += 1
-            this_part = [part, self.part_type.get_part_type(part), part]
-            self.printit(upd_util.as_part('add', this_part, cdate, ctime))
+            for part in self.missing_parts:
+                self.update_counter += 1
+                this_part = [part, self.part_type.get_part_type(part), part]
+                self.printit(upd_util.as_part('add', this_part, cdate, ctime))
 
-    # def add_missing_connections(self):
-    #     if len(self.missing):
-    #         self.hera.no_op_comment('Adding missing connections')
-    #         self._modify_connections(self.missing, 'add', self.cdate, self.ctime)
+    def add_missing_connections(self):
+        if len(self.missing['up']) + len(self.missing['down']):
+            self.no_op_comment('Adding missing connections')
+            self._modify_connections(self.missing, 'add', self.cdate, self.ctime)
 
-    # def add_partial_connections(self):
-    #     if len(self.partial):
-    #         self.hera.no_op_comment('Adding partial connections')
-    #         self._modify_connections(self.partial, 'add', self.cdate, self.ctime)
+    def add_partial_connections(self):
+        if len(self.partial['up']) + len(self.partial['down']):
+            self.no_op_comment('Adding partial connections')
+            self._modify_connections(self.partial, 'add', self.cdate, self.ctime)
 
-    # def add_different_connections(self):
-    #     if len(self.different):
-    #         self.hera.no_op_comment('Adding different connections')
-    #         stop_conn_time_offset = self.now - datetime.timedelta(seconds=90)
-    #         cdate = stop_conn_time_offset.strftime('%Y/%m/%d')
-    #         ctime = stop_conn_time_offset.strftime('%H:%M')
-    #         self._modify_connections(self.different_stop, 'stop', cdate, ctime)
-    #         self._modify_connections(self.different, 'add', self.cdate, self.ctime)
+    def add_different_connections(self):
+        if len(self.diff_add['up']) + len(self.diff_add['down']) + len(self.diff_stop['up']) + len(self.diff_stop['down']):
+            self.no_op_comment('Adding different connections')
+            stop_conn_time_offset = self.now - datetime.timedelta(seconds=90)
+            cdate = stop_conn_time_offset.strftime('%Y/%m/%d')
+            ctime = stop_conn_time_offset.strftime('%H:%M')
+            self._modify_connections(self.diff_stop, 'stop', cdate, ctime)
+            self._modify_connections(self.diff_add, 'add', self.cdate, self.ctime)
 
-    # def _modify_connections(self, this_one, add_or_stop, cdate, ctime):
-    #     for mod_conn in this_one.values():
-    #         for conn in mod_conn.values():
-    #             self.update_counter += 1
-    #             up = [conn.upstream_part, conn.up_part_rev, conn.upstream_output_port]
-    #             dn = [conn.downstream_part, conn.down_part_rev, conn.downstream_input_port]
-    #             self.hera.update_connection(add_or_stop, up, dn, cdate=cdate, ctime=ctime)
+    def _modify_connections(self, the_connections, add_or_stop, cdate, ctime):
+        stop_or_add = 'add' if add_or_stop == 'stop' else 'stop'
+        for pside in ['up', 'down']:
+            this_one = the_connections[pside]
+            for mod_conn in this_one.values():
+                for conn in mod_conn.values():
+                    cmpstr = f"{conn.upstream_part}{conn.upstream_output_port}{conn.downstream_part}{conn.downstream_input_port}"
+                    if cmpstr in self.conn_track[add_or_stop]:
+                        print(f"{cmpstr} already {add_or_stop}ed.")
+                    elif cmpstr in self.conn_track[stop_or_add]:
+                        print(f"!!!{cmpstr} in {add_or_stop} and {stop_or_add}!!!")
+                    else:
+                        self.conn_track[add_or_stop].append(cmpstr)
+                        self.update_counter += 1
+                        up = [conn.upstream_part, conn.upstream_output_port]
+                        dn = [conn.downstream_part, conn.downstream_input_port]
+                        self.printit(upd_util.as_connect(add_or_stop, up, dn, cdate, ctime))
 
-    # def show_summary_of_compare(self):
-    #     print("\n---Summary---")
-    #     print("Missing:  {}".format(len(self.missing)))
-    #     print("Same:  {}".format(len(self.same)))
-    #     print("Skipping:  {}".format(len(self.skipping)))
-    #     print("Partial:  {}".format(len(self.partial)), end='   ')
-    #     if len(self.partial):
-    #         print("*****CHECK*****")
-    #         for p in self.partial:
-    #             print("\t{}".format(p))
-    #     else:
-    #         print()
-    #     print("Different:  {}".format(len(self.different)), end='   ')
-    #     if len(self.different):
-    #         print("*****CHECK*****")
-    #         for d in self.different:
-    #             print("\t{}".format(d))
-    #     else:
-    #         print()
-    #     print("Different_stop:  {}".format(len(self.different_stop)), end='   ')
-    #     if len(self.different_stop):
-    #         print("*****CHECK*****")
-    #         for d in self.different_stop:
-    #             print("\t{}".format(d))
-    #     else:
-    #         print()
+    def show_summary_of_compare(self, check=False):
+        from tabulate import tabulate
+        header = ['Type', 'up', 'down', 'total']
+        print("\n---Summary---")
+        print(f"{self.update_counter} total number of updates.")
+        print(f"{len(self.missing_parts)} parts added.")
+        table_data = []
+        for conn in ['same', 'missing', 'partial', 'diff_add', 'diff_stop']:
+            up = len(getattr(self, conn)['up'])
+            dn = len(getattr(self, conn)['down'])
+            table_data.append([conn.capitalize(), up, dn, up + dn])
+        print(tabulate(table_data, header))
+        if check:
+            print("PARTIAL")
+            if len(self.partial):
+                print("*****CHECK*****")
+                for p in self.partial:
+                    print("\t{}".format(p))
+            else:
+                print()
+            print("DIFFERENT")
+            if len(self.diff_add):
+                print("*****CHECK*****")
+                for d in self.diff_add:
+                    print("\t{}".format(d))
+            else:
+                print()
+            print("DIFFERENT_STOP")
+            if len(self.diff_stop):
+                print("*****CHECK*****")
+                for d in self.diff_stop:
+                    print("\t{}".format(d))
+            else:
+                print()
