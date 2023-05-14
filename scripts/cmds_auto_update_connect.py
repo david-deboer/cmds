@@ -36,7 +36,6 @@ if args.archive_path.startswith('___'):
     import os.path
     args.archive_path = os.path.join(update.script_path, args.archive_path[3:])
 update.load_gsheet(node_csv=args.node_csv)
-update.load_active()
 update.make_sheet_connections()
 update.compare_connections(args.direction)
 update.add_missing_parts()
@@ -44,5 +43,6 @@ update.add_missing_connections()
 update.add_partial_connections()
 update.add_different_connections()
 update.finish(cron_script=cron_script, archive_to=args.archive_path)
+
 if cron_script is None:
     update.show_summary_of_compare()
