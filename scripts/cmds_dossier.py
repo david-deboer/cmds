@@ -181,5 +181,5 @@ with cm.CMSessionWrapper() as session:
             exact_match=args.exact_match,
             session=session,
         )
-        print(dossier.show_part_dossier(columns))
+        print(dossier.show_dossier(columns))
     print()

@@ -46,7 +46,7 @@ if __name__ == "__main__":
         "-t",
         "--hookup-type",
         help="Use specified hookup type - the default is in the sysdef json file.",
-        default=None,
+        default='ata-rfsoc',
     )
     parser.add_argument(
         "--ports", help="Show ports on hookup.", action="store_true"

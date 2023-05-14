@@ -55,10 +55,10 @@
             "prefix": "RFCB"
         },
         "attemplifier": {
-            "up": {"x": ["in1", "in2", "in3", "in4", "in5", "in6", "in7", "in8"],
-                   "y": ["in9", "in10", "in11", "in12", "in13", "in14", "in15", "in16"]},
-            "down":  {"x": ["out1", "out2", "out3", "out4", "out5", "out6", "out7", "out8"],
-                      "y": ["out9", "out10", "out11", "out12", "out13", "out14", "out15", "out16"]},
+            "up":  {"x": ["in1", "in2", "in3", "in4", "in5", "in6", "in7", "in8", "in9", "in10", "in11", "in12", "in13", "in14", "in15", "in16"],
+                    "y": ["in1", "in2", "in3", "in4", "in5", "in6", "in7", "in8", "in9", "in10", "in11", "in12", "in13", "in14", "in15", "in16"]},
+            "down":  {"x": ["out1", "out2", "out3", "out4", "out5", "out6", "out7", "out8", "out9", "out10", "out11", "out12", "out13", "out14", "out15", "out16"],
+                      "y": ["out1", "out2", "out3", "out4", "out5", "out6", "out7", "out8", "out9", "out10", "out11", "out12", "out13", "out14", "out15", "out16"]},
             "prefix": "G"
         },
         "rf-switch": {
@@ -67,7 +67,8 @@
             "prefix": "RFSW"
         },
         "rfsoc": {
-            "up": {"x": ["x1", "x2", "x3", "x4"], "y": ["y1", "y1", "y3", "y4"]},
+            "up": {"x": ["in1", "in2", "in3", "in4", "in5", "in6", "in7", "in8", "in9", "in10", "in11", "in12", "in13", "in14", "in15", "in16"],
+                   "y": ["in1", "in2", "in3", "in4", "in5", "in6", "in7", "in8", "in9", "in10", "in11", "in12", "in13", "in14", "in15", "in16"]},
             "down": {"x": ["eth"],"y": ["eth"]},
             "prefix": "SOC"
         },

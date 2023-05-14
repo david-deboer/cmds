@@ -73,7 +73,7 @@ class UpdateConnect(upd_base.Update):
                 this_attem = self.part_type.make_part_number(int(conn[1].split(':')[0]), 'G')
                 if len(this_attem):
                     rfcb_port = conn[0].split(':')[1]
-                    attem_port = conn[1].split(':')[1]
+                    attem_port = f"in{int(conn[1].split(':')[1])}"
                     up, dn = [this_rfcb, rfcb_port], [this_attem, attem_port]
                     self._uconn(up, dn)
         # Tuning Tab - RFSOC
@@ -82,8 +82,8 @@ class UpdateConnect(upd_base.Update):
             for conn in conns:
                 this_attem = self.part_type.make_part_number(int(conn[1].split(':')[0]), 'G')
                 if len(this_attem):
-                    rfsoc_port = conn[2].split(':')[1]
-                    attem_port = conn[1].split(':')[1]
+                    attem_port = f"out{int(conn[1].split(':')[1])}"
+                    rfsoc_port = f"in{int(conn[2].split(':')[1])}"
                     up, dn = [this_attem, attem_port], [this_rfsoc, rfsoc_port]
                     self._uconn(up, dn)
 
