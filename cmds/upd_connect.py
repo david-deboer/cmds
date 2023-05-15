@@ -47,12 +47,12 @@ class UpdateConnect(upd_base.Update):
                 sheet_parts[ptype] = self.part_type.make_part_number(ant, ptype[0])
             sheet_parts['Feed'] = self.part_type.make_part_number(self.gsheet.ants[ant][1], 'F')
             for this_part_prefix in ['PAX', 'RFCB', 'CBX', 'DBX', 'RBX']:
-                val = self.gsheet.ants[ant][self.gsheet.header['Antenna'].index(this_part_prefix) + 2]
+                val = self.gsheet.ants[ant][self.gsheet.header['Antenna'].index(this_part_prefix)]
                 sheet_parts[this_part_prefix] = self.part_type.make_part_number(val, this_part_prefix)
             # Set up connections
             for i, this_box in enumerate(['CBX', 'DBX', 'RBX']):
                 if len(sheet_parts[this_box]):
-                    up, dn = [ant, f"port{i}"], [sheet_parts[this_box], f"port"]
+                    up, dn = [sheet_parts["Antenna"], f"port{i}"], [sheet_parts[this_box], f"port"]
                     self._uconn(up, dn)
             up, dn = [sheet_parts["Station"], 'ground'], [sheet_parts["Antenna"], 'ground']
             self._uconn(up, dn)
