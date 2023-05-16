@@ -86,6 +86,16 @@ class UpdateConnect(upd_base.Update):
                     rfsoc_port = f"in{int(conn[2].split(':')[1])}"
                     up, dn = [this_attem, attem_port], [this_rfsoc, rfsoc_port]
                     self._uconn(up, dn)
+        # Tuning Tab - SNAP
+        for snap, conns in self.gsheet.snaps.items():
+            this_snap = self.part_type.make_part_number(snap, 'SNAP')
+            for conn in conns:
+                this_attem = self.part_type.make_part_number(int(conn[1].split(':')[0]), 'G')
+                if len(this_attem):
+                    attem_port = f"out{int(conn[1].split(':')[1])}"
+                    snap_port = f"{conn[3].split(':')[1].lower()}"
+                    up, dn = [this_attem, attem_port], [this_snap, snap_port]
+                    self._uconn(up, dn)
 
     def _uconn(self, up, dn):
         self.gsheet.connections['up'].setdefault(up[0], {})

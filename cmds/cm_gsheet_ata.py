@@ -27,6 +27,7 @@ class SheetData:
         self.tunings = {}
         self.rfsocs = {}
         self.rfcbs = {}
+        self.snaps = {}
 
 
     def load_sheet(self, node_csv='none', tabs=None, path='.', time_tag='%y%m%d'):
@@ -59,6 +60,7 @@ class SheetData:
             ttag = ""
         check_rfcb_part_port = []
         check_rfsoc_part_port = []
+        check_snap_part_port = []
         for tab in tabs:
             ofnc = os.path.join(path, f"{tab}_{ttag}.csv")
             if node_csv == 'r':
@@ -118,6 +120,16 @@ class SheetData:
                         if this_part_port in check_rfsoc_part_port:
                             raise ValueError(f"{this_part_port} is already present.")
                         self.rfsocs[this_rfsoc].append(data)
+                    # SNAPs
+                    tmp = data[3].split(':')
+                    if len(tmp) == 2:
+                        this_snap = int(tmp[0])
+                        self.snaps.setdefault(this_snap, [])
+                        this_port = tmp[1].lower()
+                        this_part_port = f"{this_snap}:{this_port}"
+                        if this_part_port in check_snap_part_port:
+                            raise ValueError(f"{this_part_port} is already present.")
+                        self.snaps[this_snap].append(data)
 
     def split_apriori(self, tab='Antenna', hdr='A Priori Status', prepend='A'):
         self.apriori = {}

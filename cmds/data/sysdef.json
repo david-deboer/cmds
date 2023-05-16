@@ -80,7 +80,7 @@
         "snap": {
             "up": {"x": ["x"], "y": ["y"]},
             "down": {"x": [null], "y": [null]},
-            "prefix": "SNP"
+            "prefix": "SNAP"
         },
         "usrp": {
             "up": {"x": ["x"], "y": ["y"]},
