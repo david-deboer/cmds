@@ -74,7 +74,7 @@ def get_hookup(
             active=None
         )
         if show:
-            print(hookup.show_hookup(pols_to_show=pol))
+            print(hookup.show_hookup(signal_paths_to_show=pol))
         return hookup
 
 
@@ -143,17 +143,17 @@ class Hookup(object):
         for this_part in parts_list:
             part = self.active.parts[this_part]
             self.hookup[this_part] = HookupEntry(entry_key=this_part, sysdef=self.sysdef)
-            for this_pol in self.sysdef.polarizations:
-                self.hookup[this_part]._strm['up'][this_pol] = {}
+            for this_signal_path in self.sysdef.signal_paths:
+                self.hookup[this_part]._strm['up'][this_signal_path] = {}
                 for this_port in self.dossier.dossier[this_part].input_ports:
-                    if this_port in self.sysdef.components[part.ptype]['up'][this_pol]:
-                        self.hookup[this_part]._strm['up'][this_pol][this_port] = self._follow_hookup(
-                            part=this_part, pol=this_pol, port=this_port, dir="up")
-                self.hookup[this_part]._strm['down'][this_pol] = {}
+                    if this_port in self.sysdef.components[part.ptype]['up'][this_signal_path]:
+                        self.hookup[this_part]._strm['up'][this_signal_path][this_port] = self._follow_hookup(
+                            part=this_part, pol=this_signal_path, port=this_port, dir="up")
+                self.hookup[this_part]._strm['down'][this_signal_path] = {}
                 for this_port in self.dossier.dossier[this_part].output_ports:
-                    if this_port in self.sysdef.components[part.ptype]['down'][this_pol]:
-                        self.hookup[this_part]._strm['down'][this_pol][this_port] = self._follow_hookup(
-                            part=this_part, pol=this_pol, port=this_port, dir="down")
+                    if this_port in self.sysdef.components[part.ptype]['down'][this_signal_path]:
+                        self.hookup[this_part]._strm['down'][this_signal_path][this_port] = self._follow_hookup(
+                            part=this_part, pol=this_signal_path, port=this_port, dir="down")
             self.hookup[this_part].consolidate_strm2hookup()
             self.hookup[this_part].add_extras(self.part_type_cache)
 
@@ -193,7 +193,7 @@ class Hookup(object):
         return headers
 
     def show_hookup(self, cols_to_show="all", state="full",
-                    pols_to_show="all", ports=False, sortby=None, timing=True,
+                    signal_paths_to_show="all", ports=False, sortby=None, timing=True,
                     filename=None, output_format="table"):
         """
         Generate a printable hookup table.
@@ -204,7 +204,7 @@ class Hookup(object):
             list of columns to include in hookup listing
         state : str
             String designating whether to show the full hookups only, or all
-        pols_to_show : list, str
+        signal_paths_to_show : list, str
             List of polarizations or 'all'
         ports : bool
             Flag to include ports or not
@@ -230,20 +230,20 @@ class Hookup(object):
 
         """
         show = {"ports": ports}
-        if pols_to_show == 'all':
-            pols_to_show = self.sysdef.polarizations
+        if signal_paths_to_show == 'all':
+            signal_paths_to_show = self.sysdef.signal_paths
         headers = self._make_header_row(cols_to_show, timing=timing)
         table_data = []
         total_shown = 0
         sorted_hukeys = self._sort_hookup_display(sortby, def_sort_order="NP")
         for hukey in sorted_hukeys:
-            for this_pol in pols_to_show:
-                for this_port in cm_utils.put_keys_in_order(self.hookup[hukey].hookup[this_pol].keys(), sort_order="PN"):  # noqa
-                    if self.hookup[hukey].hookup[this_pol][this_port] is not None and len(self.hookup[hukey].hookup[this_pol][this_port]):  # noqa
-                        this_state, is_full = state.lower(), self.hookup[hukey].fully_connected[this_pol][this_port]  # noqa
+            for this_signal_path in signal_paths_to_show:
+                for this_port in cm_utils.put_keys_in_order(self.hookup[hukey].hookup[this_signal_path].keys(), sort_order="PN"):  # noqa
+                    if self.hookup[hukey].hookup[this_signal_path][this_port] is not None and len(self.hookup[hukey].hookup[this_signal_path][this_port]):  # noqa
+                        this_state, is_full = state.lower(), self.hookup[hukey].fully_connected[this_signal_path][this_port]  # noqa
                         if this_state == "all" or (this_state == "full" and is_full):
                             total_shown += 1
-                            td = self.hookup[hukey].table_entry_row(this_pol, this_port, headers, show)
+                            td = self.hookup[hukey].table_entry_row(this_signal_path, this_port, headers, show)
                             if td not in table_data:
                                 table_data.append(td)
         if total_shown == 0:
@@ -499,17 +499,17 @@ class HookupEntry(object):
         """
         self.hookup = {}
         tmplisting = {}
-        for this_pol in self._strm['up']:  # pick one direction for pols to use
-            self.hookup[this_pol] = {}
-            tmplisting[this_pol] = []
+        for this_signal_path in self._strm['up']:  # pick one direction for signal_paths to use
+            self.hookup[this_signal_path] = {}
+            tmplisting[this_signal_path] = []
             for dir in self._strm.keys():
-                for this_port, connct in self._strm[dir][this_pol].items():
+                for this_port, connct in self._strm[dir][this_signal_path].items():
                     entrystr = str(connct)
-                    if entrystr not in tmplisting[this_pol]:
-                        self.hookup[this_pol][this_port] = connct
-                        tmplisting[this_pol].append(entrystr)
+                    if entrystr not in tmplisting[this_signal_path]:
+                        self.hookup[this_signal_path][this_port] = connct
+                        tmplisting[this_signal_path].append(entrystr)
                     elif verbose:
-                        print(f"Already found {dir} {this_pol} {this_port} {entrystr}")
+                        print(f"Already found {dir} {this_signal_path} {this_port} {entrystr}")
 
     def add_extras(self, pt_cache):
         """
@@ -524,14 +524,14 @@ class HookupEntry(object):
         full_hookup_length = len(self.sysdef.hookup) - 1
         latest_start = 0
         earliest_stop = None
-        for this_pol in self.sysdef.polarizations:
-            self.part_type[this_pol] = {}
-            self.timing[this_pol] = {}
-            self.fully_connected[this_pol] = {}
-            for this_port in self.hookup[this_pol]:
-                self.part_type[this_pol][this_port] = []
-                for c in self.hookup[this_pol][this_port]:
-                    self.part_type[this_pol][this_port].append(pt_cache[c.upstream_part])
+        for this_signal_path in self.sysdef.signal_paths:
+            self.part_type[this_signal_path] = {}
+            self.timing[this_signal_path] = {}
+            self.fully_connected[this_signal_path] = {}
+            for this_port in self.hookup[this_signal_path]:
+                self.part_type[this_signal_path][this_port] = []
+                for c in self.hookup[this_signal_path][this_port]:
+                    self.part_type[this_signal_path][this_port].append(pt_cache[c.upstream_part])
                     if c.start_gpstime > latest_start:
                         latest_start = c.start_gpstime
                     if c.stop_gpstime is None:
@@ -540,9 +540,9 @@ class HookupEntry(object):
                         earliest_stop = c.stop_gpstime
                     elif c.stop_gpstime < earliest_stop:
                         earliest_stop = c.stop_gpstime
-                self.part_type[this_pol][this_port].append(pt_cache[self.hookup[this_pol][this_port][-1].downstream_part])  # noqa
-                self.timing[this_pol][this_port] = [latest_start, earliest_stop]
-                self.fully_connected[this_pol][this_port] = len(self.hookup[this_pol][this_port]) == full_hookup_length  # noqa
+                self.part_type[this_signal_path][this_port].append(pt_cache[self.hookup[this_signal_path][this_port][-1].downstream_part])  # noqa
+                self.timing[this_signal_path][this_port] = [latest_start, earliest_stop]
+                self.fully_connected[this_signal_path][this_port] = len(self.hookup[this_signal_path][this_port]) == full_hookup_length  # noqa
 
     def table_entry_row(self, pol, port, cols, show):
         """
