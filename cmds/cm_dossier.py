@@ -158,13 +158,11 @@ class DossierEntry:
         "up.start_gpstime": "uStart",
         "up.stop_gpstime": "uStop",
         "up.upstream_part": "Upstream",
-        "up.up_part_rev": "uRev",
         "up.upstream_output_port": "uOut",
         "up.downstream_input_port": "uIn",
         "down.upstream_output_port": "dOut",
         "down.downstream_input_port": "dIn",
         "down.downstream_part": "Downstream",
-        "down.down_part_rev": "dRev",
         "down.start_gpstime": "dStart",
         "down.stop_gpstime": "dStop",
     }

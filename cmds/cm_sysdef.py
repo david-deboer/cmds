@@ -82,7 +82,7 @@ class Sysdef:
         self.type = hookup_type
         # print(f"Reading {self.sysdef_file} for hookup type {self.type}")
 
-        self.polarizations = self.sysdef_json['signal_path_defs'][self.type]
+        self.signal_paths = self.sysdef_json['signal_path_defs'][self.type]
         self.hookup = []
         for i, hd in enumerate(self.sysdef_json['hookup_defs'][self.type]):
             if isinstance(hd, dict):  # Reconfigure the base component
