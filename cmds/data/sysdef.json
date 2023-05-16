@@ -1,6 +1,6 @@
 {
     "default_type": "ata-rfsoc",
-    "polarization_defs":
+    "signal_path_defs":
     {
         "ata-rfsoc": ["x", "y"],
         "ata-snap": ["x", "y"],

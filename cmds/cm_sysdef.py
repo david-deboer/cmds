@@ -82,7 +82,7 @@ class Sysdef:
         self.type = hookup_type
         # print(f"Reading {self.sysdef_file} for hookup type {self.type}")
 
-        self.polarizations = self.sysdef_json['polarization_defs'][self.type]
+        self.polarizations = self.sysdef_json['signal_path_defs'][self.type]
         self.hookup = []
         for i, hd in enumerate(self.sysdef_json['hookup_defs'][self.type]):
             if isinstance(hd, dict):  # Reconfigure the base component
@@ -96,7 +96,7 @@ class Sysdef:
         ports = ['', '']
         dir = ['down', 'up']
         print()
-        for pol in self.sysdef_json['polarization_defs'][self.type]:
+        for pol in self.sysdef_json['signal_path_defs'][self.type]:
             print(f"{self.type}: {pol}")
             for i in range(len(self.hookup) - 1):
                 cmp = [self.hookup[i], self.hookup[i+1]]

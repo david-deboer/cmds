@@ -19,7 +19,7 @@ class UpdateConnect(upd_base.Update):
                                             script_path=script_path,
                                             verbose=verbose)
         self.conn_track = {'add': [], 'stop': []}
-        self.pols = cm_utils.get_sysdef()['polarization_defs']['ata-rfsoc']
+        self.pols = cm_utils.get_sysdef()['signal_path_defs']['ata-rfsoc']
 
     def update_workflow(self, node_csv='n'):
         self.load_gsheet(node_csv)
