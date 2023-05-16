@@ -2,9 +2,9 @@
     "default_db_name": "hcro_sqlite",
     "databases":
     {
-        "hera_mc":
+        "cmdata":
         {
-            "url": "postgresql://ddeboer@localhost/hera_mc",
+            "url": "postgresql://sonata@localhost/cmdata",
             "mode": "production"
         },
         "testing":
