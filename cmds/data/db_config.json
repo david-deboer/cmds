@@ -4,7 +4,7 @@
     {
         "cmdata":
         {
-            "url": "postgresql://sonata@localhost/cmdata",
+            "url": "postgresql://sonata:pw@localhost/cmdata",
             "mode": "production"
         },
         "testing":
