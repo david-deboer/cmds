@@ -37,6 +37,8 @@ if __name__ == '__main__':
     ap.add_argument('--ignore-no-data-level', dest='ignore_no_data', default=1,
                     help="Level at which to ignore no serial/hosts/ethers data", type=int,
                     choices=[0, 1, 2])
+    ap.add_argument('--gsheet-url', dest='gsheet_url', help="Return URL to connection gsheet.",
+                    choices=['Antenna', 'Tuning'], default=None)
     args = ap.parse_args()
 
     check = cm_checks.Checks()
@@ -56,3 +58,7 @@ if __name__ == '__main__':
         check.crontab()
     if args.daemons:
         check.daemon()
+    if args.gsheet_url is not None:
+        from cmds import cm_gsheet_ata
+        url = cm_gsheet_ata.gsheet_prefix + cm_gsheet_ata.gsheet[args.gsheet_url].strip('&output=csv')
+        print(url)

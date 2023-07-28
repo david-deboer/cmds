@@ -3,7 +3,7 @@
 # Licensed under the 2-clause BSD license.
 
 """Series of database checks."""
-from . import cm_utils, cm_active
+from . import cm_utils, cm_active, cm
 import redis
 
 
@@ -48,7 +48,8 @@ class Checks:
 
     def __init__(self, start_time=2458500, stop_time='now', day_step=1.0):
         """Initialize."""
-        self.active = cm_active.ActiveData()
+        self.session = cm.CMSessionWrapper()
+        self.active = cm_active.ActiveData(self.session)
         self.start = cm_utils.get_astropytime(start_time, float_format='jd')
         self.stop = cm_utils.get_astropytime(stop_time, float_format='jd')
         self.step = day_step
