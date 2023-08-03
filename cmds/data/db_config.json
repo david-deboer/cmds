@@ -1,5 +1,5 @@
 {
-    "default_db_name": "hcro_sqlite",
+    "default_db_name": "cmdata",
     "databases":
     {
         "cmdata":
