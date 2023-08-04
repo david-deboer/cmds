@@ -16,7 +16,7 @@ if __name__ == '__main__':
                     default='default')
     ap.add_argument('--archive-path', dest='archive_path', help="Path for script archive.",
                     default='___cm_updates')
-    ap.add_argument('-n', '--node_csv', help="For testing: flag for read/write of gsheet (r/w/n)",
+    ap.add_argument('-n', '--arc_csv', help="For testing: flag for read/write of gsheet (r/w/n)",
                     choices=['read', 'write', 'none', 'r', 'w', 'n'], default='n')
     ap.add_argument('-v', '--verbose', help="Turn verbosity on.", action='store_true')
     ap.add_argument('-d', '--duplication_window', type=float,
@@ -29,7 +29,7 @@ if __name__ == '__main__':
                     default='___cm_updates/gsheet')
     args = ap.parse_args()
 else:
-    args = argparse.Namespace(archive_path=None, script_path='default', node_csv='r', verbose=True,
+    args = argparse.Namespace(archive_path=None, script_path='default', arc_csv='r', verbose=True,
                               duplication_window=70.0, view_duplicate=10.0, look_only=False)
     print(args)
 
@@ -50,7 +50,7 @@ if args.archive_path.startswith('___'):
     args.archive_path = path.join(update.script_path, args.archive_path[3:])
 if args.archive_gsheet.startswith('___'):
     args.archive_gsheet = path.join(update.script_path, args.archive_gsheet[3:])
-update.load_gsheet(node_csv=args.node_csv, path=args.archive_gsheet, time_tag=args.time_tag)
+update.load_gsheet(arc_csv=args.arc_csv, path=args.archive_gsheet, time_tag=args.time_tag)
 update.load_active()
 update.add_apriori()
 update.add_sheet_notes(duplication_window=args.duplication_window,
