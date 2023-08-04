@@ -131,13 +131,8 @@ class UpdateInfo(upd_base.Update):
                 dt = self.now - note_time
                 ddays = dt.days + dt.seconds / (3600.0 * 24)
                 if ddays < duplication_window and statement == note.comment:
-                    if key.startswith('N'):
-                        node = key
-                    else:
-                        node = self.gsheet.ant_to_node[key]
                     if self.verbose and ddays > view_duplicate:
-                        print("Duplicate for {:8s}  ({}) - {}  ({:.1f} days)"
-                              .format(key, node, statement, ddays))
+                        print(f"Duplicate for {key:8s}  '{statement}' ({ddays:.1f} days)")
                     return True
         return False
 
