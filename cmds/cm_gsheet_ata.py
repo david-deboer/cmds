@@ -30,13 +30,13 @@ class SheetData:
         self.snaps = {}
 
 
-    def load_sheet(self, node_csv='none', tabs=None, path='.', time_tag='%y%m%d'):
+    def load_sheet(self, arc_csv='none', tabs=None, path='.', time_tag='%y%m%d'):
         """
         Get the googlesheet information from the internet (or locally for testing etc).
 
         Parameters
         ----------
-        node_csv : str
+        arc_csv : str
             node csv file status:  one of 'read', 'write', 'none' (only need first letter)
             'read' uses a local version as opposed to internet version
             'write' writes a local version
@@ -46,14 +46,14 @@ class SheetData:
         path : str
             Path to use if reading/writing csv files.
         time_tag : str
-            If non-zero length string use as time_tag format for the output files (if node_csv=w).
+            If non-zero length string use as time_tag format for the output files (if arc_csv=w).
         """
-        node_csv = node_csv[0].lower()
+        arc_csv = arc_csv[0].lower()
         if tabs is None or str(tabs) == 'all':
             tabs = self.tabs
         elif isinstance(tabs, str):
             tabs = tabs.split(',')
-        if node_csv != 'n' and isinstance(time_tag, str) and len(time_tag):
+        if arc_csv != 'n' and isinstance(time_tag, str) and len(time_tag):
             from datetime import datetime
             ttag = datetime.strftime(datetime.now(), time_tag)
         else:
@@ -63,7 +63,7 @@ class SheetData:
         check_snap_part_port = []
         for tab in tabs:
             ofnc = os.path.join(path, f"{tab}_{ttag}.csv")
-            if node_csv == 'r':
+            if arc_csv == 'r':
                 csv_data = []
                 with open(ofnc, 'r') as fp:
                     for line in fp:
@@ -81,7 +81,7 @@ class SheetData:
                     csv_tab += line
                 csv_data = csv_tab.decode('utf-8').splitlines()
             csv_tab = csv.reader(csv_data)
-            if node_csv == 'w':
+            if arc_csv == 'w':
                 with open(ofnc, 'w') as fp:
                     fp.write('\n'.join(csv_data))
             for data in csv_tab:
