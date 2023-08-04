@@ -81,7 +81,11 @@ class UpdateInfo(upd_base.Update):
         refout = 'apa-infoupd'
         for key, value in self.gsheet.apriori.items():
             print(key, value)
-            print("old  ", self.active.apriori[key].status)
+            try:
+                old_stat = self.active.apriori[key].status
+            except KeyError:
+                old_stat = 'Not defined.'
+            print(f"old apriori status: {old_stat}")
             if value != self.active.apriori[key].status:
                 self.new_apriori[key] = {'info': []}
                 self.new_apriori[key]['ant'] = key
