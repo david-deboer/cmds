@@ -60,6 +60,7 @@ class Update():
         if script_type is None:
             print("No script defined -- print to screen.")
             self.script = None
+            self.script_path = ''
             self.fp = None
             return
 
