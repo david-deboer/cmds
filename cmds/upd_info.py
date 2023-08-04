@@ -63,8 +63,8 @@ class UpdateInfo(upd_base.Update):
         if ref is None:
             ref = ''
         else:
-            ref = '-l "{}" '.format(ref)
-        self.printit("cmds_update_info.py {} -c '{}' {}--date {} --time {}\n"
+            ref = f'-l "{ref}" '
+        self.printit("cmds_update_info.py {} -c '{}' {}--date {} --time {}"
                       .format(pn, note, ref, cdate, ctime))
 
 
@@ -83,7 +83,7 @@ class UpdateInfo(upd_base.Update):
         ctime : str, optional
             HH:MM, default is 12:00
         """
-        self.printit('cmds_update_apriori.py {} -s {} --date {} --time {}\n'
+        self.printit('cmds_update_apriori.py {} -s {} --date {} --time {}'
                       .format(antenna, status, cdate, ctime))
 
     def process_apriori_notification(self, notify_type='new'):
