@@ -65,7 +65,9 @@ class Update():
             return
 
         if script_path == 'default' or script_path is None:
-            script_path = cm.get_script_path()
+            self.script_path = cm.get_script_path()
+        else:
+            self.script_path = script_path
         self.script = '{}_{}_{}'.format(self.cdate.replace('/', '')[2:], script_type,
                                         self.ctime.replace(':', ''))
         self.script = os.path.join(script_path, self.script)
