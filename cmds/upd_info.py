@@ -10,17 +10,6 @@ import os.path
 import json
 
 
-def _dict2msg(data, warning=False):
-    if warning:
-        return f"*************{data['ant']}:  {data['new_status']}*************"
-    msg = f"-------------{data['ant']}: {data['cdate']}  {data['ctime']}\n"
-    msg += f"\t{data['old_status']} --> {data['new_status']}\n"
-    for info in data['info']:
-        msg += f"\t{info}\n"
-    msg += '\n'
-    return msg
-
-
 class UpdateInfo(upd_base.Update):
     """Generates the script to update comments and "apriori" info from the configuration gsheet."""
 
@@ -30,16 +19,15 @@ class UpdateInfo(upd_base.Update):
                                          script_path=script_path,
                                          verbose=verbose)
         self.new_apriori = {}
-        self.apriori_notify_file = None if self.script is None else os.path.join(os.path.dirname(self.script), 'apriori_notify.txt')
+        self.load_active(['info', 'apriori'])
     
     def update_workflow(self):
-        self.active.load_info()
-        self.active.load_apriori()
+        """See cmds_auto_update_info.py"""
         self.load_gsheet()
         self.gsheet.split_apriori()
         self.add_apriori()
         self.gsheet.split_comments()
-        self.add_sheet_notes()
+        self.add_comments()
 
     def add_part_info(self, pn, note, cdate, ctime, ref=None):
         """
@@ -86,76 +74,8 @@ class UpdateInfo(upd_base.Update):
         self.printit('cmds_update_apriori.py {} -s {} --date {} --time {}'
                       .format(antenna, status, cdate, ctime))
 
-    def process_apriori_notification(self, notify_type='new'):
-        """
-        Processes the log apriori updates and send email digest.
-
-        Parameters
-        ----------
-        notify_type : str
-            one of 'either', 'old', 'new':  notify if status in old, new, either
-        """
-        print("L98:  For now, apriori notification process.")
-        return
-        from cmds import watch_dog
-        from os import remove
-        anotify = {}
-        if os.path.isfile(self.apriori_notify_file):
-            with open(self.apriori_notify_file, 'r') as fp:
-                anotify = json.load(fp)
-            remove(self.apriori_notify_file)
-        else:
-            return
-        self.load_gworkflow()
-        from_addr = 'hera@lists.berkeley.edu'
-        msg_header = 'Apriori system changes.\n------------------------------\n'
-        for email, n in self.gsheet.apriori_email.items():
-            msg = "{}".format(msg_header)
-            used_antdt = []
-            for antdt, data in anotify.items():
-                if notify_type == 'old':
-                    using = [data['old_status']]
-                elif notify_type == 'new':
-                    using = [data['new_status']]
-                else:
-                    using = [data['old_status'], data['new_status']]
-                for this_status in n.notify:
-                    if '!Warning!' in data['new_status']:
-                        msg += _dict2msg(data, warning=True)
-                        used_antdt.append(antdt)
-                    elif this_status in using and antdt not in used_antdt:
-                        msg += _dict2msg(data, warning=False)
-                        used_antdt.append(antdt)
-            if msg != msg_header:
-                to_addr = [email]
-                watch_dog.send_email(msg_header.splitlines()[0], msg, to_addr,
-                                     from_addr, skip_send=False)
-
-    def log_apriori_notifications(self):
-        """
-        Log the found apriori updates to a file with update_info script.
-
-        Gets processed and distributed per "process_apriori_notification".
-        """
-        print("L140:  For now not logging apriori stuff.")
-        return
-        if not len(self.new_apriori):
-            return
-        try:
-            with open(self.apriori_notify_file, 'r') as fp:
-                full_notify = json.load(fp)
-        except FileNotFoundError:
-            full_notify = {}
-        for k, v in self.new_apriori.items():
-            new_key = f"{v['ant']}|{v['cdate']}|{v['ctime']}"
-            full_notify[new_key] = v
-        with open(self.apriori_notify_file, 'w') as fp:
-            json.dump(full_notify, fp, indent=4)
-
     def add_apriori(self):
         """Write out for apriori differences."""
-        print("Skipping apriori now.")
-        return
         self.new_apriori = {}
         stmt_hdr = "apriori_antenna status change:"
         refout = 'apa-infoupd'
@@ -178,7 +98,7 @@ class UpdateInfo(upd_base.Update):
                                    self.new_apriori[key]['ctime'], ref=refout)
                 self.update_counter += 1
 
-    def add_sheet_notes(self, duplication_window=90.0, view_duplicate=0.0):
+    def add_comments(self, duplication_window=90.0, view_duplicate=0.0):
         """
         Search the relevant fields in the googlesheets and generate add note commands.
 
@@ -194,7 +114,7 @@ class UpdateInfo(upd_base.Update):
             ptime = self.ctime + ''
             for comment in entries:
                 if not self.is_duplicate(key, comment, duplication_window, view_duplicate):
-                    refout = 'infoupd'
+                    refout = 'info update from gsheet'
                     self.new_notes.setdefault(key, [])
                     self.new_notes[key].append(comment)
                     if self.verbose:

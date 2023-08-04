@@ -5,7 +5,7 @@
 """This is the base class for the script generators."""
 import datetime
 import os
-from . import cm, cm_utils, cm_gsheet_ata, cm_active, cm_handling
+from . import cm, cm_utils, cm_gsheet_ata, cm_active
 
 
 class Update():
@@ -36,13 +36,10 @@ class Update():
         self.ctime2 = time_offset.strftime('%H:%M')
         self.at_date = cm_utils.get_astropytime(self.now)
         # Miscellaneous glob
-        self.part_type = cm_utils.PartTypeTools()
         self.update_counter = 0
         self.gsheet = None
         db = cm.connect_to_cm_db(None)
         self.session = db.sessionmaker()
-        self.load_active()
-        self.handle = cm_handling.Handling(session=self.session)
         self.script_setup(script_type=script_type, script_path=script_path)
 
     def script_setup(self, script_type, script_path=None):
@@ -83,14 +80,11 @@ class Update():
         if self.verbose:
             print('-----------------')
 
-    def load_active(self):
+    def load_active(self, loading=['parts', 'connections', 'stations', 'info', 'apriori']):
         """Load all active information."""
         self.active = cm_active.ActiveData(session=self.session, at_date=self.at_date)
-        self.active.load_parts()
-        self.active.load_connections()
-        self.active.load_stations()
-        self.active.info = []
-        self.active.geo = []
+        for param in loading:
+            getattr(self.active, f"load_{param}")()
 
     def printit(self, value):
         """Write as comment only."""
@@ -118,14 +112,14 @@ class Update():
         self.gsheet = cm_gsheet_ata.SheetData()
         self.gsheet.load_sheet(arc_csv=arc_csv, tabs=None, path=path, time_tag=time_tag)
 
-    def finish(self, cron_script=None, archive_to=None):
+    def finish(self, cronjob_script=None, archive_to=None):
         """
         Close out process.  If no updates, it deletes the script file.
         If both parameters are None, it just leaves things alone.
 
         Parameters
         ----------
-        cron_script : str or None
+        cronjob_script : str or None
             If str, copies the script file to that.  Assumes in same directory as script.
             If no updates in script, then makes empty one.
         archive_to : str or None
@@ -146,32 +140,33 @@ class Update():
                 print(f"Run {self.script}")
 
         script_path = os.path.dirname(self.script)
-        if cron_script is not None:
-            cron_script = os.path.join(script_path, cron_script)
-            if os.path.exists(cron_script):
-                os.remove(cron_script)
+        if cronjob_script is not None:
+            cronjob_script = os.path.join(script_path, cronjob_script)
+            if os.path.exists(cronjob_script):
+                os.remove(cronjob_script)
 
-        if self.update_counter == 0:
-            os.remove(self.script)
+        if self.update_counter == 0:  # No updates made
+            if os.path.exists(self.script):
+                os.remove(self.script)
             if self.verbose:
                 print("No updates found.  Removing {}.".format(self.script))
-            if cron_script is not None:
-                with open(cron_script, 'w') as fp:
+            if cronjob_script is not None:
+                with open(cronjob_script, 'w') as fp:
                     fp.write('\n')
                 if self.verbose:
-                    print("Writing empty {}.".format(cron_script))
+                    print("Writing empty {}.".format(cronjob_script))
         else:
             if archive_to is not None:
                 os.system('cp {} {}'.format(self.script, archive_to))
                 if self.verbose:
                     print("Copying {}  -->  {}".format(self.script, archive_to))
-            if cron_script is not None:
-                os.rename(self.script, cron_script)
+            if cronjob_script is not None:
+                os.rename(self.script, cronjob_script)
+                if self.chmod:
+                    os.chmod(cronjob_script, 0o755)
                 if self.verbose:
-                    print("Moving {}  -->  {}".format(self.script, cron_script))
+                    print("Moving {}  -->  {}".format(self.script, cronjob_script))
             else:
-                print("L170 DONE hack comment out script handle.")
-                # os.remove(self.script)
+                if os.path.exists(self.script):
+                    os.remove(self.script)
 
-        if isinstance(cron_script, str) and os.path.exists(cron_script):
-            os.chmod(cron_script, 0o755)
