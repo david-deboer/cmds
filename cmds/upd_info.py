@@ -37,7 +37,7 @@ class UpdateInfo(upd_base.Update):
         self.active.load_apriori()
         self.load_gsheet()
         self.gsheet.split_apriori()
-        # self.add_apriori()
+        self.add_apriori()
         self.gsheet.split_comments()
         self.add_sheet_notes()
 
@@ -154,6 +154,8 @@ class UpdateInfo(upd_base.Update):
 
     def add_apriori(self):
         """Write out for apriori differences."""
+        print("Skipping apriori now.")
+        print()
         self.new_apriori = {}
         stmt_hdr = "apriori_antenna status change:"
         refout = 'apa-infoupd'
