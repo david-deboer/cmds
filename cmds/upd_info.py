@@ -155,7 +155,7 @@ class UpdateInfo(upd_base.Update):
     def add_apriori(self):
         """Write out for apriori differences."""
         print("Skipping apriori now.")
-        print()
+        return
         self.new_apriori = {}
         stmt_hdr = "apriori_antenna status change:"
         refout = 'apa-infoupd'
