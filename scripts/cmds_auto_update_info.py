@@ -6,7 +6,7 @@
 """Script to run the info update between the googlesheet and database."""
 
 import argparse
-from hera_cm import upd_info
+from cmds import upd_info
 from os import path
 
 

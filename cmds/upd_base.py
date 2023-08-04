@@ -110,10 +110,10 @@ class Update():
         """Set class date variable."""
         self.at_date = cm_utils.get_astropytime(adate=cdate, atime=ctime)
 
-    def load_gsheet(self, node_csv='none', tabs=None, path='', time_tag='_%y%m%d'):
+    def load_gsheet(self, arc_csv='none', tabs=None, path='', time_tag='_%y%m%d'):
         """Get the googlesheet information from the internet."""
         self.gsheet = cm_gsheet_ata.SheetData()
-        self.gsheet.load_sheet(node_csv=node_csv, tabs=None, path=path, time_tag=time_tag)
+        self.gsheet.load_sheet(arc_csv=arc_csv, tabs=None, path=path, time_tag=time_tag)
 
     def finish(self, cron_script=None, archive_to=None):
         """
