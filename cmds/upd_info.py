@@ -37,7 +37,7 @@ class UpdateInfo(upd_base.Update):
         self.active.load_apriori()
         self.load_gsheet()
         self.gsheet.split_apriori()
-        self.add_apriori()
+        # self.add_apriori()
         self.gsheet.split_comments()
         self.add_sheet_notes()
 
