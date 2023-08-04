@@ -95,7 +95,7 @@ class UpdateInfo(upd_base.Update):
         notify_type : str
             one of 'either', 'old', 'new':  notify if status in old, new, either
         """
-        print("For now, apriori notification process.")
+        print("L98:  For now, apriori notification process.")
         return
         from cmds import watch_dog
         from os import remove
@@ -137,6 +137,8 @@ class UpdateInfo(upd_base.Update):
 
         Gets processed and distributed per "process_apriori_notification".
         """
+        print("L140:  For now not logging apriori stuff.")
+        return
         if not len(self.new_apriori):
             return
         try:
