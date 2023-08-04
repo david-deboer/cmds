@@ -70,7 +70,7 @@ class Update():
             self.script_path = script_path
         self.script = '{}_{}_{}'.format(self.cdate.replace('/', '')[2:], script_type,
                                         self.ctime.replace(':', ''))
-        self.script = os.path.join(script_path, self.script)
+        self.script = os.path.join(self.script_path, self.script)
 
         if self.verbose:
             print(f"Writing script {self.script}")
