@@ -82,14 +82,14 @@ class UpdateInfo(upd_base.Update):
         for key, value in self.gsheet.apriori.items():
             print(key, value)
             try:
-                old_stat = self.active.apriori[key].status
+                old_status = self.active.apriori[key].status
             except KeyError:
-                old_stat = 'Not defined.'
-            print(f"old apriori status: {old_stat}")
-            if value != self.active.apriori[key].status:
+                old_status = 'Not defined.'
+            print(f"old apriori status: {old_status}")
+            if value != old_status:
                 self.new_apriori[key] = {'info': []}
                 self.new_apriori[key]['ant'] = key
-                self.new_apriori[key]['old_status'] = self.active.apriori[key].status
+                self.new_apriori[key]['old_status'] = old_status
                 self.new_apriori[key]['new_status'] = value
                 self.new_apriori[key]['cdate'] = self.cdate2
                 self.new_apriori[key]['ctime'] = self.ctime2
