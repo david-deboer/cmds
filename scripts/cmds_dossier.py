@@ -136,28 +136,24 @@ with cm.CMSessionWrapper() as session:
             elif args.verbosity == 2:
                 columns = [
                     "up.upstream_part",
-                    "up.up_part_rev",
                     "up.upstream_output_port",
                     "up.downstream_input_port",
                     "pn",
                     "down.upstream_output_port",
                     "down.downstream_input_port",
                     "down.downstream_part",
-                    "down.down_part_rev",
                 ]
             else:
                 columns = [
                     "up.start_gpstime",
                     "up.stop_gpstime",
                     "up.upstream_part",
-                    "up.up_part_rev",
                     "up.upstream_output_port",
                     "up.downstream_input_port",
                     "pn",
                     "down.upstream_output_port",
                     "down.downstream_input_port",
                     "down.downstream_part",
-                    "down.down_part_rev",
                     "down.start_gpstime",
                     "down.stop_gpstime",
                 ]
