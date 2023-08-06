@@ -649,7 +649,7 @@ def update_aprioris(aprioris, session=None):
             if add_entry:
                 # Check status (note, will error out if status not allowed, but if caught here will just skip)
                 is_valid = False
-                for valid_status in allowed_statuses():
+                for valid_status in allowed_statuses:
                     if apriorid['status'].startswith(valid_status):
                         is_valid = True
                         break
