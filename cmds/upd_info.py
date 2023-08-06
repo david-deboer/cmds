@@ -56,7 +56,7 @@ class UpdateInfo(upd_base.Update):
                       .format(pn, note, ref, cdate, ctime))
 
 
-    def update_apriori(self, antenna, status, cdate, ctime='12:00'):
+    def update_apriori(self, antenna, status, cdate, ctime='12:00', comment=None):
         """
         Update the antenna a priori status.
 
@@ -71,14 +71,17 @@ class UpdateInfo(upd_base.Update):
         ctime : str, optional
             HH:MM, default is 12:00
         """
-        self.printit('cmds_update_apriori.py {} -s {} --date {} --time {}'
-                      .format(antenna, status, cdate, ctime))
+        if comment is None:
+            commententry = ''
+        else:
+            commententry = f'-c "{comment}" '
+        self.printit('cmds_update_apriori.py {} {} {}--date {} --time {}'
+                      .format(antenna, status, commententry, cdate, ctime))
 
-    def add_apriori(self):
+    def add_apriori(self, comment=None):
         """Write out for apriori differences."""
         self.new_apriori = {}
         stmt_hdr = "apriori_antenna status change:"
-        refout = 'apa-infoupd'
         for key, value in self.gsheet.apriori.items():
             print(key, value)
             try:
@@ -96,10 +99,11 @@ class UpdateInfo(upd_base.Update):
                 s = f"{self.new_apriori[key]['old_status']} > {self.new_apriori[key]['new_status']}"
                 if self.verbose:
                     print(f"Updating {key}:  {s}")
-                self.update_apriori(key, value, self.new_apriori[key]['cdate'], self.new_apriori[key]['ctime'])
+                self.update_apriori(key, value, self.new_apriori[key]['cdate'], self.new_apriori[key]['ctime'], comment=comment)
                 self.add_part_info(key, f"{stmt_hdr} {s}",
                                    self.new_apriori[key]['cdate'],
-                                   self.new_apriori[key]['ctime'], ref=refout)
+                                   self.new_apriori[key]['ctime'],
+                                   ref=comment)
                 self.update_counter += 1
 
     def add_comments(self, duplication_window=90.0, view_duplicate=0.0):

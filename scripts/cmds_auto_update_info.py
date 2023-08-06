@@ -49,6 +49,6 @@ if args.archive_gsheet.startswith('___'):
 update.load_gsheet(split=True, arc_csv=args.arc_csv, path=args.archive_gsheet, time_tag=args.time_tag)
 
 update.add_comments(duplication_window=args.duplication_window, view_duplicate=args.view_duplicate)
-update.add_apriori()
+update.add_apriori(comment='auto-update')
 
 update.finish(cronjob_script=cronjob_script, archive_to=args.archive_path)

@@ -576,10 +576,20 @@ class AprioriStatus(CMDeclarativeBase):
         updated = 0
         for key, value in kwargs.items():
             if hasattr(self, key):
+                is_valid = True
                 if key in ['start_gpstime', 'stop_gpstime']:
                     if value is not None:
                         value = int(value)
-                setattr(self, key, value)
+                elif key == 'status':
+                    is_valid = False
+                    for valid_status in self.valid_statutes():
+                        if value.startswith(valid_status):
+                            is_valid = True
+                            break
+                if is_valid:
+                    setattr(self, key, value)
+                else:
+                    raise ValueError(f"Invalid entry:  {key} - {value}")
                 updated += 1
             else:
                 print(f"{key} is not a valid apriori_status attribute.")
@@ -598,16 +608,14 @@ def get_allowed_apriori_statuses():
     return aps.valid_statuses()
 
 
-def update_aprioris(aprioris, dates, session=None):
+def update_aprioris(aprioris, session=None):
     """
     Add or stop apriori statuses.
 
     Parameters
     ----------
     aprioris : list of dicts
-        List of dicts containing apriori information and action (add/stop)
-    dates : list of astropy.Time objects
-        List of dates to use for logging the add/stop.
+        List of dicts containing apriori information
     session : object
         Database session to use.  If None, it will start a new session, then close.
 
@@ -618,23 +626,38 @@ def update_aprioris(aprioris, dates, session=None):
 
     """
     updated = 0
+    allowed_statuses = get_allowed_apriori_statuses()
     with cm.CMSessionWrapper(session) as session:
-        for apriorid, date in zip(aprioris, dates):
+        got_valid = False
+        for apriorid in aprioris:
             pn = apriorid['pn'].upper()
-            aprioric = session.query(AprioriStatus).filter(func.upper(AprioriStatus.pn) == pn)
-            for apx in aprioric:  # Stop all old ones.
-                if apx.stop_gpstime is None:
-                    updated += apx.apriori(stop_gpstime=date.gps)
-                    print(f"Stop {apx}")
+            aprioric = session.query(AprioriStatus).filter(func.upper(AprioriStatus.pn) == pn,
+                                                           AprioriStatus.stop_gpstime is None)
+            add_entry = True
+            if len(aprioric) == 1:  # If status is different, stop current and make new.
+                if apriorid['status'] == aprioric[0].status:
+                    add_entry = False  # Make no change
+                else:  # Stop old one
+                    updated += aprioric[0].apriori(stop_gpstime=apriorid['date'].gps)
+                    session.add(aprioric[0])
+            elif len(aprioric) > 1:  # Assume confused and close all old ones (even if match).
+                for apx in aprioric:
+                    updated += apx.apriori(stop_gpstime=apriorid['date'].gps)
                     session.add(apx)
-            if apriorid['action'].lower() == 'stop':
-                if aprioric.count() == 0:
-                    print(f"{pn} is not in database.  No update.")
-            elif apriorid['action'].lower() == 'add':
-                this_update = {'pn': pn, 'status': apriorid['status'], 'comment': apriorid['comment'],
-                               'start_gpstime': date.gps, 'stop_gpstime': None}
-                apriori = AprioriStatus()
-                updated += apriori.apriori(**this_update)
-                print(f"Add {apriori}")
-                session.add(apriori)
+
+            if add_entry:
+                # Check status (note, will error out if status not allowed, but if caught here will just skip)
+                is_valid = False
+                for valid_status in allowed_statuses():
+                    if apriorid['status'].startswith(valid_status):
+                        is_valid = True
+                        break
+                if is_valid:
+                    # Make a new apriori entry
+                    this_update = {'pn': pn, 'status': apriorid['status'], 'comment': apriorid['comment'],
+                                   'start_gpstime': apriorid['date'].gps, 'stop_gpstime': None}
+                    apriori = AprioriStatus()
+                    updated += apriori.apriori(**this_update)
+                    session.add(apriori)
+
     return updated
