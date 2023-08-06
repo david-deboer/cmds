@@ -169,7 +169,4 @@ class Update():
                     os.chmod(cronjob_script, 0o755)
                 if self.verbose:
                     print("Moving {}  -->  {}".format(self.script, cronjob_script))
-            else:
-                if os.path.exists(self.script):
-                    os.remove(self.script)
 
