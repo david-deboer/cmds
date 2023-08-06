@@ -634,13 +634,14 @@ def update_aprioris(aprioris, session=None):
             aprioric = session.query(AprioriStatus).filter(func.upper(AprioriStatus.pn) == pn,
                                                            AprioriStatus.stop_gpstime is None)
             add_entry = True
-            if len(aprioric) == 1:  # If status is different, stop current and make new.
-                if apriorid['status'] == aprioric[0].status:
+            if aprioric.count() == 1:  # If status is different, stop current and make new.
+                apx = aprioric.first()
+                if apriorid['status'] == apx.status:
                     add_entry = False  # Make no change
                 else:  # Stop old one
-                    updated += aprioric[0].apriori(stop_gpstime=apriorid['date'].gps)
-                    session.add(aprioric[0])
-            elif len(aprioric) > 1:  # Assume confused and close all old ones (even if match).
+                    updated += apx.apriori(stop_gpstime=apriorid['date'].gps)
+                    session.add(apx)
+            elif aprioric.count() > 1:  # Assume confused and close all old ones (even if match).
                 for apx in aprioric:
                     updated += apx.apriori(stop_gpstime=apriorid['date'].gps)
                     session.add(apx)
