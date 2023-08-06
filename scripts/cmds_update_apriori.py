@@ -25,4 +25,4 @@ if __name__ == "__main__":
                "date": cm_utils.get_astropytime(args.date, args.time, args.format)}]
 
     with cm.CMSessionWrapper() as session:
-        cm_tables.update_aprioris(parts=update, session=session)
+        cm_tables.update_aprioris(aprioris=update, session=session)
