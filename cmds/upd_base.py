@@ -107,7 +107,7 @@ class Update():
         """Set class date variable."""
         self.at_date = cm_utils.get_astropytime(adate=cdate, atime=ctime)
 
-    def load_gsheet(self, split=False, arc_csv='none', tabs=None, path='', time_tag='_%y%m%d'):
+    def load_gsheet(self, split=True, arc_csv='none', tabs=None, path='', time_tag='_%y%m%d'):
         """Get the googlesheet information from the internet."""
         self.gsheet = cm_gsheet_ata.SheetData()
         self.gsheet.load_sheet(arc_csv=arc_csv, tabs=None, path=path, time_tag=time_tag)
