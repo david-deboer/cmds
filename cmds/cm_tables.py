@@ -582,7 +582,7 @@ class AprioriStatus(CMDeclarativeBase):
                         value = int(value)
                 elif key == 'status':
                     is_valid = False
-                    for valid_status in self.valid_statutes():
+                    for valid_status in self.valid_statuses():
                         if value.startswith(valid_status):
                             is_valid = True
                             break
