@@ -103,7 +103,7 @@ class UpdateInfo(upd_base.Update):
                 self.add_part_info(key, f"{stmt_hdr} {s}",
                                    self.new_apriori[key]['cdate'],
                                    self.new_apriori[key]['ctime'],
-                                   ref=comment)
+                                   ref='apa-refout')
                 self.update_counter += 1
 
     def add_comments(self, duplication_window=90.0, view_duplicate=0.0):
