@@ -6,7 +6,7 @@
 """Script to run the hookup check between gsheet and database."""
 
 import argparse
-from hera_cm import upd_connect
+from cmds import upd_connect
 
 if __name__ == '__main__':
     ap = argparse.ArgumentParser()

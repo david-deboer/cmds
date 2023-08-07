@@ -177,7 +177,7 @@ class UpdateConnect(upd_base.Update):
             ctime = add_part_time_offset.strftime('%H:%M')
             for part in self.missing_parts:
                 self.update_counter += 1
-                this_part = [part, self.part_type.get_part_type(part), part]
+                this_part = [part, self.sysdef.get_part_type(part), part]
                 self.printit(upd_util.as_part('add', this_part, cdate, ctime))
 
     def add_missing_connections(self):
