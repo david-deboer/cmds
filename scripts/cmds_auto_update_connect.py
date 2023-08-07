@@ -20,6 +20,7 @@ if __name__ == '__main__':
                     default='___cm_updates')
     ap.add_argument('--arc_csv', help="For testing: flag for read/write of gsheet (r/w/n)",
                     choices=['read', 'write', 'none', 'r', 'w', 'n'], default='n')
+    ap.add_argument('--time_tag', help='Flag to add time to node csv filename', action='store_true')
     ap.add_argument('--archive_gsheet', help="Path to move gsheet archive.  Use '__' to include script-path.",
                     default='___cm_updates/gsheet')
     ap.add_argument('-v', '--verbose', help="Turn verbosity on.", action='store_true')
@@ -31,6 +32,10 @@ else:
 
 script_type = 'connupd'
 cronjob_script = 'conn_update.sh'
+
+if args.time_tag:
+    args.time_tag = '_%y%m%d'
+
 
 update = upd_connect.UpdateConnect(script_type=script_type,
                                    script_path=args.script_path,
