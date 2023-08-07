@@ -20,9 +20,10 @@ if __name__ == '__main__':
                     default='___cm_updates')
     ap.add_argument('--arc_csv', help="For testing: flag for read/write of gsheet (r/w/n)",
                     choices=['read', 'write', 'none', 'r', 'w', 'n'], default='n')
+    ap.add_argument('--archive_gsheet', help="Path to move gsheet archive.  Use '__' to include script-path.",
+                    default='___cm_updates/gsheet')
     ap.add_argument('-v', '--verbose', help="Turn verbosity on.", action='store_true')
     args = ap.parse_args()
-    cron_script = 'conn_update.sh'
 else:
     args = argparse.Namespace(archive_path=None, script_path='./', node_csv='n', verbose=True)
     print(args)
