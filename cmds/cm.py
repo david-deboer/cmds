@@ -202,8 +202,14 @@ def connect_to_cm_db(args, check_connect=True, verbose=False):
         config_path = default_config_file
         db_name = None
     else:
-        config_path = args.cm_config_path
-        db_name = args.cm_db_name
+        try:
+            config_path = args.cm_config_path
+        except AttributeError:
+            config_path = default_config_file
+        try:
+            db_name = args.cm_db_name
+        except AttributeError:
+            db_name = None
 
     with open(config_path) as f:
         config_data = json.load(f)

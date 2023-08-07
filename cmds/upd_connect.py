@@ -5,7 +5,7 @@
 """
 This class sets up to update the connections database.
 """
-from . import cm_tables, cm_utils
+from . import cm_tables, cm_sysdef
 from . import upd_util, upd_base
 import datetime
 from copy import copy
@@ -14,12 +14,22 @@ from copy import copy
 class UpdateConnect(upd_base.Update):
     NotFound = "Not Found"
 
-    def __init__(self, script_type='connupd', script_path='default', verbose=True):
+    def __init__(self, script_type='connupd', script_path='default', hookup_type='ata-rfsoc', verbose=True, **kwargs):
+        """
+        kwargs can contain:cm_config_path, cm_db_name
+        """
+        if not len(kwargs):
+            args = None
+        else:
+            from argparse import Namespace
+            args = Namespace(**kwargs)
         super(UpdateConnect, self).__init__(script_type=script_type,
                                             script_path=script_path,
-                                            verbose=verbose)
+                                            verbose=verbose,
+                                            args=args)
         self.conn_track = {'add': [], 'stop': []}
-        self.pols = cm_utils.get_sysdef()['signal_path_defs']['ata-rfsoc']
+        self.sysdef = cm_sysdef.Sysdef(sysdef=None, hookup_type=hookup_type)
+        self.pols = self.sysdef.sysdef_json['signal_path_defs'][hookup_type]
 
     def update_workflow(self, node_csv='n'):
         self.load_gsheet(node_csv)
@@ -44,11 +54,11 @@ class UpdateConnect(upd_base.Update):
             sheet_parts = {}
             # Set up part numbers
             for ptype in ['Station', 'Antenna']:
-                sheet_parts[ptype] = self.part_type.make_part_number(ant, ptype[0])
-            sheet_parts['Feed'] = self.part_type.make_part_number(self.gsheet.ants[ant][1], 'F')
+                sheet_parts[ptype] = self.sysdef.make_part_number(ant, ptype[0])
+            sheet_parts['Feed'] = self.sysdef.make_part_number(self.gsheet.ants[ant][1], 'F')
             for this_part_prefix in ['PAX', 'RFCB', 'CBX', 'DBX', 'RBX']:
                 val = self.gsheet.ants[ant][self.gsheet.header['Antenna'].index(this_part_prefix)]
-                sheet_parts[this_part_prefix] = self.part_type.make_part_number(val, this_part_prefix)
+                sheet_parts[this_part_prefix] = self.sysdef.make_part_number(val, this_part_prefix)
             # Set up connections
             for i, this_box in enumerate(['CBX', 'DBX', 'RBX']):
                 if len(sheet_parts[this_box]):
@@ -68,9 +78,9 @@ class UpdateConnect(upd_base.Update):
                     self._uconn(up, dn)
         # Tuning Tab - RFCB
         for rfcb, conns in self.gsheet.rfcbs.items():
-            this_rfcb = self.part_type.make_part_number(rfcb, 'RFCB')
+            this_rfcb = self.sysdef.make_part_number(rfcb, 'RFCB')
             for conn in conns:
-                this_attem = self.part_type.make_part_number(int(conn[1].split(':')[0]), 'G')
+                this_attem = self.sysdef.make_part_number(int(conn[1].split(':')[0]), 'G')
                 if len(this_attem):
                     rfcb_port = conn[0].split(':')[1]
                     attem_port = f"in{int(conn[1].split(':')[1])}"
@@ -78,9 +88,9 @@ class UpdateConnect(upd_base.Update):
                     self._uconn(up, dn)
         # Tuning Tab - RFSOC
         for rfsoc, conns in self.gsheet.rfsocs.items():
-            this_rfsoc = self.part_type.make_part_number(rfsoc, 'SOC')
+            this_rfsoc = self.sysdef.make_part_number(rfsoc, 'SOC')
             for conn in conns:
-                this_attem = self.part_type.make_part_number(int(conn[1].split(':')[0]), 'G')
+                this_attem = self.sysdef.make_part_number(int(conn[1].split(':')[0]), 'G')
                 if len(this_attem):
                     attem_port = f"out{int(conn[1].split(':')[1])}"
                     rfsoc_port = f"in{int(conn[2].split(':')[1])}"
@@ -88,9 +98,9 @@ class UpdateConnect(upd_base.Update):
                     self._uconn(up, dn)
         # Tuning Tab - SNAP
         for snap, conns in self.gsheet.snaps.items():
-            this_snap = self.part_type.make_part_number(snap, 'SNAP')
+            this_snap = self.sysdef.make_part_number(snap, 'SNAP')
             for conn in conns:
-                this_attem = self.part_type.make_part_number(int(conn[1].split(':')[0]), 'G')
+                this_attem = self.sysdef.make_part_number(int(conn[1].split(':')[0]), 'G')
                 if len(this_attem):
                     attem_port = f"out{int(conn[1].split(':')[1])}"
                     snap_port = f"{conn[3].split(':')[1].lower()}"

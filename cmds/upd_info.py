@@ -4,20 +4,26 @@
 """
 This class sets up to update the part information database.
 """
-from . import cm_utils, cm_active
-from . import upd_util, upd_base, cm_gsheet_ata
-import os.path
-import json
+from . import cm_utils, upd_base
 
 
 class UpdateInfo(upd_base.Update):
     """Generates the script to update comments and "apriori" info from the configuration gsheet."""
 
-    def __init__(self, script_type='infoupd', script_path='default', verbose=True):
-        """Init of base."""
+    def __init__(self, script_type='infoupd', script_path='default', verbose=True, **kwargs):
+        """Init of base.
+        
+        kwargs can contain:cm_config_path, cm_db_name
+        """
+        if not len(kwargs):
+            args = None
+        else:
+            from argparse import Namespace
+            args = Namespace(**kwargs)
         super(UpdateInfo, self).__init__(script_type=script_type,
                                          script_path=script_path,
-                                         verbose=verbose)
+                                         verbose=verbose,
+                                         args=args)
         self.new_apriori = {}
         self.load_active(['info', 'apriori'])
     
@@ -103,7 +109,7 @@ class UpdateInfo(upd_base.Update):
                 self.add_part_info(key, f"{stmt_hdr} {s}",
                                    self.new_apriori[key]['cdate'],
                                    self.new_apriori[key]['ctime'],
-                                   ref='apa-refout')
+                                   ref='apa-infoupd')
                 self.update_counter += 1
 
     def add_comments(self, duplication_window=90.0, view_duplicate=0.0):

@@ -11,7 +11,7 @@ from . import cm, cm_utils, cm_gsheet_ata, cm_active
 class Update():
     """Base update class."""
 
-    def __init__(self, script_type, script_path=None, chmod=False, verbose=True):
+    def __init__(self, script_type, script_path=None, chmod=False, verbose=True, args=None):
         """
         Initialize.
 
@@ -23,6 +23,8 @@ class Update():
             Path to the script.
         verbose : bool
             Verbose or not.
+        kwargs: None or Namespace
+            If not None, can contain cm_config_path, cm_db_name
 
         """
         self.chmod = chmod
@@ -38,7 +40,7 @@ class Update():
         # Miscellaneous glob
         self.update_counter = 0
         self.gsheet = None
-        db = cm.connect_to_cm_db(None)
+        db = cm.connect_to_cm_db(args)
         self.session = db.sessionmaker()
         self.script_setup(script_type=script_type, script_path=script_path)
 

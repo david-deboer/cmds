@@ -25,8 +25,8 @@ class Sysdef:
     """
     def __init__(self, sysdef=None, hookup_type=None):
         self.get_sysdef(sysdef=sysdef)
-        if hookup_type is not None:
-            self.get_hookup(hookup_type)
+        self.get_hookup(hookup_type)
+        self.part_type_tools_setup()
 
     def get_sysdef(self, sysdef='sysdef.json'):
         """
@@ -60,6 +60,7 @@ class Sysdef:
         self.components = self.sysdef_json['components']
         self.station_types = self.sysdef_json['station_types']
         self.apriori_statuses = self.sysdef_json['apriori_statuses']
+        
 
     def get_hookup(self, hookup_type):
         """
@@ -150,3 +151,40 @@ class Sysdef:
                     return p
         print("Sysdef Warning: 'get_thru_port' criteria not met -- 'None' returned.")
         return None
+
+    def part_type_tools_setup(self):
+        self.part_types = {}
+        tmp = {}
+        for ptype, pdict in self.components.items():
+            pp = pdict['prefix']
+            self.part_types[pp] = ptype
+            tmp.setdefault(len(pp), [])
+            tmp[len(pp)].append(pp)
+        self.part_type_order = []
+        for lpp in sorted(tmp, reverse=True):
+            for pp in tmp[lpp]:
+                self.part_type_order.append(pp)
+
+    def get_part_type(self, prefix):
+        for ppre in self.part_type_order:
+            if prefix.startswith(ppre):
+                return self.part_types[ppre]
+        raise ValueError(f"{prefix} not found in part types")
+
+    def make_part_number(self, val, part_type):
+        """
+        Convert entry in google-sheet to part number
+        """
+        if val is None or not len(str(val).strip()):
+            return ''
+        val = str(val)
+        part_type = part_type.lower()
+        for pprefix, ptype in self.part_types.items():
+            if part_type == pprefix.lower() or part_type == ptype.lower():
+                if pprefix in ['S', 'A', 'F']:
+                    return f"{pprefix}{val.strip()}"
+                try:
+                    val = int(val)
+                except ValueError:
+                    return ''
+                return f"{pprefix}{val:03d}"

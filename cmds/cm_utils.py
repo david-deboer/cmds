@@ -14,52 +14,6 @@ PAST_DATE = "2000-01-01"
 VALID_FLOAT_FORMAT_FOR_TIME = ["unix", "gps", "jd"]
 
 
-def get_sysdef(systemfile='sysdef.json'):
-    with open(cm.file_finder(systemfile), 'r') as fp:
-        sysdef = json.load(fp)
-    return sysdef
-
-
-class PartTypeTools:
-    def __init__(self, systemfile='sysdef.json'):
-        self.systemfile = systemfile
-        sysdef = get_sysdef(systemfile=systemfile)
-        self.part_types = {}
-        tmp = {}
-        for ptype, pdict in sysdef['components'].items():
-            pp = pdict['prefix']
-            self.part_types[pp] = ptype
-            tmp.setdefault(len(pp), [])
-            tmp[len(pp)].append(pp)
-        self.part_type_order = []
-        for lpp in sorted(tmp, reverse=True):
-            for pp in tmp[lpp]:
-                self.part_type_order.append(pp)
-
-    def get_part_type(self, prefix):
-        for ppre in self.part_type_order:
-            if prefix.startswith(ppre):
-                return self.part_types[ppre]
-        raise ValueError(f"{prefix} not found in part types")
-
-    def make_part_number(self, val, part_type):
-        """
-        Convert entry in google-sheet to part number
-        """
-        if val is None or not len(str(val).strip()):
-            return ''
-        part_type = part_type.lower()
-        for pprefix, ptype in self.part_types.items():
-            if part_type == pprefix.lower() or part_type == ptype.lower():
-                if pprefix in ['S', 'A', 'F']:
-                    return f"{pprefix}{val.strip()}"
-                try:
-                    val = int(val)
-                except ValueError:
-                    return ''
-                return f"{pprefix}{val:03d}"
-
-
 def get_pn_list(pnreq, pnlist, exact_match):
     """
     Return hpn,rev zip list to accommodate non-exact matches.
