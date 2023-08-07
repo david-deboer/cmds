@@ -7,6 +7,7 @@
 
 import argparse
 from cmds import upd_connect
+from os import path
 
 if __name__ == '__main__':
     ap = argparse.ArgumentParser()
@@ -28,21 +29,22 @@ else:
     cron_script = None
 
 script_type = 'connupd'
+cronjob_script = 'conn_update.sh'
 
 update = upd_connect.UpdateConnect(script_type=script_type,
                                    script_path=args.script_path,
                                    verbose=args.verbose)
+
 if args.archive_path.startswith('___'):
-    import os.path
-    args.archive_path = os.path.join(update.script_path, args.archive_path[3:])
-update.load_gsheet(arc_csv=args.arc_csv)
+    args.archive_path = path.join(update.script_path, args.archive_path[3:])
+if args.archive_gsheet.startswith('___'):
+    args.archive_gsheet = path.join(update.script_path, args.archive_gsheet[3:])
+
+update.load_gsheet(split=False, arc_csv=args.arc_csv, path=args.archive_gsheet, time_tag=args.time_tag)
 update.make_sheet_connections()
 update.compare_connections(args.direction)
 update.add_missing_parts()
 update.add_missing_connections()
 update.add_partial_connections()
 update.add_different_connections()
-update.finish(cron_script=cron_script, archive_to=args.archive_path)
-
-if cron_script is None:
-    update.show_summary_of_compare()
+update.finish(cronjob_script=cronjob_script, archive_to=args.archive_path)
