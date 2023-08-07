@@ -17,7 +17,7 @@ if __name__ == '__main__':
                     default='default')
     ap.add_argument('--archive-path', dest='archive_path', help="Path for script archive.",
                     default='___cm_updates')
-    ap.add_argument('-n', '--node_csv', help="For testing: flag for read/write of gsheet (r/w/n)",
+    ap.add_argument('--arc_csv', help="For testing: flag for read/write of gsheet (r/w/n)",
                     choices=['read', 'write', 'none', 'r', 'w', 'n'], default='n')
     ap.add_argument('-v', '--verbose', help="Turn verbosity on.", action='store_true')
     args = ap.parse_args()
@@ -35,7 +35,7 @@ update = upd_connect.UpdateConnect(script_type=script_type,
 if args.archive_path.startswith('___'):
     import os.path
     args.archive_path = os.path.join(update.script_path, args.archive_path[3:])
-update.load_gsheet(node_csv=args.node_csv)
+update.load_gsheet(arc_csv=args.arc_csv)
 update.make_sheet_connections()
 update.compare_connections(args.direction)
 update.add_missing_parts()

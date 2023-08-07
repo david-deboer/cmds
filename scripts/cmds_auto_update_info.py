@@ -15,11 +15,11 @@ if __name__ == '__main__':
     ap.add_argument('--script-path', dest='script_path', help="Path for active script", default='default')
     ap.add_argument('--archive-path', dest='archive_path', help="Path for script archive.  Use '__' to include script-path.",
                     default='___cm_updates')
-    ap.add_argument('-n', '--arc_csv', help="For testing: flag for read/write of gsheet (r/w/n)",
-                    choices=['read', 'write', 'none', 'r', 'w', 'n'], default='n')
     ap.add_argument('-v', '--verbose', help="Turn verbosity on.", action='store_true')
     ap.add_argument('-d', '--duplication_window', type=float,
                     help="Number of days to use for duplicate comments.", default=180.0)
+    ap.add_argument('--arc_csv', help="For testing: flag for read/write of gsheet (r/w/n)",
+                    choices=['read', 'write', 'none', 'r', 'w', 'n'], default='n')
     ap.add_argument('--view_duplicate', type=float,
                     help='In verbose, only show duplicates after this many days', default=0.0)
     ap.add_argument('--time_tag', help='Flag to add time to node csv filename', action='store_true')
