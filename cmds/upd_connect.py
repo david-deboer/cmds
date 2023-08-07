@@ -30,6 +30,7 @@ class UpdateConnect(upd_base.Update):
         self.conn_track = {'add': [], 'stop': []}
         self.sysdef = cm_sysdef.Sysdef(sysdef=None, hookup_type=hookup_type)
         self.pols = self.sysdef.sysdef_json['signal_path_defs'][hookup_type]
+        self.load_active(['parts', 'connections'])
 
     def update_workflow(self, node_csv='n'):
         self.load_gsheet(node_csv)
