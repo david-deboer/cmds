@@ -29,7 +29,6 @@ class SheetData:
         self.rfcbs = {}
         self.snaps = {}
 
-
     def load_sheet(self, arc_csv='none', tabs=None, path='.', time_tag='%y%m%d'):
         """
         Get the googlesheet information from the internet (or locally for testing etc).
