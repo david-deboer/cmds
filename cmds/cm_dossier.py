@@ -297,8 +297,8 @@ class DossierEntry:
             if "up." in col or "down." in col:
                 ports_included = True
                 conns = zip_longest(
-                    [self.connections.down[x.upper()] for x in self.input_ports],
-                    [self.connections.up[x.upper()] for x in self.output_ports],
+                    [self.connections.down[x.lower()] for x in self.input_ports],
+                    [self.connections.up[x.lower()] for x in self.output_ports],
                 )
                 break
         if ports_included and ports is not None:
@@ -307,16 +307,16 @@ class DossierEntry:
             for up, down in conns:
                 if (
                     up is None
-                    or up.upstream_output_port.upper() in ports
-                    or up.downstream_input_port.upper() in ports
+                    or up.upstream_output_port.lower() in ports
+                    or up.downstream_input_port.lower() in ports
                 ):
                     new_up.append(up)
                 else:
                     new_up.append(None)
                 if (
                     down is None
-                    or down.upstream_output_port.upper() in ports
-                    or down.downstream_input_port.upper() in ports
+                    or down.upstream_output_port.lower() in ports
+                    or down.downstream_input_port.lower() in ports
                 ):
                     new_dn.append(down)
                 else:
