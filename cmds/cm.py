@@ -11,11 +11,13 @@ your database and configure CM to find it.
 
 import os.path as op
 from abc import ABCMeta
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.exc import OperationalError
 import json
 
+from . import logger
 
 from . import CMDeclarativeBase
 from .cm_session import CMSession
@@ -33,6 +35,109 @@ def file_finder(filename, default_path_list=['.', op.join(op.expanduser('~'), '.
 
 
 default_config_file = file_finder('db_config.json')
+
+
+def check_connection(session):
+    """
+    Check whether the database connection is live and responsive.
+
+    Parameters
+    ----------
+    session : SQLAlchemy session
+        Session to use to check the connection, bound to an engine.
+
+    Returns
+    -------
+    True if database responds to simple SQL query. Otherwise False.
+
+    """
+    result = True
+    try:
+        session.execute(text("SELECT 1"))
+    except OperationalError:
+        result = False
+    return result
+
+
+def is_valid_database(base, session):
+    """
+    Check that the current database matches the models declared in model base.
+
+    Currently we check that all tables exist with all columns.
+
+    What is not checked:
+
+    * Column types are not verified
+    * Relationships are not verified (TODO)
+
+    Parameters
+    ----------
+    base : Declarative Base
+        Instance of SQLAlchemy Declarative Base to check.
+    session : SQLAlchemy session
+        Session to use, bound to an engine.
+
+    Returns
+    -------
+    True if all declared models have corresponding tables and columns.
+
+    """
+    if base is None:
+        from . import CMDeclarativeBase
+
+        base = CMDeclarativeBase
+
+    engine = session.get_bind()
+    try:  # This tries thrice with 5sec sleeps in between
+        iengine = inspect(engine)
+    except OperationalError:  # pragma: no cover
+        import time
+
+        time.sleep(5)
+        try:
+            iengine = inspect(engine)
+        except OperationalError:
+            time.sleep(5)
+            iengine = inspect(engine)
+
+    errors = False
+
+    tables = iengine.get_table_names()
+
+    # Go through all SQLAlchemy models
+
+    for table, klass in base.metadata.tables.items():
+
+        if table in tables:
+            # Check all columns are found
+            # Looks like [{'default':
+            #               "nextval('validity_check_test_id_seq'::regclass)",
+            #              'autoincrement': True, 'nullable': False,
+            #              'type': INTEGER(), 'name': 'id'}]
+
+            columns = [c["name"] for c in iengine.get_columns(table)]
+            mapper = inspect(klass)
+
+            for column in mapper.columns:
+                # Assume normal flat column
+                if column.key not in columns:
+                    logger.error(
+                        f"Model {klass} declares column {column.key} which does not "
+                        "exist in database {engine}"
+                    )
+                    errors = True
+            # TODO: Add validity checks for relations
+        else:
+            logger.error(
+                "Model %s declares table %s which does not exist " "in database %s",
+                klass,
+                table,
+                engine,
+            )
+            errors = True
+
+    return not errors
+
 
 
 class DB(object, metaclass=ABCMeta):
@@ -94,8 +199,6 @@ class AutomappedDB(DB):
 
     def __init__(self, db_url):
         super(AutomappedDB, self).__init__(automap_base(), db_url)
-
-        from .db_check import is_valid_database
 
         with self.sessionmaker() as session:
             if not is_valid_database(CMDeclarativeBase, session):
@@ -265,9 +368,8 @@ def connect_to_cm_db(args, check_connect=True, verbose=False):
     if check_connect:
         # Test database connection
         with db.sessionmaker() as session:
-            from . import db_check
 
-            if not db_check.check_connection(session):
+            if not check_connection(session):
                 raise RuntimeError(
                     "Could not establish valid connection to " "database."
                 )
