@@ -22,26 +22,6 @@ def YMD_HM(dt, offset=0.0, add_second=False):
         return dt.strftime('%Y/%m/%d'), dt.strftime('%H:%M')
 
 
-def compare_lists(list1, list2, info=None, ignore_length=True):
-    """
-    Make sure the lists agree.  If ignore_length, then check
-    as far as length of list1
-    """
-    if not ignore_length:
-        if len(list1) != len(list2):
-            print("List lengths differ")
-        return False
-
-    are_same = True
-    for i, l1 in enumerate(list1):
-        if l1 != list2[i]:
-            if info is not None:
-                print(info)
-            print("\t{} and {} are not the same".format(l1, list2[i]))
-            are_same = False
-    return are_same
-
-
 def get_num(val):
     """
     Makes digits in alphanumeric string into a number as string
