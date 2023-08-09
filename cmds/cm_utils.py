@@ -12,7 +12,8 @@ import datetime
 PAST_DATE = "2000-01-01"
 VALID_FLOAT_FORMAT_FOR_TIME = ["unix", "gps", "jd"]
 
-## #-start-#MOVED OVER FROM UPD_UTIL
+
+## #-start-# MOVED OVER FROM UPD_UTIL
 def YMD_HM(dt, offset=0.0, add_second=False):
     dt += datetime.timedelta(offset)
     if add_second:
