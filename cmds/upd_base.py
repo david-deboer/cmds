@@ -178,7 +178,7 @@ class Update():
                 os.remove(cronjob_script)
 
         if self.update_counter == 0:  # No updates made
-            alert = False
+            alert = None
             if os.path.exists(self.script):
                 os.remove(self.script)
             if self.verbose:
