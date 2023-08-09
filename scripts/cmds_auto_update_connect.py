@@ -24,6 +24,7 @@ if __name__ == '__main__':
     ap.add_argument('--archive_gsheet', help="Path to move gsheet archive.  Use '__' to include script-path.",
                     default='___cm_updates/gsheet')
     ap.add_argument('-v', '--verbose', help="Turn verbosity on.", action='store_true')
+    ap.add_argument('-a', '--alert', help="Emails to alert if change.", default='ddeboer@seti.org')
     args = ap.parse_args()
 else:
     args = argparse.Namespace(archive_path=None, script_path='./', node_csv='n', verbose=True)
@@ -53,4 +54,4 @@ update.add_missing_parts()
 update.add_missing_connections()
 update.add_partial_connections()
 update.add_different_connections()
-update.finish(cronjob_script=cronjob_script, archive_to=args.archive_path)
+update.finish(cronjob_script=cronjob_script, archive_to=args.archive_path, alert=args.alert)

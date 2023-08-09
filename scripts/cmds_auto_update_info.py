@@ -25,6 +25,7 @@ if __name__ == '__main__':
     ap.add_argument('--time_tag', help='Flag to add time to node csv filename', action='store_true')
     ap.add_argument('--archive_gsheet', help="Path to move gsheet archive.  Use '__' to include script-path.",
                     default='___cm_updates/gsheet')
+    ap.add_argument('-a', '--alert', help="Emails to alert if change.", default=None)
     args = ap.parse_args()
 else:
     args = argparse.Namespace(archive_path=None, script_path='default', arc_csv='r', verbose=True,
@@ -51,4 +52,4 @@ update.load_gsheet(split=True, arc_csv=args.arc_csv, path=args.archive_gsheet, t
 update.add_comments(duplication_window=args.duplication_window, view_duplicate=args.view_duplicate)
 update.add_apriori(comment='auto-update')
 
-update.finish(cronjob_script=cronjob_script, archive_to=args.archive_path)
+update.finish(cronjob_script=cronjob_script, archive_to=args.archive_path, alert=args.alert)

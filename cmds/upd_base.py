@@ -134,7 +134,15 @@ class Update():
             self.gsheet.split_apriori()
             self.gsheet.split_comments()
 
-    def finish(self, cronjob_script=None, archive_to=None):
+    def alert_email(self, subj, msg, to_addr, from_addr=''):
+        from cmds import watch_dog
+        try:
+            watch_dog.send_email(subj, msg, to_addr=to_addr, from_addr=from_addr)
+        except ConnectionRefusedError:
+            print("No email sent - ConnectionRefusedError")
+
+
+    def finish(self, cronjob_script=None, archive_to=None, alert=None):
         """
         Close out process.  If no updates, it deletes the script file.
         If both parameters are None, it just leaves things alone.
@@ -146,6 +154,8 @@ class Update():
             If no updates in script, then makes empty one.
         archive_to : str or None
             If str, moves the script file to that directory.  If not, deletes.
+        alert : str or None
+            If str, will send to that email csv-list
         """
         if self.fp is None:
             return
@@ -168,6 +178,7 @@ class Update():
                 os.remove(cronjob_script)
 
         if self.update_counter == 0:  # No updates made
+            alert = False
             if os.path.exists(self.script):
                 os.remove(self.script)
             if self.verbose:
@@ -189,3 +200,8 @@ class Update():
                 if self.verbose:
                     print("Moving {}  -->  {}".format(self.script, cronjob_script))
 
+        if alert is not None:
+            with open(self.script, 'r') as fp:
+                script_lines = fp.readlines()
+            msg = ''.join(script_lines)
+            self.alert_email(subj=f"Update: {self.script}", msg=msg, to_addr=alert)
