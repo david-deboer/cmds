@@ -8,6 +8,23 @@ import os
 from . import cm, cm_utils, cm_gsheet_ata, cm_active
 
 
+def as_part(add_or_stop, p, cdate, ctime):
+    """Return a string to use cmds script to add or stop a part."""
+    s = f'cmds_update_part.py {add_or_stop} {p[0]} '
+    if add_or_stop == 'add':
+        s += f'-t {p[1]} -m {p[2]} '
+    s += f'--date {cdate} --time {ctime}'
+    return s
+
+
+def as_connect(add_or_stop, up, dn, cdate, ctime):
+    """Return a string to use cmds script to add or stop a connection."""
+    s = 'cmds_update_connection.py {} -u {} --upport {} -d {} --dnport {}'\
+        ' --date {} --time {}'.format(add_or_stop, up[0], up[1],
+                                        dn[0], dn[1], cdate, ctime)
+    return s
+
+
 class Update():
     """Base update class."""
 

@@ -25,16 +25,6 @@ def as_connect(add_or_stop, up, dn, cdate, ctime):
     return s
 
 
-def include_this_line_in_log(line, included):
-    if '--date' not in line:
-        return False
-    trunc_line = line.split('--date')[0]
-    for included_line in included:
-        if included_line.startswith(trunc_line):
-            return False
-    return True
-
-
 def YMD_HM(dt, offset=0.0, add_second=False):
     dt += datetime.timedelta(offset)
     if add_second:
@@ -88,20 +78,6 @@ def get_bracket(input_string, bracket_type='{}'):
     return prefix, statement, postfix
 
 
-def parse_command_payload(col):
-    """
-    Parses the full command payload.
-    """
-    prefix, stmt, postfix = get_bracket(col, '{}')
-    isstmt = prefix is not None
-    edate = False
-    prefix, entry, postfix = get_bracket(stmt, '[]')
-    if prefix is not None:
-        edate = entry
-        entry = prefix
-    return argparse.Namespace(isstmt=isstmt, entry=entry, date=edate)
-
-
 def get_unique_pkey(hpn, rev, pdate, ptime, old_timers):
     """
     Generate unique info_pkey by advancing the time tag a second at a time if needed.
@@ -117,13 +93,3 @@ def get_unique_pkey(hpn, rev, pdate, ptime, old_timers):
         pkey = '|'.join([hpn, rev, pdate, ptime])
     return pkey, pdate, ptime
 
-
-def get_row_dict(hdr, data):
-    """
-    Makes a dictionary providing mapping of column headers and column numbers to data.
-    """
-    row = {}
-    for i, h in enumerate(hdr):
-        row[h] = data[i]
-        row[i] = data[i]
-    return row

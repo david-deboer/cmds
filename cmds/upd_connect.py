@@ -6,7 +6,7 @@
 This class sets up to update the connections database.
 """
 from . import cm_tables, cm_sysdef
-from . import upd_util, upd_base
+from . import upd_base
 import datetime
 from copy import copy
 
@@ -178,7 +178,7 @@ class UpdateConnect(upd_base.Update):
             for part in self.missing_parts:
                 self.update_counter += 1
                 this_part = [part, self.sysdef.get_part_type(part), part]
-                self.printit(upd_util.as_part('add', this_part, cdate, ctime))
+                self.printit(upd_base.as_part('add', this_part, cdate, ctime))
 
     def add_missing_connections(self):
         if len(self.missing['up']) + len(self.missing['down']):
@@ -215,7 +215,7 @@ class UpdateConnect(upd_base.Update):
                         self.update_counter += 1
                         up = [conn.upstream_part, conn.upstream_output_port]
                         dn = [conn.downstream_part, conn.downstream_input_port]
-                        self.printit(upd_util.as_connect(add_or_stop, up, dn, cdate, ctime))
+                        self.printit(upd_base.as_connect(add_or_stop, up, dn, cdate, ctime))
 
     def show_summary_of_compare(self, check=False):
         from tabulate import tabulate
