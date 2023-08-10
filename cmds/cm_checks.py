@@ -4,18 +4,6 @@
 
 """Series of database checks."""
 from . import cm_utils, cm_active, cm
-import redis
-
-
-def _getkeys(this_dict, these_keys, defv):
-    fndkeys = []
-    for key in these_keys:
-        try:
-            x = this_dict[key]
-        except KeyError:
-            x = defv
-        fndkeys.append(x)
-    return fndkeys
 
 
 def _notsame(a, b, **kwargs):
@@ -36,13 +24,6 @@ def _notsame(a, b, **kwargs):
     return True
 
 
-def _isthere(line, lookfor):
-    for lf in lookfor:
-        if lf in line:
-            return True
-    return False
-
-
 class Checks:
     """Check class."""
 
@@ -54,7 +35,6 @@ class Checks:
         self.stop = cm_utils.get_astropytime(stop_time, float_format='jd')
         self.step = day_step
         self.chk_same = None
-        self.r = redis.Redis('redishost', decode_responses=True)
 
     def info_log(self, look_back=7.0, outfile='info_log.csv'):
         """
@@ -87,28 +67,6 @@ class Checks:
             writer = csv.writer(fp)
             for key in sorted(fnd.keys(), reverse=True):
                 writer.writerow(fnd[key])
-
-    def daemon(self, lookfor=['hera', 'rtp']):
-        rdaemon = self.r.hgetall('check:daemon')
-        for hname, datastr in rdaemon.items():
-            data = datastr.splitlines()
-            for line in data:
-                if _isthere(line, lookfor):
-                    x = f"{hname} {line}".split()
-                    print_line = ','.join(x).replace(':', ',')
-                    print(print_line)
-
-    def crontab(self):
-        rcrontab = self.r.hgetall('check:crontab')
-        for hname, datastr in rcrontab.items():
-            data = datastr.splitlines()
-            for line in data:
-                if len(line) and line[0] != '#':
-                    x = line.split()
-                    ct = ','.join(x[:5])
-                    cm = ' '.join(x[5:])
-                    hn = hname.replace(':', ',')
-                    print(f"{hn},{ct},{cm}")
 
     def for_same(self, sep=',', **kwargs):
         """
