@@ -8,16 +8,6 @@
             "url": "postgresql://sonata:pw@localhost/cmdata",
             "mode": "production"
         },
-        "testing":
-        {
-            "url": "postgresql://ddeboer@localhost/hera_mc_test",
-            "mode": "testing"
-        },
-        "hera_mc_sqlite":
-        {
-            "url": "sqlite:////Users/ddeboer/Home/Projects/HERA/repos/hera_cm_db_updates/hera_mc.db",
-            "mode": "production"
-        },
         "hcro_sqlite":
         {
             "url": "sqlite:////Users/ddeboer/Home/Projects/Oliver/cm_ata/hcro.db",
