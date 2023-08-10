@@ -89,12 +89,10 @@ class UpdateInfo(upd_base.Update):
         self.new_apriori = {}
         stmt_hdr = "apriori_antenna status change:"
         for key, value in self.gsheet.apriori.items():
-            print(key, value)
             try:
                 old_status = self.active.apriori[key].status
             except KeyError:
                 old_status = 'Not defined.'
-            print(f"old apriori status: {old_status}")
             if value != old_status:
                 self.new_apriori[key] = {'info': []}
                 self.new_apriori[key]['ant'] = key
