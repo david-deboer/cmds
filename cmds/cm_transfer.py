@@ -6,7 +6,7 @@
 """
 Definitions to generate table initialization files.
 
-Used in scripts cm_init.py, cm_pack.py
+Used in scripts cmds_init.py, cmds_pack.py
 """
 
 import csv
@@ -14,61 +14,12 @@ import os.path
 import subprocess
 from math import floor
 
-from astropy.time import Time
-from sqlalchemy import BigInteger, Column, String
+#-to cut?from astropy.time import Time
+#-to cut?from sqlalchemy import BigInteger, Column, String
 
-from . import MCDeclarativeBase, cm_table_info, cm_utils, mc
+from . import cm_tables, cm_utils, cm
 
-
-class CMVersion(MCDeclarativeBase):
-    """
-    Definition of cm_version table.
-
-    This table simply stores the git hash of the repository to which the
-    cm tables were packaged from the onsite database.
-
-    For offsite & test databases, this table is populated by the cm initialization
-    code using the git hash of the repository used for the initialization.
-
-    Attributes
-    ----------
-    update_time : BigInteger Column
-        gps time of the cm update (long integer) Primary key.
-    git_hash : String Column
-        cm repo git hash (String)
-
-    """
-
-    __tablename__ = "cm_version"
-    update_time = Column(BigInteger, primary_key=True, autoincrement=False)
-    git_hash = Column(String(64), nullable=False)
-
-    @classmethod
-    def create(cls, time, git_hash):
-        """
-        Create a new cm version object.
-
-        Parameters
-        ----------
-        time: astropy time object
-            time of update
-        git_hash: String
-            git hash of cm repository
-
-        Returns
-        -------
-        object
-            cm_version object with time/git_hash
-        """
-        if not isinstance(time, Time):
-            raise ValueError("time must be an astropy Time object")
-        time = int(floor(time.gps))
-
-        # In Python 3, we sometimes get Unicode, sometimes bytes
-        if isinstance(git_hash, bytes):
-            git_hash = git_hash.decode("utf8")
-
-        return cls(update_time=time, git_hash=git_hash)
+data_prefix = "initialization_data_"
 
 
 def package_db_to_csv(session=None, tables="all"):
@@ -93,21 +44,14 @@ def package_db_to_csv(session=None, tables="all"):
     """
     import pandas
 
-    data_prefix = cm_table_info.data_prefix
-    cm_tables = cm_table_info.cm_tables
-
-    if tables == "all":
-        tables_to_write = cm_tables.keys()
-    else:
-        tables_to_write = tables.split(",")
+    tables_to_write = cm_tables.order_the_tables(tables)
 
     print("Writing packaged files to current directory.")
     print(
         "--> If packing from qmaster, be sure to use 'cm_pack.py --go' to "
         "copy, commit and log the change."
     )
-    print("    Note:  this works via the hera_cm_db_updates repo.")
-    with mc.MCSessionWrapper(session=session) as session:
+    with cm.MCSessionWrapper(session=session) as session:
         files_written = []
         for table in tables_to_write:
             data_filename = data_prefix + table + ".csv"
@@ -120,11 +64,9 @@ def package_db_to_csv(session=None, tables="all"):
     return files_written
 
 
-def pack_n_go(session, cm_csv_path):  # pragma: no cover
+def pack_n_go(cm_csv_path):
     """
-    Move the csv files to the distribution directory, commit them and update the hash.
-
-    Puts the new commit hash into the M&C database
+    Move the csv files to the distribution directory and commit.
 
     Parameters
     ----------
@@ -140,17 +82,8 @@ def pack_n_go(session, cm_csv_path):  # pragma: no cover
     cmd = "git -C {} commit -am 'updating csv to repo.'".format(cm_csv_path)
     subprocess.call(cmd, shell=True)
 
-    # get hash of this commit
-    cm_git_hash = cm_utils.get_cm_repo_git_hash(cm_csv_path=cm_csv_path)
 
-    # add this cm git hash to cm_version table
-    with mc.MCSessionWrapper(session=session) as session:
-        session.add(CMVersion.create(Time.now(), cm_git_hash))
-
-
-def initialize_db_from_csv(
-    session=None, tables="all", maindb=False, testing=False, cm_csv_path=None
-):  # pragma: no cover
+def initialize_db_from_csv(session=None, tables="all", maindb=False, cm_csv_path=None):
     """
     Read the csv files and repopulate the configuration management database.
 
@@ -167,8 +100,6 @@ def initialize_db_from_csv(
         comma-separated list of names of tables to initialize or 'all'.
     maindb: bool or str
         Either False or the password to change from main db.
-    testing : bool
-        Flag to cover testing
     cm_csv_path : str or None
         Path where the csv files reside.  If None uses default.
 
@@ -186,7 +117,6 @@ def initialize_db_from_csv(
             cm_csv_path=cm_csv_path,
             tables=tables,
             maindb=maindb,
-            testing=testing,
         )
     else:
         print("Exit with no rewrite.")
@@ -194,9 +124,7 @@ def initialize_db_from_csv(
     return success
 
 
-def check_if_main(
-    session, config_path=None, expected_hostname="qmaster", test_db_name="testing"
-):
+def check_if_main(session, expected_main_hostname="obs-node1"):
     """
     Determine if the code is running on the site main computer or not.
 
@@ -207,9 +135,7 @@ def check_if_main(
     config_path : str or None
         Full path to location of config file.  Default is None, which goes to default path.
     expected_hostname : str
-        Name of the expected main host.  Default is 'qmaster'
-    test_db_name : str
-        Name of test database.  Default is 'testing'
+        Name of the expected main host.
 
     Returns
     -------
@@ -217,49 +143,22 @@ def check_if_main(
         True if main host, False if not.
 
     """
-    # the 'hostname' call on qmaster returns the following value:
-    import json
     import socket
 
-    if isinstance(session, str) and session == "testing_not_main":
-        return False
-    if isinstance(session, str) and session == "testing_main":
-        return True
-
     hostname = socket.gethostname()
-    is_main_host = hostname == expected_hostname
+    is_main_host = hostname == expected_main_hostname
 
     session_db_url = session.bind.engine.url.render_as_string(hide_password=False)
 
-    if config_path is None:
-        config_path = mc.default_config_file
-
-    with open(config_path) as f:
-        config_data = json.load(f)
-
-    testing_db_url = config_data.get("databases").get(test_db_name).get("url")
-    is_test_db = session_db_url == testing_db_url
-
     if is_main_host:  # pragma: no cover
-        if is_test_db:
-            is_main_db = False
-        else:
-            is_main_db = True
-    else:
-        is_main_db = False
-
-    if is_main_db:  # pragma: no cover
-        print(
-            "Found main db at hostname {} and DB url {}".format(
-                hostname, session_db_url
-            )
-        )
-    return is_main_db
+        print(f"Found main db at hostname {hostname} and DB url {session_db_url}")
+    return is_main_host
 
 
 def db_validation(maindb_pw, session):
     """
-    Check if you are working on the main db and if so if you have the right password.
+    Check if you are working on the main db and if so if you have the right password
+    which is just hardcoded below.
 
     Parameters
     ----------
@@ -274,6 +173,7 @@ def db_validation(maindb_pw, session):
         True means you are allowed to modify main database.  False not.
 
     """
+    hardcode_maindb_pw = "pw4maindb"
     is_maindb = check_if_main(session)
 
     if not is_maindb:
@@ -281,15 +181,13 @@ def db_validation(maindb_pw, session):
 
     if maindb_pw is False:
         raise ValueError("Error:  attempting access to main db without a password")
-    if maindb_pw != "pw4maindb":
+    if maindb_pw != hardcode_maindb_pw:
         raise ValueError("Error:  incorrect password for main db")
 
     return True
 
 
-def _initialization(
-    session=None, cm_csv_path=None, tables="all", maindb=False, testing=False
-):
+def _initialization(session=None, cm_csv_path=None, tables="all", maindb=False):
     """
     Initialize the database.
 
@@ -313,38 +211,26 @@ def _initialization(
         Success, True or False
 
     """
-    wrapper = mc.MCSessionWrapper(session=session, testing=testing)
+    wrapper = cm.MCSessionWrapper(session=session)
     if cm_csv_path is None:
-        cm_csv_path = mc.get_cm_csv_path(mc_config_file=None, testing=testing)
+        cm_csv_path = cm.get_cm_csv_path(mc_config_file=None)
 
     if not db_validation(maindb, wrapper.session):
         print("cm_init not allowed.")
         return False
-
-    cm_git_hash = cm_utils.get_cm_repo_git_hash(
-        cm_csv_path=cm_csv_path, testing=testing
-    )
 
     if tables != "all":  # pragma: no cover
         print("You may encounter foreign_key issues by not using 'all' tables.")
         print("If it doesn't complain though you should be ok.")
 
     # Get tables to deal with in proper order
-    cm_tables = cm_table_info.cm_tables
-    if tables == "all":
-        tables_to_read_unordered = cm_tables.keys()
-    else:  # pragma: no cover
-        tables_to_read_unordered = tables.split(",")
-    tables_to_read = cm_table_info.order_the_tables(tables_to_read_unordered)
-    data_prefix = cm_table_info.data_prefix
+    tables_to_read = cm_tables.order_the_tables(tables)
 
     use_table = []
     for table in tables_to_read:
         csv_table_name = data_prefix + table + ".csv"
         use_table.append([table, os.path.join(cm_csv_path, csv_table_name)])
 
-    # add this cm git hash to cm_version table
-    wrapper.session.add(CMVersion.create(Time.now(), cm_git_hash))
 
     # Delete tables in this order
     for table, data_filename in use_table:

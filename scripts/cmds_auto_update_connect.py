@@ -22,7 +22,7 @@ if __name__ == '__main__':
                     choices=['read', 'write', 'none', 'r', 'w', 'n'], default='n')
     ap.add_argument('--time_tag', help='Flag to add time to node csv filename', action='store_true')
     ap.add_argument('--archive_gsheet', help="Path to move gsheet archive.  Use '__' to include script-path.",
-                    default='___cm_updates/gsheet')
+                    default='___cm_updates/repo/gsheet')
     ap.add_argument('-v', '--verbose', help="Turn verbosity on.", action='store_true')
     ap.add_argument('-a', '--alert', help="Emails to alert if change.", default='ddeboer@seti.org')
     args = ap.parse_args()

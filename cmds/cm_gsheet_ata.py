@@ -54,14 +54,14 @@ class SheetData:
             tabs = tabs.split(',')
         if arc_csv != 'n' and isinstance(time_tag, str) and len(time_tag):
             from datetime import datetime
-            ttag = datetime.strftime(datetime.now(), time_tag)
+            ttag = f"_{datetime.strftime(datetime.now(), time_tag)}"
         else:
             ttag = ""
         check_rfcb_part_port = []
         check_rfsoc_part_port = []
         check_snap_part_port = []
         for tab in tabs:
-            ofnc = os.path.join(path, f"{tab}_{ttag}.csv")
+            ofnc = os.path.join(path, f"{tab}{ttag}.csv")
             if arc_csv == 'r':
                 csv_data = []
                 with open(ofnc, 'r') as fp:

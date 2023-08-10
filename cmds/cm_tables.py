@@ -662,3 +662,48 @@ def update_aprioris(aprioris, session=None):
                     session.add(apriori)
 
     return updated
+
+cm_table_list = {
+    "part_info": [PartInfo, 0],
+    "apriori_antenna": [AprioriStatus, 1],
+    "connections": [Connections, 2],
+    "parts": [Parts, 3],
+    "stations": [Stations, 4],
+}
+
+
+def order_the_tables(unordered_tables=None):
+    """
+    Ensure that the tables are loaded into the database in the proper order.
+
+    Tables must be loaded into the database in the proper order to satisfy
+    ForeignKey constraints.
+
+    Parameters
+    ----------
+    unordered_tables : list or None
+        list of unordered_tables or None.  Default is None, which gets all cm tables.
+
+    Returns
+    -------
+    list
+        list of ordered tables
+
+    """
+
+    if unordered_tables == "all" or unordered_tables is None:
+        tables_to_write = list(cm_table_list.keys())
+    else:
+        tables_to_write = unordered_tables.split(",")
+
+    ordered_tables = []
+    for i in range(len(cm_table_list.keys())):
+        ordered_tables.append("NULL")
+    for table in tables_to_write:
+        try:
+            ordered_tables[cm_table_list[table][1]] = table
+        except KeyError:
+            print(table, "not found")
+    while "NULL" in ordered_tables:
+        ordered_tables.remove("NULL")
+    return ordered_tables

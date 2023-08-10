@@ -24,7 +24,7 @@ if __name__ == '__main__':
                     help='In verbose, only show duplicates after this many days', default=0.0)
     ap.add_argument('--time_tag', help='Flag to add time to node csv filename', action='store_true')
     ap.add_argument('--archive_gsheet', help="Path to move gsheet archive.  Use '__' to include script-path.",
-                    default='___cm_updates/gsheet')
+                    default='___cm_updates/repo/gsheet')
     ap.add_argument('-a', '--alert', help="Emails to alert if change.", default=None)
     args = ap.parse_args()
 else:
