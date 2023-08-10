@@ -7,9 +7,9 @@
 Script to read configuration management csv files and initialize tables.
 """
 
-from hera_mc import cm_transfer, mc
+from cmds import cm_transfer, cm
 
-parser = mc.get_mc_argument_parser()
+parser = cm.get_mc_argument_parser()
 parser.add_argument(
     "--maindb",
     help="password to initialize the main site database - admin only",

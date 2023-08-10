@@ -7,9 +7,9 @@
 Script to generate table initialization files (package from db to csv).
 """
 
-from hera_mc import cm_transfer, mc
+from cmds import cm_transfer, cm
 
-parser = mc.get_mc_argument_parser()
+parser = cm.get_mc_argument_parser()
 parser.add_argument(
     "--tables",
     help="name of table for which to generate " "initialization data file",
@@ -29,8 +29,8 @@ args = parser.parse_args()
 files_written = cm_transfer.package_db_to_csv(tables=args.tables)
 
 if args.go:
-    db = mc.connect_to_mc_db(args)
+    db = cm.connect_to_mc_db(args)
     if args.cm_csv_path is None:
-        args.cm_csv_path = mc.get_cm_csv_path(None)
+        args.cm_csv_path = cm.get_cm_csv_path(None)
     with db.sessionmaker() as session:
         cm_transfer.pack_n_go(session, args.cm_csv_path)
