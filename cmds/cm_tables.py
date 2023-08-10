@@ -270,7 +270,8 @@ class PartInfo(CMDeclarativeBase):
 
     pn = Column(String(64), nullable=False, primary_key=True)
     posting_gpstime = NotNull(BigInteger, primary_key=True)
-    comment = NotNull(String(2048))
+    comment = NotNull(String(2048), primary_key=True)
+    pol = Column(String(256))
     reference = Column(String(256))
 
     __table_args__ = (
