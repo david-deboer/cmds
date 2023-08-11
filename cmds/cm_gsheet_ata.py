@@ -61,8 +61,8 @@ class SheetData:
         check_rfcb_part_port = []
         check_rfsoc_part_port = []
         check_snap_part_port = []
-        obs_line_reached = False
         for tab in tabs:
+            obs_line_reached = False
             ofnc = os.path.join(path, f"{tab}{ttag}.csv")
             if arc_csv == 'r':
                 csv_data = []
