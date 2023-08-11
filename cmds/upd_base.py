@@ -189,6 +189,11 @@ class Update():
                 if self.verbose:
                     print("Writing empty {}.".format(cronjob_script))
         else:
+            if alert is not None:
+                with open(self.script, 'r') as fp:
+                    script_lines = fp.readlines()
+                msg = ''.join(script_lines)
+                self.alert_email(subj=f"Update: {self.script}", msg=msg, to_addr=alert)
             if archive_to is not None:
                 os.system('cp {} {}'.format(self.script, archive_to))
                 if self.verbose:
@@ -200,8 +205,3 @@ class Update():
                 if self.verbose:
                     print("Moving {}  -->  {}".format(self.script, cronjob_script))
 
-        if alert is not None:
-            with open(self.script, 'r') as fp:
-                script_lines = fp.readlines()
-            msg = ''.join(script_lines)
-            self.alert_email(subj=f"Update: {self.script}", msg=msg, to_addr=alert)
