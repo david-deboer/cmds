@@ -207,9 +207,11 @@ class UpdateConnect(upd_base.Update):
                 for conn in mod_conn.values():
                     cmpstr = f"{conn.upstream_part}{conn.upstream_output_port}{conn.downstream_part}{conn.downstream_input_port}"
                     if cmpstr in self.conn_track[add_or_stop]:
-                        print(f"{cmpstr} already {add_or_stop}ed.")
+                        if self.verbose:
+                            print(f"{cmpstr} already {add_or_stop}ed in this check.")
                     elif cmpstr in self.conn_track[stop_or_add]:
-                        print(f"!!!{cmpstr} in {add_or_stop} and {stop_or_add}!!!")
+                        if self.verbose:
+                            print(f"!!!{cmpstr} in {add_or_stop} and {stop_or_add} already for this check!!!")
                     else:
                         self.conn_track[add_or_stop].append(cmpstr)
                         self.update_counter += 1
