@@ -28,6 +28,7 @@ class SheetData:
         self.rfsocs = {}
         self.rfcbs = {}
         self.snaps = {}
+        self.obs = set()
 
     def load_sheet(self, arc_csv='none', tabs=None, path='.', time_tag='%y%m%d'):
         """
@@ -60,6 +61,7 @@ class SheetData:
         check_rfcb_part_port = []
         check_rfsoc_part_port = []
         check_snap_part_port = []
+        obs_line_reached = False
         for tab in tabs:
             ofnc = os.path.join(path, f"{tab}{ttag}.csv")
             if arc_csv == 'r':
@@ -88,8 +90,14 @@ class SheetData:
                     self.header[tab] = [_x.strip('$') for _x in data]
                     continue
                 elif data[0].startswith('#'):
+                    if data[0].startswith('#Obs'):
+                        obs_line_reached = True
                     continue
-                if tab == 'Antenna':
+                if obs_line_reached:  # Everything relates to observatory overall
+                    for cell in data:
+                        if len(cell):
+                            self.obs.add(cell)
+                elif tab == 'Antenna':
                     this_ant = data[0].upper()
                     if this_ant in self.ants:
                         raise ValueError(f"{this_ant} is already present.")
@@ -139,13 +147,23 @@ class SheetData:
             if len(apval):
                 self.apriori[aant] = apval
 
-    def split_comments(self, tab='Antenna', hdr='Comments', prepend='A'):
+    def split_comments(self, tab='Antenna', comment_col='Comments', prepend='A'):
         self.comments = {}
-        cmind = self.header[tab].index(hdr)
+        comments_start_at = self.header[tab].index(comment_col)
         for ant, entry in self.ants.items():
             aant = prepend + ant
-            for i in range(cmind, len(self.header[tab])):
-                if len(entry[i]):
+            for i, this_entry in enumerate(entry[comments_start_at:]):
+                try:
+                    header = self.header[tab][i + comments_start_at]
+                except IndexError:
+                    header = False
+                if len(this_entry):
                     self.comments.setdefault(aant, [])
-                    prep = '' if self.header[tab][i] == hdr else self.header[tab][i] + ': '
-                    self.comments[aant].append(prep + entry[i])
+                    if header == comment_col or not header:
+                        entry_to_append = this_entry + ''
+                    elif '|' in this_entry:
+                        entry_to_append = f"{header}:|{this_entry}"
+                    else:
+                        entry_to_append = f"{header}:{this_entry}"
+                self.comments[aant].append(entry_to_append)
+        self.comments['obs'] = list(self.obs)

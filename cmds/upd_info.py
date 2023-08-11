@@ -35,7 +35,7 @@ class UpdateInfo(upd_base.Update):
         self.gsheet.split_comments()
         self.add_comments()
 
-    def add_part_info(self, pn, note, cdate, ctime, ref=None):
+    def add_part_info(self, pn, note, cdate, ctime, pol=None, ref=None):
         """
         Add a note/comment for a part to the database.
 
@@ -55,11 +55,18 @@ class UpdateInfo(upd_base.Update):
         if not len(note.strip()):
             return
         if ref is None:
-            ref = ''
+            refp = ''
         else:
-            ref = f'-l "{ref}" '
+            refp = f'--reference "{ref}" '
+        if pol is not None:
+            if pol.lower() in ['a', 'b', 'xy']:
+                refp = f'--pol xy {refp.strip()} '
+            elif pol.lower() == 'x':
+                refp = f'--pol x {refp.strip()} '
+            elif pol.lower() == 'y':
+                refp = f'--pol y {refp.strip()} '
         self.printit("cmds_update_info.py {} -c '{}' {}--date {} --time {}"
-                      .format(pn, note, ref, cdate, ctime))
+                      .format(pn, note, refp, cdate, ctime))
 
 
     def update_apriori(self, antenna, status, cdate, ctime='12:00', comment=None):
@@ -110,6 +117,28 @@ class UpdateInfo(upd_base.Update):
                                    ref='apa-infoupd')
                 self.update_counter += 1
 
+    def parse_pol_info(self, comment):
+        if not isinstance(comment, str):
+            return None, ''
+        if '|' in comment:
+            x = [y.lower().strip() for y in comment.split('|')]
+            if len(x) == 2:
+                pol, comment = x
+            elif len(x) == 3:
+                pol = x[1]
+                comment = f"{pol[0]} {pol[2]}"
+            elif len(x) == 4:
+                if x[0] == x[2]:
+                    pol = x[0]
+                    comment = f"{x[1]} {x[3]}"
+                else:
+                    pol = None
+            else:
+                pol = None
+        else:
+            pol = None
+        return pol, comment
+
     def add_comments(self, duplication_window=90.0, view_duplicate=0.0):
         """
         Search the relevant fields in the googlesheets and generate add note commands.
@@ -125,13 +154,14 @@ class UpdateInfo(upd_base.Update):
             pdate = self.cdate + ''
             ptime = self.ctime + ''
             for comment in entries:
-                if not self.is_duplicate(key, comment, duplication_window, view_duplicate):
+                pol, cmmnt = self.parse_pol_info(comment)
+                if len(cmmnt) and not self.is_duplicate(key, cmmnt, duplication_window, view_duplicate):
                     refout = 'info update from gsheet'
                     self.new_notes.setdefault(key, [])
-                    self.new_notes[key].append(comment)
+                    self.new_notes[key].append(cmmnt)
                     if self.verbose:
-                        print(f"Adding comment: {key} - {comment}")
-                    self.add_part_info(key, comment, pdate, ptime, ref=refout)
+                        print(f"Adding comment: {key} - {cmmnt}")
+                    self.add_part_info(key, cmmnt, pdate, ptime, pol=pol, ref=refout)
                     self.update_counter += 1
 
 
