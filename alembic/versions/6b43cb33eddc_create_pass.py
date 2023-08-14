@@ -52,7 +52,7 @@ def upgrade():
     sa.Column('easting', sa.Float(precision='53'), nullable=True),
     sa.Column('elevation', sa.Float(), nullable=True),
     sa.Column('created_gpstime', sa.BigInteger(), nullable=False),
-    sa.PrimaryKeyConstraint('station_name')
+    sa.PrimaryKeyConstraint('station_name', 'station_type')
     )
     op.create_table('connections',
     sa.Column('upstream_part', sa.String(length=64), nullable=False),
