@@ -65,7 +65,7 @@ class Stations(CMDeclarativeBase):
     __tablename__ = "stations"
 
     station_name = Column(String(64), primary_key=True)
-    station_type = Column(String(64), nullable=False)
+    station_type = Column(String(64), primary_key=True)
     datum = Column(String(64))
     tile = Column(String(64))
     northing = Column(Float(precision="53"))
