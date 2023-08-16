@@ -16,7 +16,7 @@ from cmds import cm, cm_dossier, cm_utils
 all_views = {
     "p": "parts",
     "c": "connections",
-    "i": "info",
+    "l": "log",
 }
 
 parser = cm.get_cm_argument_parser()
@@ -33,9 +33,7 @@ parser.add_argument(
 parser.add_argument(
     "-p",
     "--pn",
-    help="Part number or portion thereof, csv list. "
-    "If view is 'node', this may be ints or a hyphen-range of ints (e.g. '0-3')"
-    "or 'active'/'all'",
+    help="Part number or portion thereof, csv list.",
     default=None,
 )
 parser.add_argument(
@@ -94,7 +92,7 @@ with cm.CMSessionWrapper() as session:
         print("\t{:30s}\t{}".format("--------------", "----------"))
         for col in blank.col_hdr.keys():
             print("\t{:30s}\t{}".format(col, blank.col_hdr[col]))
-    else:  # view == 'parts' or view == 'connections' or view == 'info'
+    else:  # view == 'parts' or view == 'connections' or view == 'log'
         args.pn = cm_utils.listify(args.pn)
         if view == "parts":
             if args.verbosity == 1:
@@ -157,13 +155,13 @@ with cm.CMSessionWrapper() as session:
                     "down.start_gpstime",
                     "down.stop_gpstime",
                 ]
-        elif view == "info":
+        elif view == "log":
             if args.verbosity == 1:
                 columns = ["pn", "comment"]
             elif args.verbosity == 2:
-                columns = ["pn", "posting_gpstime", "comment"]
+                columns = ["pn", "posting_gpstime", "comment", "pol"]
             else:
-                columns = ["pn", "posting_gpstime", "reference", "comment"]
+                columns = ["pn", "posting_gpstime", "comment", "pol", "reference"]
 
         if args.columns is not None:
             columns = cm_utils.listify(args.columns)
