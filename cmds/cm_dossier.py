@@ -155,6 +155,7 @@ class DossierEntry:
         "comment": "Note",
         "posting_gpstime": "Date",
         "reference": "File",
+        "pol": "Polarization",
         "up.start_gpstime": "uStart",
         "up.stop_gpstime": "uStop",
         "up.upstream_part": "Upstream",
