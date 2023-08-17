@@ -189,15 +189,23 @@ class DossierEntry:
         """
         try:
             self.part = active.parts[self.pn]
-        except KeyError:
+        except (TypeError, KeyError):
             self.part = None
-        if self.pn in active.connections["up"].keys():
-            self.connections.up = active.connections["up"][self.pn]
-        if self.pn in active.connections["down"].keys():
-            self.connections.down = active.connections["down"][self.pn]
-        if self.pn in active.stations.keys():
-            self.station = active.stations[self.pn]
-
+        try:
+            if self.pn in active.connections["up"].keys():
+                self.connections.up = active.connections["up"][self.pn]
+        except (TypeError, KeyError):
+            self.connections.up = None
+        try:
+            if self.pn in active.connections["down"].keys():
+                self.connections.down = active.connections["down"][self.pn]
+        except (TypeError, KeyError):
+            self.connections.down = None
+        try:
+            if self.pn in active.stations.keys():
+                self.station = active.stations[self.pn]
+        except (TypeError, KeyError):
+            self.station = None
         self._get_part_info(active=active)
         self._add_ports()
 
@@ -220,6 +228,9 @@ class DossierEntry:
             Contains the active database entries.
 
         """
+        if not isinstance(active.info, dict):
+            self.part_info = None
+            return
         if self.pn in active.info.keys():
             for pi_entry in active.info[self.pn]:
                 self.part_info.comment.append(pi_entry.comment)

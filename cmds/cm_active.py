@@ -221,7 +221,7 @@ class ActiveData:
             If True, and 'at_date' is provided, it will return dates within self.info_date - self.at_date
 
         """
-        if self.at_date is not None:
+        if at_date is not None:
             self.info_date = cm_utils.get_astropytime(at_date, at_time, float_format)
             if bracket and self.info_date >= self.at_date:
                 print(f"{self.info_date} can't be after {self.at_date}")
