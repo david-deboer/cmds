@@ -13,40 +13,6 @@ PAST_DATE = "2000-01-01"
 VALID_FLOAT_FORMAT_FOR_TIME = ["unix", "gps", "jd"]
 
 
-## #-start-# MOVED OVER FROM UPD_UTIL
-def YMD_HM(dt, offset=0.0, add_second=False):
-    dt += datetime.timedelta(offset)
-    if add_second:
-        return dt.strftime('%Y/%m/%d'), dt.strftime('%H:%M:%S')
-    else:
-        return dt.strftime('%Y/%m/%d'), dt.strftime('%H:%M')
-
-
-def get_num(val):
-    """
-    Makes digits in alphanumeric string into a number as string
-    """
-    if isinstance(val, (int, float)):
-        return str(val)
-    return ''.join(c for c in val if c.isnumeric())
-
-
-def get_bracket(input_string, bracket_type='{}'):
-    """
-    Breaks out stuff as <before, in, after>.
-    If no starting bracket, it returns <None, input_string, None>
-    Used in parse_stmt below.
-    """
-    start_ind = input_string.find(bracket_type[0])
-    if start_ind == -1:
-        return None, input_string, None
-    end_ind = input_string.find(bracket_type[1])
-    prefix = input_string[:start_ind].strip()
-    statement = input_string[start_ind + 1: end_ind].strip()
-    postfix = input_string[end_ind + 1:].strip()
-    return prefix, statement, postfix
-
-
 def get_unique_pkey(hpn, rev, pdate, ptime, old_timers):
     """
     Generate unique info_pkey by advancing the time tag a second at a time if needed.
@@ -277,7 +243,7 @@ def parse_verbosity(vargs):
 
 
 # ##############################################DATE STUFF
-def add_date_time_args(parser):
+def add_date_time_args(parser, date_default='now'):
     """
     Add standardized "--date" and "--time" arguments to an ArgParser object.
 
@@ -293,7 +259,7 @@ def add_date_time_args(parser):
     parser.add_argument(
         "--date",
         help="UTC YYYY/MM/DD or '<' or '>' or 'now' or one of jd,unix,gps [now]",
-        default="now",
+        default=date_default,
     )
     parser.add_argument(
         "--time",
@@ -303,47 +269,6 @@ def add_date_time_args(parser):
     parser.add_argument(
         "--format", help="Format if date is unix, gps or jd.", default=None
     )
-
-
-def is_active(at_date, start_date=None, stop_date=None):
-    """
-    Check to see if at_date is within start/stop.
-
-    Note that at_date, start_date and stop_date must be of the same type or None.
-
-    Parameters
-    ----------
-    at_date : Time, int/float, None or 'now'
-        Date to check - must be astropy.time, number, None or 'now'
-    start_date : Time, int/float, None
-        Start date to use - must be astropy.time, number or None
-    stop_date : Time, int/float, None
-        Stop date to use - must be astropy.time, number or None
-
-    """
-    if at_date is None:
-        return True
-    elif at_date == "now":
-        at_date = Time.now()
-    if start_date is None and stop_date is None:
-        return True
-    if isinstance(at_date, Time):
-        at_date = at_date.gps
-        if start_date is None:
-            start_date = 0
-        else:
-            start_date = start_date.gps
-        if stop_date is None:
-            stop_date = 2000000000
-        else:
-            stop_date = stop_date.gps
-    else:
-        if start_date is None:
-            start_date = 0
-        if stop_date is None:
-            stop_date = 2000000000
-
-    return at_date >= start_date and at_date <= stop_date
 
 
 def future_date():
@@ -359,30 +284,6 @@ def future_date():
 
     """
     return Time.now() + TimeDelta(1000, format="jd")
-
-
-def get_stopdate(stop_date, stop_time=None, float_format=None):
-    """
-    Provide an appropriate stop date.
-
-    Parameters
-    ----------
-    stop_date : Anything intelligible by `get_astropytime`.
-        If None, uses `future_date`.
-    stop_time : Anything intelligible by `get_astropytime`.
-        Passed to get_astropytime, ignored if at_date is a float or contains time information.
-    float_format : str or None
-        Format if stop_date is unix or gps time or jd day.
-
-    Returns
-    -------
-    Time object
-        Time object for stop_date.
-
-    """
-    if stop_date is None:
-        return future_date()
-    return get_astropytime(stop_date, stop_time, float_format)
 
 
 def get_time_for_display(display, display_time=None, float_format=None):
@@ -692,37 +593,3 @@ def general_table_handler(headers, table_data, output_format=None):
             output_format = "orgtbl"
         table = tabulate(table_data, headers=headers, tablefmt=output_format) + "\n"
     return table
-
-
-def query_default(param, args):
-    """
-    Allow for a parameter to be queried, and return defaults for those not provided.
-
-    Parameters
-    ----------
-    param : str
-        The parameter being queried
-    args : object
-        Namespace object
-
-    Returns
-    -------
-    Queried value or default
-
-    """
-    vargs = vars(args)
-    default = vargs[param]
-    if "unittesting" in vargs.keys():
-        v = vargs["unittesting"]
-    else:  # pragma: no cover
-        s = "{} [{}]:  ".format(param, str(default))
-        v = input(s)
-    if len(v) == 0:
-        return default
-    if v.lower() == "none":
-        return None
-    if v.lower() == "false":
-        return False
-    if v.lower() == "true":
-        return True
-    return v
