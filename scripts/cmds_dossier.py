@@ -140,9 +140,9 @@ with cm.CMSessionWrapper() as session:
         if args.ports is not None:
             args.ports = cm_utils.listify(args.ports)  # specify port names as list.
         dossier = cm_dossier.Dossier(
+            dtype = args.view,
             pn=args.pn,
             at_date=date_query,
-            active=None,
             exact_match=args.exact_match,
             session=session,
         )

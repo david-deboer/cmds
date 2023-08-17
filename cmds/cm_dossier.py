@@ -7,8 +7,8 @@
 
 from argparse import Namespace
 from itertools import zip_longest
-
-from . import cm_utils
+from . import cm_utils, cm_active
+from datetime import timedelta
 
 
 class Dossier:
@@ -25,8 +25,8 @@ class Dossier:
         self.dossier = {}
         self.get_dossier(**kwargs)
 
-    def get_dossier(self, at_date="now", at_time=None, float_format=None,
-                    active=None, exact_match=False, session=None, **kwargs):
+    def get_dossier(self, at_date="now", at_time=None, float_format=None, history=None,
+                    exact_match=False, session=None, **kwargs):
         """
         Get information on a part or parts.
 
@@ -38,55 +38,54 @@ class Dossier:
             Time at which to check, ignored if at_date is a float or contains time information
         float_format : str
             Format if at_date is a number denoting gps or unix seconds or jd day
+        history : int or str or None
+            History length in days to view.  Used to set active.info_time.
+            If None, it is ignored
+            If int, number of days (bracket [at_date-history, at_date])
+            If str, it will pass through to cm_astropytime (bracket [history, at_date])
         active : cm_active.ActiveData class or None
             Use supplied ActiveData.  If None, read in.
         exact_match : bool
             Flag to enforce full part number match, or "startswith"
         kwargs:
-            skip_pn_list_gather:  skip redoing the pn_list step (use pn as is)
+            skip_pn_list_gather:  skip redoing the pn_list step (use pn list as is)
 
         Returns
         -------
         dict
-            dictionary keyed on the part_number:rev containing DossierEntry
+            dictionary keyed on the part_number containing DossierEntry
             dossier classes
 
         """
 
-        if active is None:
-            from . import cm_active
-            active = cm_active.ActiveData(session, at_date=at_date, at_time=at_time, float_format=float_format)
-        elif at_date is not None:
-            date_diff = abs(at_date - active.at_date).sec
-            if date_diff > 1.0:
-                raise ValueError(
-                    "Supplied date and active date do not agree "
-                    "({}sec)".format(date_diff)
-                )
-        self.active = active
-        at_date = active.at_date
-        if active.parts is None:
-            active.load_parts(at_date=at_date)
-        if active.connections is None:
-            active.load_connections(at_date=at_date)
-        if active.info is None:
-            active.load_info(at_date='<')  # always get all comments
-        if active.stations is None:
-            active.load_stations(at_date=at_date)
+        self.active = cm_active.ActiveData(session, at_date=at_date, at_time=at_time, float_format=float_format)
+
+        at_date = self.active.at_date
+        if history is None:
+            bracket = False
+        else:
+            bracket = True
+            if not isinstance(history, str):
+                history = at_date.datetime - timedelta(days=history)
+
+        self.active.load_info(at_date=history, bracket=bracket)
+        if self.dtype != 'log':
+            from datetime import timedelta
+            self.active.load_stations()
+            self.active.load_parts()
+            self.active.load_connections()
+
 
         if 'skip_pn_list_gather' in kwargs:
             self.pn = self.pn
         elif self.dtype == 'log':
-            self.pn = cm_utils.get_pn_list(self.pn, list(active.info.keys()), exact_match)
+            self.pn = cm_utils.get_pn_list(self.pn, list(self.active.info.keys()), exact_match)
         else:
-            self.pn = cm_utils.get_pn_list(self.pn, list(active.parts.keys()), exact_match)
+            self.pn = cm_utils.get_pn_list(self.pn, list(self.active.parts.keys()), exact_match)
 
         for this_pn in self.pn:
-            this_part = DossierEntry(
-                pn=this_pn,
-                at_date=at_date,
-            )
-            this_part.get_entry(active)
+            this_part = DossierEntry(pn=this_pn)
+            this_part.get_entry(self.active)
             if this_part.use:
                 self.dossier[this_pn] = this_part
 
@@ -162,9 +161,8 @@ class DossierEntry:
         "down.stop_gpstime": "dStop",
     }
 
-    def __init__(self, pn, at_date="now"):
+    def __init__(self, pn):
         self.pn = pn  # a single part number, not a list!
-        self.at_date = at_date
         # Below are the database components of the dossier
         self.input_ports = []
         self.output_ports = []
@@ -175,7 +173,9 @@ class DossierEntry:
 
     def __repr__(self):
         """Define representation."""
-        return "{} -- {}".format(self.pn, self.part)
+        if self.part is not None:
+            return "{} -- {}".format(self.pn, self.part)
+        return str(self.pn)
 
     def get_entry(self, active):
         """
@@ -189,18 +189,19 @@ class DossierEntry:
         """
         try:
             self.part = active.parts[self.pn]
-            self.part.gps2Time()
         except KeyError:
             self.part = None
-        self._get_connections(active=active)
-        self._get_part_info(active=active)
-        self._get_station(active=active)
-        self._add_ports()
-        self.use = self.part is not None and self.part_info is not None
+        if self.pn in active.connections["up"].keys():
+            self.connections.up = active.connections["up"][self.pn]
+        if self.pn in active.connections["down"].keys():
+            self.connections.down = active.connections["down"][self.pn]
+        if self.pn in active.stations.keys():
+            self.station = active.stations[self.pn]
 
-    def _add_pol(self):
-        """Get the part_info polarization info."""
-        print("To be implemented.")
+        self._get_part_info(active=active)
+        self._add_ports()
+
+        self.use = self.part is not None and self.part_info is not None
 
     def _add_ports(self):
         """Pull out the input_ports and output_ports to a class variable."""
@@ -208,25 +209,6 @@ class DossierEntry:
             self.input_ports = [x.lower() for x in self.connections.down.keys()]
         if self.connections.up is not None:
             self.output_ports = [x.lower() for x in self.connections.up.keys()]
-
-    def _get_connections(self, active):
-        """
-        Retrieve the connection info for the part in self.hpn.
-
-        Parameters
-        ----------
-        active : ActiveData class
-            Contains the active database entries.
-
-        """
-        if self.pn in active.connections["up"].keys():
-            self.connections.up = active.connections["up"][self.pn]
-        else:
-            self.connections.up = None
-        if self.pn in active.connections["down"].keys():
-            self.connections.down = active.connections["down"][self.pn]
-        else:
-            self.connections.down = None
 
     def _get_part_info(self, active):
         """
@@ -240,28 +222,12 @@ class DossierEntry:
         """
         if self.pn in active.info.keys():
             for pi_entry in active.info[self.pn]:
-                if pi_entry.posting_gpstime > self.at_date.gps:
-                    self.part_info.comment.append(pi_entry.comment)
-                    self.part_info.posting_gpstime.append(pi_entry.posting_gpstime)
-                    self.part_info.reference.append(pi_entry.reference)
-                    self.part_info.pol.append(pi_entry.pol)
+                self.part_info.comment.append(pi_entry.comment)
+                self.part_info.posting_gpstime.append(pi_entry.posting_gpstime)
+                self.part_info.reference.append(pi_entry.reference)
+                self.part_info.pol.append(pi_entry.pol)
         else:
             self.part_info = None
-
-    def _get_station(self, active):
-        """
-        Retrieve the geographical information for the part in self.hpn.
-
-        Parameter
-        ---------
-        active : ActiveData class
-            Contains the active database entries.
-
-        """
-        if self.pn in active.stations.keys():
-            self.station = active.stations[self.pn]
-        else:
-            self.station = None
 
     def get_headers(self, columns):
         """

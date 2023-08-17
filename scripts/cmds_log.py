@@ -41,12 +41,21 @@ parser.add_argument(
     help="Show a list of all available columns",
     action="store_true",
 )
-parser.add_argument("--ports", help="Include only these ports, csv list", default=None)
+parser.add_argument(
+    "--ports",
+    help="Include only these ports, csv list",
+    default=None
+)
 cm_utils.add_verbosity_args(parser)
 cm_utils.add_date_time_args(parser, date_default='<')
-
+parser.add_argument(
+    "--history",
+    help="If provided, it will return log between supplied date and this many days in the past",
+    default=None
+)
 args = parser.parse_args()
 
+args.history = float(args.history)
 args.verbosity = cm_utils.parse_verbosity(args.verbosity)
 date_query = cm_utils.get_astropytime(args.date, args.time, args.format)
 
@@ -73,9 +82,10 @@ with cm.CMSessionWrapper() as session:
         if args.ports is not None:
             args.ports = cm_utils.listify(args.ports)  # specify port names as list.
         dossier = cm_dossier.Dossier(
+            dtype = 'log',
             pn=args.pn,
             at_date=date_query,
-            active=None,
+            history=args.history,
             exact_match=args.exact_match,
             session=session,
         )

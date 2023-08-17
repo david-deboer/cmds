@@ -48,6 +48,8 @@ class ActiveData:
     """
     Object containing the active data (parts, connections, stations, etc) for a given date.
 
+    Info is handled slightly differently in that the 'active' time may be different.
+
     Parameters
     ----------
     at_date : str, int, float, Time, datetime
@@ -72,6 +74,7 @@ class ActiveData:
         """
         self.session = session
         self.at_date = cm_utils.get_astropytime(at_date, at_time, float_format)
+        self.info_date = None
         self.reset_all()
 
     def reset_all(self):
@@ -120,7 +123,7 @@ class ActiveData:
         If at_date is None, the existing at_date on the object will be used.
 
         Writes class dictionary:
-                self.parts - keyed on part:rev
+                self.parts - keyed on part
 
         Parameters
         ----------
@@ -197,31 +200,40 @@ class ActiveData:
             self.connections["down"].setdefault(key, {})
             self.connections["down"][key][cnn.downstream_input_port.lower()] = copy(cnn)
 
-    def load_info(self, at_date=None, at_time=None, float_format=None):
+    def load_info(self, at_date=None, at_time=None, float_format=None, bracket=False):
         """
-        Retrieve all current part infomation (ie. before date).
+        Retrieve all comments after date (can supply a different one) and if bracket before self.at_date
 
-        Loads the part information up to at_date onto the class and sets the class at_date
         If at_date is None, the existing at_date on the object will be used.
 
         Writes class dictionary:
-                self.info - keyed on part:rev
+                self.info - keyed on part
 
         Parameters
         ----------
         at_date : anything interpretable by cm_utils.get_astropytime
-            Date at which to initialize.
+            Date at which to use.
         at_time : anything interpretable by cm_utils.get_astropytime
-            Time at which to initialize, ignored if at_date is a float or contains time information
+            Time at which to use, ignored if at_date is a float or contains time information
         float_format : str
             Format if at_date is a number denoting gps, unix seconds or jd
+        bracket : bool
+            If True, and 'at_date' is provided, it will return dates within self.info_date - self.at_date
 
         """
-        gps_time = self.set_active_time(at_date, at_time, float_format)
+        if self.at_date is not None:
+            self.info_date = cm_utils.get_astropytime(at_date, at_time, float_format)
+            if bracket and self.info_date >= self.at_date:
+                print(f"{self.info_date} can't be after {self.at_date}")
+                return
+        else:
+            self.info_date = copy(self.at_date)
+            bracket = False
         self.info = {}
         for info in self.session.query(cm_tables.PartInfo).filter(
-            (cm_tables.PartInfo.posting_gpstime >= gps_time)
-        ):
+            (cm_tables.PartInfo.posting_gpstime >= self.info_date.gps) ):
+            if bracket and info.posting_gpstime > self.at_date.gps:
+                continue
             key = info.pn
             self.info.setdefault(key, [])
             self.info[key].append(copy(info))
@@ -234,7 +246,7 @@ class ActiveData:
         If at_date is None, the existing at_date on the object will be used.
 
         Writes class dictionary:
-                self.apriori - keyed on part:rev
+                self.apriori - keyed on part
 
         Parameters
         ----------
