@@ -47,7 +47,7 @@ parser.add_argument(
     default=None
 )
 cm_utils.add_verbosity_args(parser)
-cm_utils.add_date_time_args(parser, date_default='<')
+cm_utils.add_date_time_args(parser, date_default='now')
 parser.add_argument(
     "--history",
     help="If provided, it will return log between supplied date and this many days in the past",
