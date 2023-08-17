@@ -26,6 +26,8 @@ class Dossier:
         ----------
         pn : str, list
             Part number [string or list-of-strings] (whole or first part thereof)
+        dtype : str
+            Dossier type parts, connections, log
         at_date : anything interpretable by cm_utils.get_astropytime
             Date for which to check.
         at_time : anything interpretable by cm_utils.get_astropytime
@@ -47,7 +49,6 @@ class Dossier:
 
         """
 
-        at_date = cm_utils.get_astropytime(at_date, at_time, float_format)
         if active is None:
             from . import cm_active
             active = cm_active.ActiveData(session, at_date=at_date)

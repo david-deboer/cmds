@@ -220,7 +220,7 @@ class ActiveData:
         gps_time = self.set_active_time(at_date, at_time, float_format)
         self.info = {}
         for info in self.session.query(cm_tables.PartInfo).filter(
-            (cm_tables.PartInfo.posting_gpstime <= gps_time)
+            (cm_tables.PartInfo.posting_gpstime >= gps_time)
         ):
             key = info.pn
             self.info.setdefault(key, [])
