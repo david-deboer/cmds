@@ -199,7 +199,7 @@ class DossierEntry:
         self._get_part_info(active=active)
         self._add_ports()
 
-        self.use = self.part is not None and self.part_info is not None
+        self.use = self.part is not None or self.part_info is not None
 
     def _add_ports(self):
         """Pull out the input_ports and output_ports to a class variable."""
