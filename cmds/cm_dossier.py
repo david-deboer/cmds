@@ -188,6 +188,10 @@ class DossierEntry:
         self._get_station(active=active)
         self._add_ports()
 
+    def _add_pol(self):
+        """Get the part_info polarization info."""
+        print("To be implemented.")
+
     def _add_ports(self):
         """Pull out the input_ports and output_ports to a class variable."""
         if self.connections.down is not None:

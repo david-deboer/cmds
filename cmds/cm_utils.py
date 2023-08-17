@@ -258,7 +258,7 @@ def add_date_time_args(parser, date_default='now'):
     """
     parser.add_argument(
         "--date",
-        help="UTC YYYY/MM/DD or '<' or '>' or 'now' or one of jd,unix,gps [now]",
+        help="UTC YYYY/MM/DD or ['<', '>', 'now', 'today', 'yesterday'] or one of jd,unix,gps [now]",
         default=date_default,
     )
     parser.add_argument(
