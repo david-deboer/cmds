@@ -504,11 +504,11 @@ def get_astropytime(adate, atime=None, float_format=None):
         if adate.lower() == "now" or adate.lower() == "current":
             return Time.now()
         if adate.lower() == 'today':
-            tt = Time.now()
-            return datetime.datetime(year=tt.year, month=tt.month, day=tt.day)
+            tt = datetime.datetime.now()
+            return Time(datetime.datetime(year=tt.year, month=tt.month, day=tt.day))
         if adate.lower() == 'yesterday':
-            tt = Time.now() - datetime.timedelta(day=1)
-            return datetime.datetime(year=tt.year, month=tt.month, day=tt.day)
+            tt = datetime.datetime.now() - datetime.timedelta(day=1)
+            return Time(datetime.datetime(year=tt.year, month=tt.month, day=tt.day))
         if adate.lower() == "none":
             return None
         adate = adate.replace("/", "-")
