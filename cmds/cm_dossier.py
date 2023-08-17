@@ -59,6 +59,7 @@ class Dossier:
                     "Supplied date and active date do not agree "
                     "({}sec)".format(date_diff)
                 )
+        self.active = active
         at_date = active.at_date
         if active.parts is None:
             active.load_parts(at_date=at_date)
