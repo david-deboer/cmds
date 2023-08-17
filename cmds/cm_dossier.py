@@ -13,21 +13,25 @@ from . import cm_utils
 
 class Dossier:
 
-    def __init__(self, **kwargs):
+    def __init__(self, dtype, pn, **kwargs):
+        """
+        dtype : str
+            Dossier type:  log, parts, connections
+        pn : str or list
+            part number(s)
+        """
+        self.dtype = dtype
+        self.pn = pn
         self.dossier = {}
         self.get_dossier(**kwargs)
 
-    def get_dossier(self, pn, at_date="now", at_time=None, float_format=None,
-                    active=None, exact_match=True, session=None, **kwargs):
+    def get_dossier(self, at_date="now", at_time=None, float_format=None,
+                    active=None, exact_match=False, session=None, **kwargs):
         """
         Get information on a part or parts.
 
         Parameters
         ----------
-        pn : str, list
-            Part number [string or list-of-strings] (whole or first part thereof)
-        dtype : str
-            Dossier type parts, connections, log
         at_date : anything interpretable by cm_utils.get_astropytime
             Date for which to check.
         at_time : anything interpretable by cm_utils.get_astropytime
@@ -66,22 +70,25 @@ class Dossier:
         if active.connections is None:
             active.load_connections(at_date=at_date)
         if active.info is None:
-            active.load_info(at_date=at_date)
+            active.load_info(at_date='<')  # always get all comments
         if active.stations is None:
             active.load_stations(at_date=at_date)
 
         if 'skip_pn_list_gather' in kwargs:
-            pn_list = pn
+            self.pn = self.pn
+        elif self.dtype == 'log':
+            self.pn = cm_utils.get_pn_list(self.pn, list(active.info.keys()), exact_match)
         else:
-            pn_list = cm_utils.get_pn_list(pn, list(active.parts.keys()), exact_match)
+            self.pn = cm_utils.get_pn_list(self.pn, list(active.parts.keys()), exact_match)
 
-        for this_pn in pn_list:
+        for this_pn in self.pn:
             this_part = DossierEntry(
                 pn=this_pn,
                 at_date=at_date,
             )
             this_part.get_entry(active)
-            self.dossier[this_pn] = this_part
+            if this_part.use:
+                self.dossier[this_pn] = this_part
 
     def show_dossier(self, columns=None):
         """
@@ -156,14 +163,13 @@ class DossierEntry:
     }
 
     def __init__(self, pn, at_date="now"):
-        self.pn = pn
-        self.entry_key = pn
+        self.pn = pn  # a single part number, not a list!
         self.at_date = at_date
         # Below are the database components of the dossier
         self.input_ports = []
         self.output_ports = []
         self.part = None
-        self.part_info = Namespace(comment=[], posting_gpstime=[], reference=[])
+        self.part_info = Namespace(comment=[], posting_gpstime=[], reference=[], pol=[])
         self.connections = Namespace(up=None, down=None)
         self.station = None
 
@@ -181,12 +187,16 @@ class DossierEntry:
             Contains the active database entries
 
         """
-        self.part = active.parts[self.entry_key]
-        self.part.gps2Time()
+        try:
+            self.part = active.parts[self.pn]
+            self.part.gps2Time()
+        except KeyError:
+            self.part = None
         self._get_connections(active=active)
         self._get_part_info(active=active)
         self._get_station(active=active)
         self._add_ports()
+        self.use = self.part is not None and self.part_info is not None
 
     def _add_pol(self):
         """Get the part_info polarization info."""
@@ -209,10 +219,14 @@ class DossierEntry:
             Contains the active database entries.
 
         """
-        if self.entry_key in active.connections["up"].keys():
-            self.connections.up = active.connections["up"][self.entry_key]
-        if self.entry_key in active.connections["down"].keys():
-            self.connections.down = active.connections["down"][self.entry_key]
+        if self.pn in active.connections["up"].keys():
+            self.connections.up = active.connections["up"][self.pn]
+        else:
+            self.connections.up = None
+        if self.pn in active.connections["down"].keys():
+            self.connections.down = active.connections["down"][self.pn]
+        else:
+            self.connections.down = None
 
     def _get_part_info(self, active):
         """
@@ -224,12 +238,15 @@ class DossierEntry:
             Contains the active database entries.
 
         """
-        if self.entry_key in active.info.keys():
-            for pi_entry in active.info[self.entry_key]:
+        if self.pn in active.info.keys():
+            for pi_entry in active.info[self.pn]:
                 if pi_entry.posting_gpstime > self.at_date.gps:
                     self.part_info.comment.append(pi_entry.comment)
                     self.part_info.posting_gpstime.append(pi_entry.posting_gpstime)
                     self.part_info.reference.append(pi_entry.reference)
+                    self.part_info.pol.append(pi_entry.pol)
+        else:
+            self.part_info = None
 
     def _get_station(self, active):
         """
@@ -243,6 +260,8 @@ class DossierEntry:
         """
         if self.pn in active.stations.keys():
             self.station = active.stations[self.pn]
+        else:
+            self.station = None
 
     def get_headers(self, columns):
         """
