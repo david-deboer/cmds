@@ -43,7 +43,7 @@ parser.add_argument(
 )
 parser.add_argument("--ports", help="Include only these ports, csv list", default=None)
 cm_utils.add_verbosity_args(parser)
-cm_utils.add_date_time_args(parser, date_default='now')
+cm_utils.add_date_time_args(parser, date_default='<')
 
 args = parser.parse_args()
 
