@@ -16,7 +16,6 @@ from cmds import cm, cm_dossier, cm_utils
 all_views = {
     "p": "parts",
     "c": "connections",
-    "l": "log",
 }
 
 parser = cm.get_cm_argument_parser()
@@ -57,32 +56,12 @@ parser.add_argument(
 parser.add_argument("--ports", help="Include only these ports, csv list", default=None)
 cm_utils.add_verbosity_args(parser)
 cm_utils.add_date_time_args(parser)
-parser.add_argument(
-    "--notes-start-date",
-    dest="notes_start_date",
-    help="<For notes> start_date for notes [<]",
-    default="<",
-)
-parser.add_argument(
-    "--notes-start-time",
-    dest="notes_start_time",
-    help="<For notes> start_time for notes",
-    default=0.0,
-)
-parser.add_argument(
-    "--notes-float-format",
-    dest="notes_float_format",
-    help="unix, gps, jd as appropriate for notes-start-date",
-    default=None,
-)
+
 args = parser.parse_args()
 
 args.verbosity = cm_utils.parse_verbosity(args.verbosity)
 view = all_views[args.view[0].lower()]
 date_query = cm_utils.get_astropytime(args.date, args.time, args.format)
-notes_start_date = cm_utils.get_astropytime(
-    args.notes_start_date, args.notes_start_time, args.notes_float_format
-)
 
 # Start session
 with cm.CMSessionWrapper() as session:
@@ -92,7 +71,7 @@ with cm.CMSessionWrapper() as session:
         print("\t{:30s}\t{}".format("--------------", "----------"))
         for col in blank.col_hdr.keys():
             print("\t{:30s}\t{}".format(col, blank.col_hdr[col]))
-    else:  # view == 'parts' or view == 'connections' or view == 'log'
+    else:  # view == 'parts' or view == 'connections'
         args.pn = cm_utils.listify(args.pn)
         if view == "parts":
             if args.verbosity == 1:
@@ -155,13 +134,6 @@ with cm.CMSessionWrapper() as session:
                     "down.start_gpstime",
                     "down.stop_gpstime",
                 ]
-        elif view == "log":
-            if args.verbosity == 1:
-                columns = ["pn", "comment"]
-            elif args.verbosity == 2:
-                columns = ["pn", "posting_gpstime", "comment", "pol"]
-            else:
-                columns = ["pn", "posting_gpstime", "comment", "pol", "reference"]
 
         if args.columns is not None:
             columns = cm_utils.listify(args.columns)
@@ -171,7 +143,6 @@ with cm.CMSessionWrapper() as session:
             pn=args.pn,
             at_date=date_query,
             active=None,
-            notes_start_date=notes_start_date,
             exact_match=args.exact_match,
             session=session,
         )

@@ -18,8 +18,7 @@ class Dossier:
         self.get_dossier(**kwargs)
 
     def get_dossier(self, pn, at_date="now", at_time=None, float_format=None,
-                    active=None, notes_start_date="<", notes_start_time=None,
-                    notes_float_format=None, exact_match=True, session=None, **kwargs):
+                    active=None, exact_match=True, session=None, **kwargs):
         """
         Get information on a part or parts.
 
@@ -35,13 +34,6 @@ class Dossier:
             Format if at_date is a number denoting gps or unix seconds or jd day
         active : cm_active.ActiveData class or None
             Use supplied ActiveData.  If None, read in.
-        notes_start_date : anything interpretable by cm_utils.get_astropytime
-            Start_date for displaying notes
-        notes_start_time : anything interpretable by cm_utils.get_astropytime
-            Start time for displaying notes, ignored if notes_start_date is a float or
-            contains time information
-        notes_float_format : str
-            Format if notes_start_date is a number denoting gps or unix seconds or jd day.
         exact_match : bool
             Flag to enforce full part number match, or "startswith"
         kwargs:
@@ -56,9 +48,6 @@ class Dossier:
         """
 
         at_date = cm_utils.get_astropytime(at_date, at_time, float_format)
-        notes_start_date = cm_utils.get_astropytime(
-            notes_start_date, notes_start_time, notes_float_format
-        )
         if active is None:
             from . import cm_active
             active = cm_active.ActiveData(session, at_date=at_date)
@@ -89,7 +78,6 @@ class Dossier:
             this_part = DossierEntry(
                 pn=this_pn,
                 at_date=at_date,
-                notes_start_date=notes_start_date,
             )
             this_part.get_entry(active)
             self.dossier[this_pn] = this_part
@@ -138,8 +126,6 @@ class DossierEntry:
     at_date : astropy.Time
         Date after which the part is active.  If inactive, the part will still be included,
         but things like notes, station etc may exclude on that basis.
-    notes_start_date : astropy.Time
-        Start date on which to filter notes.  The stop date is at_date above.
 
     """
 
@@ -168,11 +154,10 @@ class DossierEntry:
         "down.stop_gpstime": "dStop",
     }
 
-    def __init__(self, pn, at_date="now", notes_start_date="<"):
+    def __init__(self, pn, at_date="now"):
         self.pn = pn
         self.entry_key = pn
         self.at_date = at_date
-        self.notes_start_date = notes_start_date
         # Below are the database components of the dossier
         self.input_ports = []
         self.output_ports = []
@@ -236,7 +221,7 @@ class DossierEntry:
         """
         if self.entry_key in active.info.keys():
             for pi_entry in active.info[self.entry_key]:
-                if pi_entry.posting_gpstime > self.notes_start_date.gps:
+                if pi_entry.posting_gpstime > self.at_date.gps:
                     self.part_info.comment.append(pi_entry.comment)
                     self.part_info.posting_gpstime.append(pi_entry.posting_gpstime)
                     self.part_info.reference.append(pi_entry.reference)
