@@ -51,7 +51,7 @@ class Dossier:
 
         if active is None:
             from . import cm_active
-            active = cm_active.ActiveData(session, at_date=at_date)
+            active = cm_active.ActiveData(session, at_date=at_date, at_time=at_time, float_format=float_format)
         elif at_date is not None:
             date_diff = abs(at_date - active.at_date).sec
             if date_diff > 1.0:
@@ -59,8 +59,7 @@ class Dossier:
                     "Supplied date and active date do not agree "
                     "({}sec)".format(date_diff)
                 )
-        else:
-            at_date = active.at_date
+        at_date = active.at_date
         if active.parts is None:
             active.load_parts(at_date=at_date)
         if active.connections is None:
