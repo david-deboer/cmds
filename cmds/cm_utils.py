@@ -11,7 +11,7 @@ import datetime
 
 PAST_DATE = "2000-01-01"
 VALID_FLOAT_FORMAT_FOR_TIME = ["unix", "gps", "jd"]
-past = {'today': 0, 'yesterday': 1, 'lastweek': 7, 'lastmonth': 30, 'lastyear': 365}
+RELATIVE_PAST = {'today': 0, 'yesterday': 1, 'lastweek': 7, 'lastmonth': 30, 'lastyear': 365}
 
 
 def get_unique_pkey(hpn, rev, pdate, ptime, old_timers):
@@ -405,14 +405,8 @@ def get_astropytime(adate, atime=None, float_format=None):
             return future_date()
         if adate.lower() == "now" or adate.lower() == "current":
             return Time.now()
-        if adate.lower() == 'today':
-            tt = datetime.datetime.now()
-            return Time(datetime.datetime(year=tt.year, month=tt.month, day=tt.day))
-        if adate.lower() == 'yesterday':
-            tt = datetime.datetime.now() - datetime.timedelta(days=1)
-            return Time(datetime.datetime(year=tt.year, month=tt.month, day=tt.day))
-        if adate.lower() == 'lastweek':
-            tt = datetime.datetime.now() - datetime.timedelta(days=7)
+        if adate.lower() in RELATIVE_PAST:
+            tt = datetime.datetime.now() - datetime.timedelta(days=RELATIVE_PAST[adate.lower()])
             return Time(datetime.datetime(year=tt.year, month=tt.month, day=tt.day))
         if adate.lower() == "none":
             return None
