@@ -25,7 +25,7 @@ class UpdateInfo(upd_base.Update):
                                          verbose=verbose,
                                          args=args)
         self.new_apriori = {}
-        self.load_active(['info', 'apriori'], {'info': '<'})
+        self.load_active(['info', 'apriori'])
     
     def update_workflow(self):
         """See cmds_auto_update_info.py"""

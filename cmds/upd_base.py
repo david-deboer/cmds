@@ -99,15 +99,11 @@ class Update():
         if self.verbose:
             print('-----------------')
 
-    def load_active(self, loading=['parts', 'connections', 'stations', 'info', 'apriori'], at_date={}):
+    def load_active(self, loading=['parts', 'connections', 'stations', 'info', 'apriori']):
         """Load all active information from the start."""
         self.active = cm_active.ActiveData(session=self.session, at_date=self.at_date)
         for actload in loading:
-            if actload in at_date:
-                ad = at_date[actload]
-            else:
-                ad = self.at_date
-            getattr(self.active, f"load_{actload}")(at_date=ad)
+            getattr(self.active, f"load_{actload}")()
 
     def printit(self, value):
         """Write as comment only."""
