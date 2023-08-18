@@ -106,7 +106,7 @@ class Update():
             if actload in at_date:
                 ad = at_date[actload]
             else:
-                ad = self.at_data
+                ad = self.at_date
             getattr(self, f"load_{actload}")(at_date=ad)
 
     def printit(self, value):
