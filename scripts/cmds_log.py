@@ -49,14 +49,17 @@ parser.add_argument(
 cm_utils.add_verbosity_args(parser)
 cm_utils.add_date_time_args(parser, date_default='<')
 parser.add_argument(
-    "--history",
-    help="If provided, it will return log between supplied date and this many days in the past",
+    "--window",
+    help="If provided, it will return log between supplied date and this many days in the past (if number) or from get_astropytime str."
+         "  This only makes if you want a window in the past, otherwise just set the date.",
     default=None
 )
 args = parser.parse_args()
 
+if args.date == '<' and args.window:
+    args.date = 'now'
 try:
-    args.history = float(args.history)
+    args.window = float(args.window)
 except TypeError:
     pass
 args.verbosity = cm_utils.parse_verbosity(args.verbosity)
@@ -88,7 +91,7 @@ with cm.CMSessionWrapper() as session:
             dtype = 'log',
             pn=args.pn,
             at_date=date_query,
-            history=args.history,
+            window=args.window,
             exact_match=args.exact_match,
             session=session,
         )
