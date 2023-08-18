@@ -30,7 +30,7 @@ class Checks:
     def __init__(self, start_time=2458500, stop_time='now', day_step=1.0):
         """Initialize."""
         self.session = cm.CMSessionWrapper()
-        self.active = cm_active.ActiveData(self.session)
+        self.active = cm_active.ActiveData(self.session, 'now')
         self.start = cm_utils.get_astropytime(start_time, float_format='jd')
         self.stop = cm_utils.get_astropytime(stop_time, float_format='jd')
         self.step = day_step
@@ -41,27 +41,24 @@ class Checks:
         Get all info comments within look_back time (days).
         """
         from cmds import cm_hookup
+        import datetime
         print(f"Writing log of last {look_back} days to {outfile}")
         import csv
-        look_gps = cm_utils.get_astropytime('now').gps - look_back * 3600 * 24
-        self.active.load_info()
+        look_back = datetime.datetime.now() - datetime.timedelta(days=look_back)
+        self.active.load_info(look_back, window=True)
         fnd = {}
         hookup = cm_hookup.Hookup()
         for hpn, data in self.active.info.items():
-            found_one_yet = False
+            if len(data):
+                xx = hookup.get_hookup(hpn)
+                try:
+                    node = xx[hpn].hookup.popitem()[-1][-1].downstream_part
+                except:  # noqa
+                    node = 'N/A'
             for entry in data:
-                if entry.posting_gpstime >= look_gps:
-                    if not found_one_yet:  # Get node
-                        found_one_yet = True
-                        xhpn, xrev = cm_utils.split_part_key(hpn)
-                        xx = hookup.get_hookup(xhpn)
-                        try:
-                            node = xx[hpn].hookup.popitem()[-1][-1].downstream_part
-                        except:  # noqa
-                            node = 'N/A'
-                    key = f"{entry.posting_gpstime}:{hpn}"
-                    datet = cm_utils.get_astropytime(entry.posting_gpstime, float_format='gps')
-                    fnd[key] = [hpn, node, entry.comment, datet.isot]
+                key = f"{entry.posting_gpstime}:{hpn}"
+                datet = cm_utils.get_astropytime(entry.posting_gpstime, float_format='gps')
+                fnd[key] = [hpn, node, entry.comment, datet.isot]
 
         with open(outfile, 'w') as fp:
             writer = csv.writer(fp)
@@ -91,7 +88,7 @@ class Checks:
         """Check the database for duplicate comments."""
         cmdpre = 'delete from part_info where hpn='
         filename = 'dupcomm.sql'
-        self.active.load_info()
+        self.active.load_info('now')
         duplicates_found = 0
         with open(filename, 'w') as fp:
             for part, comments in self.active.info.items():
@@ -105,7 +102,7 @@ class Checks:
                                 posting_gpstime = comments[i].posting_gpstime
                             else:
                                 posting_gpstime = comments[j].posting_gpstime
-                            print("{}'{}' and hpn_rev='{}' and posting_gpstime='{}';"
+                            print("{}'{}' and hpn='{}' and posting_gpstime='{}';"
                                   .format(cmdpre, hpn, rev, posting_gpstime), file=fp)
                             if verbose:
                                 print(f"{hpn} ({posting_gpstime}): {comments[i]}")
