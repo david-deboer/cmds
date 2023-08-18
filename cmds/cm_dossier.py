@@ -42,8 +42,6 @@ class Dossier:
             If None, it is ignored
             If int, number of days (bracket [at_date-window, at_date])
             If str, it will pass through to cm_astropytime (bracket [window, at_date])
-        active : cm_active.ActiveData class or None
-            Use supplied ActiveData.  If None, read in.
         exact_match : bool
             Flag to enforce full part number match, or "startswith"
         kwargs:

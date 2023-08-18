@@ -282,7 +282,9 @@ class PartInfo(CMDeclarativeBase):
 
     def __repr__(self):
         """Define representation."""
-        return f"<Info:  name={self.pn} comment = {self.comment}  {get_cptimes(self, 'posting')}>"
+        if self.pol is None:
+            return f"<Info:  name={self.pn} comment = {self.comment}  {get_cptimes(self, 'posting')}>"
+        return f"<Info:  name={self.pn} pol={self.pol} comment = {self.comment}  {get_cptimes(self, 'posting')}>"
 
     def gps2Time(self):
         """Add a posting_date attribute (astropy Time object) based on posting_gpstime."""
