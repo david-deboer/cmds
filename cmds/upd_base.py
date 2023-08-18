@@ -107,7 +107,9 @@ class Update():
                 ad = at_date[actload]
             else:
                 ad = self.at_date
+            print(f"{actload}  {ad}")
             getattr(self.active, f"load_{actload}")(at_date=ad)
+            print(self.active.info)
 
     def printit(self, value):
         """Write as comment only."""
