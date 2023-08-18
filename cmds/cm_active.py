@@ -219,20 +219,23 @@ class ActiveData:
             Format if at_date is a number denoting gps, unix seconds or jd
         bracket : bool
             If True, and 'at_date' is provided, it will return dates within self.info_date - self.at_date
+            If no new date is supplied, this is ignored.
 
         """
-        if at_date is not None:
+        
+        self.info = {}
+        if not bracket or at_date is None:
+            gps_time = self.set_active_time(at_date, at_time, float_format)
+            bracket = False
+        else:
+            gps_time = self.at_date.gps
             self.info_date = cm_utils.get_astropytime(at_date, at_time, float_format)
-            if bracket and self.info_date >= self.at_date:
+            if self.info_date > self.at_date:
                 print(f"{self.info_date} can't be after {self.at_date}")
                 return
-        else:
-            self.info_date = copy(self.at_date)
-            bracket = False
-        self.info = {}
         for info in self.session.query(cm_tables.PartInfo).filter(
-            (cm_tables.PartInfo.posting_gpstime >= self.info_date.gps) ):
-            if bracket and info.posting_gpstime > self.at_date.gps:
+            (cm_tables.PartInfo.posting_gpstime <= gps_time) ):
+            if bracket and info.posting_gpstime < self.info_date.gps:
                 continue
             key = info.pn
             self.info.setdefault(key, [])
