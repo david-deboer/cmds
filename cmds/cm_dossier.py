@@ -24,7 +24,7 @@ class Dossier:
         self.dossier = {}
         self.get_dossier(**kwargs)
 
-    def get_dossier(self, at_date="now", at_time=None, float_format=None, history=None,
+    def get_dossier(self, at_date="now", at_time=None, float_format=None, window=None,
                     exact_match=False, session=None, **kwargs):
         """
         Get information on a part or parts.
@@ -37,11 +37,11 @@ class Dossier:
             Time at which to check, ignored if at_date is a float or contains time information
         float_format : str
             Format if at_date is a number denoting gps or unix seconds or jd day
-        history : int or str or None
+        window : int or str or None
             History length in days to view.  Used to set active.info_time.
             If None, it is ignored
-            If int, number of days (bracket [at_date-history, at_date])
-            If str, it will pass through to cm_astropytime (bracket [history, at_date])
+            If int, number of days (bracket [at_date-window, at_date])
+            If str, it will pass through to cm_astropytime (bracket [window, at_date])
         active : cm_active.ActiveData class or None
             Use supplied ActiveData.  If None, read in.
         exact_match : bool
@@ -60,17 +60,16 @@ class Dossier:
         self.active = cm_active.ActiveData(session, at_date=at_date, at_time=at_time, float_format=float_format)
 
         at_date = self.active.at_date
-        if history is None:
+        if window is None:
             bracket = False
         else:
             bracket = True
-            if not isinstance(history, str):
+            if not isinstance(window, str):
                 from datetime import timedelta
-                history = at_date.datetime - timedelta(days=history)
+                window = at_date.datetime - timedelta(days=window)
 
-        self.active.load_info(at_date=history, bracket=bracket)
+        self.active.load_info(at_date=window, bracket=bracket)
         if self.dtype != 'log':
-            from datetime import timedelta
             self.active.load_stations()
             self.active.load_parts()
             self.active.load_connections()

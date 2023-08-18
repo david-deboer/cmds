@@ -47,7 +47,7 @@ parser.add_argument(
     default=None
 )
 cm_utils.add_verbosity_args(parser)
-cm_utils.add_date_time_args(parser, date_default='<')
+cm_utils.add_date_time_args(parser, date_default='now')
 parser.add_argument(
     "--window",
     help="If provided, it will return log between [this many days in the past (if number) or from get_astropytime str -> supplied date]",
