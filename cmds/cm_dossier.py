@@ -8,7 +8,6 @@
 from argparse import Namespace
 from itertools import zip_longest
 from . import cm_utils, cm_active
-from datetime import timedelta
 
 
 class Dossier:
@@ -66,6 +65,7 @@ class Dossier:
         else:
             bracket = True
             if not isinstance(history, str):
+                from datetime import timedelta
                 history = at_date.datetime - timedelta(days=history)
 
         self.active.load_info(at_date=history, bracket=bracket)
