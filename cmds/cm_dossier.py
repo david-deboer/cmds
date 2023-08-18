@@ -338,7 +338,7 @@ class DossierEntry:
                         ]
                     )
                 elif isinstance(x, (list, set)):
-                    x = ", ".join(x)
+                    x = ", ".join([str(tmp) for tmp in x])
                 trow.append(x)
                 if x is not None and len(x):
                     number_entries += 1
