@@ -55,7 +55,10 @@ parser.add_argument(
 )
 args = parser.parse_args()
 
-args.history = float(args.history)
+try:
+    args.history = float(args.history)
+except TypeError:
+    pass
 args.verbosity = cm_utils.parse_verbosity(args.verbosity)
 date_query = cm_utils.get_astropytime(args.date, args.time, args.format)
 
