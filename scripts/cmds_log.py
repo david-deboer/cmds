@@ -50,14 +50,11 @@ cm_utils.add_verbosity_args(parser)
 cm_utils.add_date_time_args(parser, date_default='<')
 parser.add_argument(
     "--window",
-    help="If provided, it will return log between supplied date and this many days in the past (if number) or from get_astropytime str."
-         "  This only makes if you want a window in the past, otherwise just set the date.",
+    help="If provided, it will return log between [this many days in the past (if number) or from get_astropytime str -> supplied date]",
     default=None
 )
 args = parser.parse_args()
 
-if args.date == '<' and args.window:
-    args.date = 'now'
 try:
     args.window = float(args.window)
 except TypeError:
