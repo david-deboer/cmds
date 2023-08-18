@@ -227,12 +227,13 @@ class ActiveData:
         if not bracket or at_date is None:
             gps_time = self.set_active_time(at_date, at_time, float_format)
             bracket = False
+            self.info_date = None
         else:
             gps_time = self.at_date.gps
             self.info_date = cm_utils.get_astropytime(at_date, at_time, float_format)
             if self.info_date > self.at_date:
-                print(f"{self.info_date} can't be after {self.at_date}")
-                return
+                print(f"{self.info_date} shouldn't be after {self.at_date}")
+                print("But continuing anyway -- lower date is the Big Bang")
         for info in self.session.query(cm_tables.PartInfo).filter(
             (cm_tables.PartInfo.posting_gpstime <= gps_time) ):
             if bracket and info.posting_gpstime < self.info_date.gps:
