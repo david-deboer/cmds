@@ -57,7 +57,7 @@ args = parser.parse_args()
 
 try:
     args.window = float(args.window)
-except TypeError:
+except (ValueError, TypeError):
     pass
 args.verbosity = cm_utils.parse_verbosity(args.verbosity)
 date_query = cm_utils.get_astropytime(args.date, args.time, args.format)
