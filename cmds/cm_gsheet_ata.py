@@ -167,4 +167,4 @@ class SheetData:
                         entry_to_append = f"{header}:{this_entry}"
                     self.comments[aant].append(entry_to_append)
         if len(self.obs):
-            self.comments['obs'] = list(self.obs)
+            self.comments['OBS'] = list(self.obs)

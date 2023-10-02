@@ -41,7 +41,7 @@ def date_check(posting):
 active = cm_active.get_active(date, loading=['info'])
 
 found = {}
-for hpn, notes in active.info.items():
+for pn, notes in active.info.items():
     for note in notes:
         diff = abs(note.posting_gpstime - date.gps)
         if date_check(note.posting_gpstime):

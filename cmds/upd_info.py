@@ -172,7 +172,7 @@ class UpdateInfo(upd_base.Update):
                 note_time = cm_utils.get_astropytime(note.posting_gpstime, float_format='gps').datetime  # noqa
                 dt = self.now - note_time
                 ddays = dt.days + dt.seconds / (3600.0 * 24)
-                if ddays < duplication_window and statement == note.comment:
+                if ddays < duplication_window and statement.lower().strip() == note.comment.lower().strip():
                     if self.verbose and ddays > view_duplicate:
                         print(f"Duplicate for {key:8s}  '{statement}' ({ddays:.1f} days)")
                     return True
