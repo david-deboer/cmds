@@ -46,7 +46,7 @@ for hpn, notes in active.info.items():
         diff = abs(note.posting_gpstime - date.gps)
         if date_check(note.posting_gpstime):
             note.date = cm_utils.get_astropytime(note.posting_gpstime, float_format='gps')
-            nk, pk, rk = cm_utils.peel_key(note.hpn, 'NPR')
+            nk, pk = cm_utils.peel_key(note.pn, 'NP')
             if args.sortby == 'date':
                 key = f"{note.date.datetime}{pk}{nk:04d}{note.comment}"
             else:
