@@ -88,7 +88,7 @@ with cm.CMSessionWrapper() as session:
             pn=args.pn,
             exact_match=args.exact_match,
             active = [],
-            at_date=date_query,            
+            at_date=date_query,
             session=session
         )
         dossier.load_dossier(window=args.window)
