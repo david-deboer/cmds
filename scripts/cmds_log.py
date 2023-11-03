@@ -85,12 +85,12 @@ with cm.CMSessionWrapper() as session:
         if args.ports is not None:
             args.ports = cm_utils.listify(args.ports)  # specify port names as list.
         dossier = cm_dossier.Dossier(
-            dtype = 'log',
             pn=args.pn,
-            at_date=date_query,
-            window=args.window,
             exact_match=args.exact_match,
-            session=session,
+            active = [],
+            at_date=date_query,            
+            session=session
         )
+        dossier.load_dossier(window=args.window)
         print(dossier.show_dossier(columns))
     print()

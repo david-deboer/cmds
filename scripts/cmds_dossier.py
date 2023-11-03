@@ -16,6 +16,7 @@ from cmds import cm, cm_dossier, cm_utils
 all_views = {
     "p": "parts",
     "c": "connections",
+    "l": "log"
 }
 
 parser = cm.get_cm_argument_parser()
@@ -140,11 +141,11 @@ with cm.CMSessionWrapper() as session:
         if args.ports is not None:
             args.ports = cm_utils.listify(args.ports)  # specify port names as list.
         dossier = cm_dossier.Dossier(
-            dtype = args.view,
             pn=args.pn,
-            at_date=date_query,
             exact_match=args.exact_match,
-            session=session,
+            at_date=date_query,            
+            session=session
         )
+        dossier.load_dossier()
         print(dossier.show_dossier(columns))
     print()

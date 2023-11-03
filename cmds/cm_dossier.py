@@ -3,7 +3,7 @@
 # Copyright 2019 the HERA Collaboration
 # Licensed under the 2-clause BSD license.
 
-"""Contains the Dossier and XEntry classes which serves as a "dossier" for part and hookup entries."""
+"""Contains the Dossier and DossierEntry classes which serves as a "dossier" for part and hookup entries."""
 
 from argparse import Namespace
 from itertools import zip_longest
@@ -12,42 +12,52 @@ from . import cm_utils, cm_active
 
 class Dossier:
 
-    def __init__(self, dtype, pn, **kwargs):
+    def __init__(self, pn, exact_match=False, skip_pn_list_gather=False, active=['parts', 'connections', 'stations'],
+                 at_date='now', at_time=None, float_format=None, session=None):
         """
-        dtype : str
-            Dossier type:  log, parts, connections
         pn : str or list
             part number(s)
-        """
-        self.dtype = dtype
-        self.pn = pn
-        self.dossier = {}
-        self.get_dossier(**kwargs)
-
-    def get_dossier(self, at_date="now", at_time=None, float_format=None, window=None,
-                    exact_match=False, session=None, **kwargs):
-        """
-        Get information on a part or parts.
-
-        Parameters
-        ----------
+        exact_match : bool
+            If True, will only use exact matches in pn
+        skip_pn_list_gather : bool
+            If True, it won't try to update the provided pn
+        active : self.active.ActiveData or list of modules to load (except info, which always gets loaded later)
+            If not list, use this ActiveData
         at_date : anything interpretable by cm_utils.get_astropytime
             Date for which to check.
         at_time : anything interpretable by cm_utils.get_astropytime
             Time at which to check, ignored if at_date is a float or contains time information
         float_format : str
             Format if at_date is a number denoting gps or unix seconds or jd day
+
+        """
+        self.dossier = {}
+        if isinstance(active, list):
+            self.active = cm_active.ActiveData(session, at_date=at_date, at_time=at_time, float_format=float_format)
+            for param in active:
+                getattr(self.active, f'load_{param}')()
+        else:
+            self.active = active
+        self.at_date = self.active.at_date
+        if skip_pn_list_gather:
+            self.pn = pn
+        else:
+            self.pn = cm_utils.get_pn_list(pn, list(self.active.parts.keys()), exact_match)
+
+    def load_dossier(self, window=None):
+        """
+        Load the DossierEntry for the supplied part numbers.
+
+        Parameters
+        ----------
+
         window : int or str or None
             History length in days to view.  Used to set active.info_time.
             If None, it is ignored
             If int, number of days (bracket [at_date-window, at_date])
             If str, it will pass through to cm_astropytime (bracket [window, at_date])
-        exact_match : bool
-            Flag to enforce full part number match, or "startswith"
-        kwargs:
-            skip_pn_list_gather:  skip redoing the pn_list step (use pn list as is)
 
-        Returns
+        Attribute
         -------
         dict
             dictionary keyed on the part_number containing DossierEntry
@@ -55,30 +65,14 @@ class Dossier:
 
         """
 
-        self.active = cm_active.ActiveData(session, at_date=at_date, at_time=at_time, float_format=float_format)
-
-        at_date = self.active.at_date
         if window is None:
             bracket = False
         else:
             bracket = True
             if not isinstance(window, str):
                 from datetime import timedelta
-                window = at_date.datetime - timedelta(days=window)
-
+                window = self.at_date.datetime - timedelta(days=window)
         self.active.load_info(at_date=window, bracket=bracket)
-        if self.dtype != 'log':
-            self.active.load_stations()
-            self.active.load_parts()
-            self.active.load_connections()
-
-
-        if 'skip_pn_list_gather' in kwargs:
-            self.pn = self.pn
-        elif self.dtype == 'log':
-            self.pn = cm_utils.get_pn_list(self.pn, list(self.active.info.keys()), exact_match)
-        else:
-            self.pn = cm_utils.get_pn_list(self.pn, list(self.active.parts.keys()), exact_match)
 
         for this_pn in self.pn:
             this_part = DossierEntry(pn=this_pn)
